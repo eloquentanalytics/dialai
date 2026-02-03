@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 300" width="900" height="300">
+  <defs>
+    <linearGradient id="flowAiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1aa3ff"/>
+      <stop offset="100%" stop-color="#0070b3"/>
+    </linearGradient>
+    <linearGradient id="flowHumanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffc91a"/>
+      <stop offset="100%" stop-color="#e6b000"/>
+    </linearGradient>
+    <marker id="flowArrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#475569"/>
+    </marker>
+    <marker id="flowArrowBlue" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#1aa3ff"/>
+    </marker>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="900" height="300" fill="#0f172a"/>
+  
+  <!-- Grid pattern -->
+  <pattern id="flowGrid" width="30" height="30" patternUnits="userSpaceOnUse">
+    <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+  </pattern>
+  <rect width="900" height="300" fill="url(#flowGrid)"/>
+  
+  <!-- Step 1: Solicit -->
+  <g transform="translate(80, 150)">
+    <rect x="-60" y="-40" width="120" height="80" rx="12" fill="#1e293b" stroke="#1aa3ff" stroke-width="2"/>
+    <text y="-10" text-anchor="middle" fill="#1aa3ff" font-family="sans-serif" font-size="14" font-weight="bold">SOLICIT</text>
+    <text y="10" text-anchor="middle" fill="#94a3b8" font-family="sans-serif" font-size="11">Ask specialists</text>
+    <text y="25" text-anchor="middle" fill="#94a3b8" font-family="sans-serif" font-size="11">for proposals</text>
+    <text y="-60" text-anchor="middle" fill="#475569" font-family="sans-serif" font-size="12" font-weight="bold">1</text>
+  </g>
+  
+  <!-- Arrow 1→2 -->
+  <line x1="145" y1="150" x2="190" y2="150" stroke="#475569" stroke-width="2" marker-end="url(#flowArrow)"/>
+  
+  <!-- Step 2: Propose -->
+  <g transform="translate(260, 150)">
+    <rect x="-60" y="-40" width="120" height="80" rx="12" fill="#1e293b" stroke="#1aa3ff" stroke-width="2"/>
+    <text y="-10" text-anchor="middle" fill="#1aa3ff" font-family="sans-serif" font-size="14" font-weight="bold">PROPOSE</text>
+    <text y="10" text-anchor="middle" fill="#94a3b8" font-family="sans-serif" font-size="11">Specialists submit</text>
+    <text y="25" text-anchor="middle" fill="#94a3b8" font-family="sans-serif" font-size="11">recommendations</text>
+    <text y="-60" text-anchor="middle" fill="#475569" font-family="sans-serif" font-size="12" font-weight="bold">2</text>
+  </g>
+  
+  <!-- Arrow 2→3 -->
+  <line x1="325" y1="150" x2="370" y2="150" stroke="#475569" stroke-width="2" marker-end="url(#flowArrow)"/>
+  
+  <!-- Step 3: Vote -->
+  <g transform="translate(440, 150)">
+    <rect x="-60" y="-40" width="120" height="80" rx="12" fill="#1e293b" stroke="#1aa3ff" stroke-width="2"/>
+    <text y="-10" text-anchor="middle" fill="#1aa3ff" font-family="sans-serif" font-size="14" font-weight="bold">VOTE</text>
+    <text y="10" text-anchor="middle" fill="#94a3b8" font-family="sans-serif" font-size="11">Compare pairs</text>
+    <text y="25" text-anchor="middle" fill="#94a3b8" font-family="sans-serif" font-size="11">A vs B</text>
+    <text y="-60" text-anchor="middle" fill="#475569" font-family="sans-serif" font-size="12" font-weight="bold">3</text>
+  </g>
+  
+  <!-- Arrow 3→4 -->
+  <line x1="505" y1="150" x2="550" y2="150" stroke="#475569" stroke-width="2" marker-end="url(#flowArrow)"/>
+  
+  <!-- Step 4: Arbitrate -->
+  <g transform="translate(620, 150)">
+    <rect x="-60" y="-40" width="120" height="80" rx="12" fill="#1e293b" stroke="#ffc91a" stroke-width="2"/>
+    <text y="-10" text-anchor="middle" fill="#ffc91a" font-family="sans-serif" font-size="14" font-weight="bold">ARBITRATE</text>
+    <text y="10" text-anchor="middle" fill="#94a3b8" font-family="sans-serif" font-size="11">Check consensus</text>
+    <text y="25" text-anchor="middle" fill="#94a3b8" font-family="sans-serif" font-size="11">(human wins)</text>
+    <text y="-60" text-anchor="middle" fill="#475569" font-family="sans-serif" font-size="12" font-weight="bold">4</text>
+  </g>
+  
+  <!-- Arrow 4→5 -->
+  <line x1="685" y1="150" x2="730" y2="150" stroke="#475569" stroke-width="2" marker-end="url(#flowArrow)"/>
+  
+  <!-- Step 5: Execute -->
+  <g transform="translate(800, 150)">
+    <rect x="-60" y="-40" width="120" height="80" rx="12" fill="#1e293b" stroke="url(#flowHumanGrad)" stroke-width="3"/>
+    <text y="-10" text-anchor="middle" fill="#ffc91a" font-family="sans-serif" font-size="14" font-weight="bold">EXECUTE</text>
+    <text y="10" text-anchor="middle" fill="#94a3b8" font-family="sans-serif" font-size="11">Transition the</text>
+    <text y="25" text-anchor="middle" fill="#94a3b8" font-family="sans-serif" font-size="11">state machine</text>
+    <text y="-60" text-anchor="middle" fill="#475569" font-family="sans-serif" font-size="12" font-weight="bold">5</text>
+  </g>
+  
+  <!-- Return arrow (cycle back) -->
+  <path d="M800,210 Q800,260 440,260 Q80,260 80,210" fill="none" stroke="#1aa3ff" stroke-width="2" stroke-dasharray="8 4" marker-end="url(#flowArrowBlue)"/>
+  <text x="440" y="280" text-anchor="middle" fill="#1aa3ff" font-family="sans-serif" font-size="11" opacity="0.7">Repeat until default state</text>
+</svg>
