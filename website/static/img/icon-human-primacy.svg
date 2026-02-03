@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80">
+  <defs>
+    <linearGradient id="humanPrimacyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffc91a"/>
+      <stop offset="100%" stop-color="#e6b000"/>
+    </linearGradient>
+    <filter id="humanGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="80" height="80" rx="16" fill="#0f172a"/>
+  
+  <!-- Human figure - elevated, glowing -->
+  <g transform="translate(40, 35)" filter="url(#humanGlow)">
+    <!-- Head -->
+    <circle r="10" fill="url(#humanPrimacyGrad)"/>
+    <!-- Body -->
+    <path d="M-15,28 Q-15,12 0,12 Q15,12 15,28" fill="url(#humanPrimacyGrad)"/>
+    <!-- Arms raised -->
+    <line x1="-12" y1="18" x2="-20" y2="8" stroke="url(#humanPrimacyGrad)" stroke-width="4" stroke-linecap="round"/>
+    <line x1="12" y1="18" x2="20" y2="8" stroke="url(#humanPrimacyGrad)" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Crown/primacy indicator -->
+  <path d="M30,18 L35,10 L40,16 L45,10 L50,18" fill="none" stroke="#ffc91a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Radiating lines -->
+  <g stroke="#ffc91a" stroke-width="1.5" opacity="0.5">
+    <line x1="20" y1="30" x2="14" y2="24"/>
+    <line x1="60" y1="30" x2="66" y2="24"/>
+    <line x1="20" y1="50" x2="14" y2="56"/>
+    <line x1="60" y1="50" x2="66" y2="56"/>
+  </g>
+</svg>
