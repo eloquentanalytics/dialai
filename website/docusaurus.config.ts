@@ -3,9 +3,9 @@ import type { Config } from "@docusaurus/types";
 import type * as Preset from "@docusaurus/preset-classic";
 
 const config: Config = {
-  title: "DialAI",
+  title: "DIAL",
   tagline: "Dynamic Integration between AI and Labor",
-  favicon: "img/favicon.ico",
+  favicon: "img/favicon.svg",
 
   // Set the production url of your site here
   url: "https://eloquentanalytics.github.io",
@@ -45,10 +45,18 @@ const config: Config = {
   ],
 
   themeConfig: {
+    // Force dark mode as default
+    colorMode: {
+      defaultMode: "dark",
+      disableSwitch: false,
+      respectPrefersColorScheme: false,
+    },
+    // Social card for sharing
+    image: "img/hero-illustration.svg",
     navbar: {
-      title: "DialAI",
+      title: "DIAL",
       logo: {
-        alt: "DialAI Logo",
+        alt: "DIAL Logo",
         src: "img/logo.svg",
       },
       items: [
@@ -56,7 +64,22 @@ const config: Config = {
           type: "docSidebar",
           sidebarId: "tutorialSidebar",
           position: "left",
-          label: "Docs",
+          label: "Documentation",
+        },
+        {
+          to: "/constitution",
+          position: "left",
+          label: "Constitution",
+        },
+        {
+          to: "/docs/concepts/intro",
+          position: "left",
+          label: "Concepts",
+        },
+        {
+          to: "/docs/getting-started/installation",
+          position: "left",
+          label: "Get Started",
         },
         {
           href: "https://github.com/eloquentanalytics/dialai",
@@ -69,15 +92,36 @@ const config: Config = {
       style: "dark",
       links: [
         {
-          title: "Docs",
+          title: "Learn",
           items: [
             {
-              label: "Getting Started",
+              label: "Introduction",
               to: "/docs/intro",
+            },
+            {
+              label: "Getting Started",
+              to: "/docs/getting-started/installation",
             },
             {
               label: "Concepts",
               to: "/docs/concepts/intro",
+            },
+          ],
+        },
+        {
+          title: "Guides",
+          items: [
+            {
+              label: "State Machines",
+              to: "/docs/guides/state-machines",
+            },
+            {
+              label: "Registering Specialists",
+              to: "/docs/guides/registering-specialists",
+            },
+            {
+              label: "Implementing Strategies",
+              to: "/docs/guides/implementing-strategies",
             },
           ],
         },
@@ -88,15 +132,34 @@ const config: Config = {
               label: "GitHub",
               href: "https://github.com/eloquentanalytics/dialai",
             },
+            {
+              label: "Issues",
+              href: "https://github.com/eloquentanalytics/dialai/issues",
+            },
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} DialAI Contributors. Built with Docusaurus.`,
+      logo: {
+        alt: "DIAL - Dynamic Integration between AI and Labor",
+        src: "img/logo.svg",
+        width: 50,
+        height: 50,
+      },
+      copyright: `Copyright © ${new Date().getFullYear()} DIAL Contributors. Built with Docusaurus.`,
     },
     prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
-      additionalLanguages: ["bash", "json"],
+      additionalLanguages: ["bash", "json", "typescript"],
+    },
+    // Announcement bar (optional)
+    announcementBar: {
+      id: "alpha_notice",
+      content:
+        '⚡ DIAL is in active development. <a href="/docs/intro">Learn about the framework</a> and help shape the future of AI-human collaboration.',
+      backgroundColor: "#1e293b",
+      textColor: "#94a3b8",
+      isCloseable: true,
     },
   } satisfies Preset.ThemeConfig,
 
@@ -104,6 +167,25 @@ const config: Config = {
     mermaid: true,
   },
   themes: ["@docusaurus/theme-mermaid"],
+  
+  // Head tags for custom fonts
+  headTags: [
+    {
+      tagName: "link",
+      attributes: {
+        rel: "preconnect",
+        href: "https://fonts.googleapis.com",
+      },
+    },
+    {
+      tagName: "link",
+      attributes: {
+        rel: "preconnect",
+        href: "https://fonts.gstatic.com",
+        crossorigin: "anonymous",
+      },
+    },
+  ],
 };
 
 export default config;
