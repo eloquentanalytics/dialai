@@ -21,5 +21,5 @@ module.exports = {
     "@typescript-eslint/explicit-function-return-type": "off",
     "@typescript-eslint/no-explicit-any": "warn"
   },
-  ignorePatterns: ["dist", "node_modules", "*.config.ts", "*.config.js"]
+  ignorePatterns: ["dist", "node_modules", "website", "*.config.ts", "*.config.js"]
 };
