@@ -1,30 +1,620 @@
 /**
- * Any CSS included here will be global. The classic template
- * bundles Infima by default. Infima is a CSS framework designed to
- * work well for content-centric websites.
+ * DIAL - Dynamic Integration between AI and Labor
+ * A distinctive dark theme with electric blue (AI) and warm amber (human) accents
  */
 
-/* You can override the default Infima variables here. */
+/* Import distinctive fonts */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+
+/* ========================================
+   CSS VARIABLES - LIGHT & DARK THEMES
+   ======================================== */
+
 :root {
-  --ifm-color-primary: #2e8555;
-  --ifm-color-primary-dark: #29784c;
-  --ifm-color-primary-darker: #277148;
-  --ifm-color-primary-darkest: #205d3b;
-  --ifm-color-primary-light: #33925d;
-  --ifm-color-primary-lighter: #359962;
-  --ifm-color-primary-lightest: #3cad6e;
-  --ifm-code-font-size: 95%;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  /* Core palette */
+  --dial-blue-50: #e6f4ff;
+  --dial-blue-100: #b3e0ff;
+  --dial-blue-200: #80ccff;
+  --dial-blue-300: #4db8ff;
+  --dial-blue-400: #1aa3ff;
+  --dial-blue-500: #0090e6;
+  --dial-blue-600: #0070b3;
+  --dial-blue-700: #005080;
+  --dial-blue-800: #003354;
+  --dial-blue-900: #001a2b;
+
+  --dial-amber-50: #fff8e6;
+  --dial-amber-100: #ffecb3;
+  --dial-amber-200: #ffe080;
+  --dial-amber-300: #ffd54d;
+  --dial-amber-400: #ffc91a;
+  --dial-amber-500: #e6b000;
+  --dial-amber-600: #b38900;
+  --dial-amber-700: #806200;
+  --dial-amber-800: #4d3b00;
+  --dial-amber-900: #1a1400;
+
+  --dial-slate-50: #f8fafc;
+  --dial-slate-100: #f1f5f9;
+  --dial-slate-200: #e2e8f0;
+  --dial-slate-300: #cbd5e1;
+  --dial-slate-400: #94a3b8;
+  --dial-slate-500: #64748b;
+  --dial-slate-600: #475569;
+  --dial-slate-700: #334155;
+  --dial-slate-800: #1e293b;
+  --dial-slate-900: #0f172a;
+  --dial-slate-950: #020617;
+
+  /* Theme colors - light mode */
+  --ifm-color-primary: #0070b3;
+  --ifm-color-primary-dark: #005fa0;
+  --ifm-color-primary-darker: #005896;
+  --ifm-color-primary-darkest: #00487b;
+  --ifm-color-primary-light: #0081c6;
+  --ifm-color-primary-lighter: #008ad0;
+  --ifm-color-primary-lightest: #009beb;
+  
+  /* Accent colors */
+  --dial-accent-human: var(--dial-amber-500);
+  --dial-accent-ai: var(--dial-blue-500);
+  --dial-glow-human: rgba(255, 201, 26, 0.3);
+  --dial-glow-ai: rgba(26, 163, 255, 0.3);
+
+  /* Typography */
+  --ifm-font-family-base: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --ifm-font-family-monospace: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  --ifm-heading-font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --ifm-heading-font-weight: 700;
+  --ifm-font-weight-bold: 600;
+  
+  /* Sizing */
+  --ifm-code-font-size: 92%;
+  --ifm-global-radius: 8px;
+  --ifm-button-border-radius: 8px;
+  
+  /* Misc */
+  --docusaurus-highlighted-code-line-bg: rgba(0, 112, 179, 0.1);
+  --ifm-navbar-height: 4rem;
+  
+  /* Shadows */
+  --dial-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --dial-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --dial-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --dial-shadow-glow-ai: 0 0 40px var(--dial-glow-ai);
+  --dial-shadow-glow-human: 0 0 40px var(--dial-glow-human);
 }
 
-/* For readability concerns, you should choose a lighter palette in dark mode. */
-[data-theme="dark"] {
-  --ifm-color-primary: #25c2a0;
-  --ifm-color-primary-dark: #21af90;
-  --ifm-color-primary-darker: #1fa588;
-  --ifm-color-primary-darkest: #1a8870;
-  --ifm-color-primary-light: #29d5b0;
-  --ifm-color-primary-lighter: #32d8b4;
-  --ifm-color-primary-lightest: #4fddbf;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+/* ========================================
+   DARK THEME (Primary theme for DIAL)
+   ======================================== */
+
+[data-theme='dark'] {
+  --ifm-color-primary: #1aa3ff;
+  --ifm-color-primary-dark: #0090e6;
+  --ifm-color-primary-darker: #0085d9;
+  --ifm-color-primary-darkest: #006fb3;
+  --ifm-color-primary-light: #3eb1ff;
+  --ifm-color-primary-lighter: #4db8ff;
+  --ifm-color-primary-lightest: #80ccff;
+  
+  --ifm-background-color: var(--dial-slate-950);
+  --ifm-background-surface-color: var(--dial-slate-900);
+  --ifm-navbar-background-color: rgba(2, 6, 23, 0.9);
+  --ifm-footer-background-color: var(--dial-slate-950);
+  
+  --ifm-color-content: var(--dial-slate-100);
+  --ifm-color-content-secondary: var(--dial-slate-400);
+  
+  --ifm-code-background: rgba(26, 163, 255, 0.1);
+  --docusaurus-highlighted-code-line-bg: rgba(26, 163, 255, 0.15);
+  
+  --dial-shadow-glow-ai: 0 0 60px rgba(26, 163, 255, 0.25);
+  --dial-shadow-glow-human: 0 0 60px rgba(255, 201, 26, 0.2);
+}
+
+/* ========================================
+   GLOBAL STYLES
+   ======================================== */
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  letter-spacing: 0.01em;
+}
+
+/* ========================================
+   NAVBAR
+   ======================================== */
+
+.navbar {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: none;
+}
+
+[data-theme='dark'] .navbar {
+  background: linear-gradient(
+    180deg,
+    rgba(2, 6, 23, 0.95) 0%,
+    rgba(2, 6, 23, 0.85) 100%
+  );
+}
+
+.navbar__title {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  font-size: 1.4rem;
+  background: linear-gradient(135deg, var(--dial-blue-300) 0%, var(--dial-blue-500) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.navbar__link {
+  font-weight: 500;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.navbar__link:hover {
+  transform: translateY(-1px);
+}
+
+.navbar__link--active {
+  color: var(--dial-blue-400);
+}
+
+/* ========================================
+   HERO SECTION
+   ======================================== */
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  padding: 6rem 0;
+  background: transparent;
+}
+
+[data-theme='dark'] .hero--primary {
+  background: linear-gradient(
+    180deg,
+    var(--dial-slate-950) 0%,
+    rgba(0, 26, 43, 0.8) 50%,
+    var(--dial-slate-950) 100%
+  );
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    radial-gradient(ellipse 80% 50% at 50% 0%, var(--dial-glow-ai) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 70% 80%, var(--dial-glow-human) 0%, transparent 40%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hero__title {
+  font-size: clamp(3rem, 8vw, 5rem);
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+  margin-bottom: 1.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+[data-theme='dark'] .hero__title {
+  background: linear-gradient(
+    135deg,
+    var(--dial-slate-50) 0%,
+    var(--dial-blue-200) 50%,
+    var(--dial-amber-300) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.hero__subtitle {
+  font-size: clamp(1.25rem, 3vw, 1.75rem);
+  font-weight: 400;
+  opacity: 0.85;
+  max-width: 700px;
+  margin: 0 auto 2.5rem;
+  line-height: 1.5;
+  position: relative;
+  z-index: 1;
+}
+
+/* ========================================
+   BUTTONS
+   ======================================== */
+
+.button {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 0.85rem 2rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.button--primary,
+.button--secondary {
+  border: none;
+}
+
+[data-theme='dark'] .button--secondary {
+  background: linear-gradient(135deg, var(--dial-blue-600) 0%, var(--dial-blue-700) 100%);
+  color: white;
+  box-shadow: 0 4px 20px rgba(26, 163, 255, 0.3);
+}
+
+[data-theme='dark'] .button--secondary:hover {
+  background: linear-gradient(135deg, var(--dial-blue-500) 0%, var(--dial-blue-600) 100%);
+  box-shadow: 0 6px 30px rgba(26, 163, 255, 0.4);
+  transform: translateY(-2px);
+}
+
+.button--outline {
+  border: 2px solid currentColor;
+}
+
+[data-theme='dark'] .button--outline.button--secondary {
+  background: transparent;
+  color: var(--dial-amber-400);
+  border-color: var(--dial-amber-400);
+  box-shadow: none;
+}
+
+[data-theme='dark'] .button--outline.button--secondary:hover {
+  background: rgba(255, 201, 26, 0.1);
+  box-shadow: 0 4px 20px rgba(255, 201, 26, 0.2);
+  transform: translateY(-2px);
+}
+
+/* ========================================
+   CARDS
+   ======================================== */
+
+.card {
+  border-radius: 16px;
+  padding: 0;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  height: 100%;
+}
+
+[data-theme='dark'] .card {
+  background: linear-gradient(
+    180deg,
+    rgba(30, 41, 59, 0.5) 0%,
+    rgba(15, 23, 42, 0.5) 100%
+  );
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.card:hover {
+  transform: translateY(-4px);
+}
+
+[data-theme='dark'] .card:hover {
+  border-color: rgba(26, 163, 255, 0.3);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), 0 0 40px rgba(26, 163, 255, 0.1);
+}
+
+.card__header {
+  padding: 1.75rem 1.75rem 0.75rem;
+}
+
+.card__header h3 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.card__body {
+  padding: 0.75rem 1.75rem 1.75rem;
+}
+
+.card__body p {
+  margin: 0;
+  line-height: 1.7;
+  opacity: 0.85;
+}
+
+/* Feature cards with icons */
+.feature-card {
+  position: relative;
+}
+
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-radius: 16px 16px 0 0;
+}
+
+.feature-card--human::before {
+  background: linear-gradient(90deg, var(--dial-amber-500), var(--dial-amber-400));
+}
+
+.feature-card--ai::before {
+  background: linear-gradient(90deg, var(--dial-blue-500), var(--dial-blue-400));
+}
+
+.feature-card--trust::before {
+  background: linear-gradient(90deg, var(--dial-amber-500), var(--dial-blue-500));
+}
+
+/* ========================================
+   DOCUMENTATION
+   ======================================== */
+
+.markdown h1 {
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.markdown h2 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-top: 3rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.markdown h3 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Code blocks */
+.prism-code {
+  border-radius: 12px !important;
+}
+
+[data-theme='dark'] pre {
+  background: rgba(15, 23, 42, 0.8) !important;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+code {
+  border-radius: 6px;
+  padding: 0.2em 0.4em;
+  font-size: 0.9em;
+}
+
+[data-theme='dark'] code {
+  background: rgba(26, 163, 255, 0.1);
+  color: var(--dial-blue-300);
+}
+
+/* Sidebar */
+.theme-doc-sidebar-container {
+  border-right: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.menu__link {
+  font-weight: 500;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.menu__link--active {
+  font-weight: 600;
+}
+
+[data-theme='dark'] .menu__link--active {
+  background: rgba(26, 163, 255, 0.1);
+  color: var(--dial-blue-300);
+}
+
+/* Table of contents */
+.table-of-contents__link {
+  font-size: 0.875rem;
+}
+
+.table-of-contents__link--active {
+  font-weight: 600;
+}
+
+[data-theme='dark'] .table-of-contents__link--active {
+  color: var(--dial-blue-400);
+}
+
+/* ========================================
+   FOOTER
+   ======================================== */
+
+.footer {
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+[data-theme='dark'] .footer--dark {
+  background: var(--dial-slate-950);
+}
+
+.footer__title {
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.footer__link-item {
+  transition: color 0.2s ease;
+}
+
+.footer__link-item:hover {
+  color: var(--dial-blue-400);
+}
+
+/* ========================================
+   CUSTOM COMPONENTS
+   ======================================== */
+
+/* Grid pattern background */
+.dial-grid-bg {
+  background-image: 
+    linear-gradient(rgba(26, 163, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(26, 163, 255, 0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* Animated gradient border */
+.dial-gradient-border {
+  position: relative;
+  background: var(--dial-slate-900);
+  border-radius: 16px;
+}
+
+.dial-gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 18px;
+  background: linear-gradient(
+    135deg,
+    var(--dial-blue-500),
+    var(--dial-amber-500),
+    var(--dial-blue-500)
+  );
+  background-size: 200% 200%;
+  animation: gradient-rotate 6s linear infinite;
+  z-index: -1;
+}
+
+@keyframes gradient-rotate {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Status indicators */
+.dial-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.dial-status--human {
+  background: rgba(255, 201, 26, 0.1);
+  color: var(--dial-amber-400);
+}
+
+.dial-status--ai {
+  background: rgba(26, 163, 255, 0.1);
+  color: var(--dial-blue-400);
+}
+
+/* Pulse animation for "live" elements */
+.dial-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ========================================
+   RESPONSIVE ADJUSTMENTS
+   ======================================== */
+
+@media screen and (max-width: 996px) {
+  .hero {
+    padding: 4rem 1rem;
+  }
+  
+  .hero__title {
+    font-size: 2.5rem;
+  }
+  
+  .hero__subtitle {
+    font-size: 1.125rem;
+  }
+  
+  .card__header {
+    padding: 1.25rem 1.25rem 0.5rem;
+  }
+  
+  .card__body {
+    padding: 0.5rem 1.25rem 1.25rem;
+  }
+}
+
+/* ========================================
+   ANIMATIONS
+   ======================================== */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fadeInUp {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* Staggered animation delays */
+.animate-delay-100 { animation-delay: 100ms; }
+.animate-delay-200 { animation-delay: 200ms; }
+.animate-delay-300 { animation-delay: 300ms; }
+.animate-delay-400 { animation-delay: 400ms; }
+.animate-delay-500 { animation-delay: 500ms; }
+
+/* ========================================
+   MERMAID DIAGRAMS
+   ======================================== */
+
+[data-theme='dark'] .mermaid {
+  background: transparent;
+}
+
+[data-theme='dark'] .mermaid .node rect,
+[data-theme='dark'] .mermaid .node circle,
+[data-theme='dark'] .mermaid .node ellipse,
+[data-theme='dark'] .mermaid .node polygon {
+  fill: var(--dial-slate-800);
+  stroke: var(--dial-blue-500);
+}
+
+[data-theme='dark'] .mermaid .edgePath .path {
+  stroke: var(--dial-blue-400);
+}
+
+[data-theme='dark'] .mermaid .label {
+  color: var(--dial-slate-100);
 }

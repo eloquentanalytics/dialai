@@ -1,23 +1,632 @@
 /**
- * CSS files with the .module.css extension will be treated as CSS modules
- * and scoped locally.
+ * DIAL Homepage Styles
+ * A distinctive, modern design for the DIAL framework documentation
  */
 
-.heroBanner {
-  padding: 4rem 0;
-  text-align: center;
+/* ========================================
+   HERO SECTION
+   ======================================== */
+
+.hero {
   position: relative;
-  overflow: hidden;
-}
-
-@media screen and (max-width: 996px) {
-  .heroBanner {
-    padding: 2rem;
-  }
-}
-
-.buttons {
+  min-height: 80vh;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  padding: 4rem 2rem 2rem;
+}
+
+.heroBackground {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.heroContent {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;
+  gap: 2rem;
+  align-items: center;
+  max-width: 1300px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.heroText {
+  max-width: 600px;
+}
+
+.heroTitle {
+  font-size: clamp(4rem, 10vw, 7rem);
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  margin-bottom: 0.5rem;
+}
+
+.titleGradient {
+  background: linear-gradient(
+    135deg,
+    var(--dial-slate-50) 0%,
+    var(--dial-blue-200) 40%,
+    var(--dial-amber-300) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.heroTagline {
+  font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+  font-weight: 500;
+  color: var(--dial-blue-400);
+  margin-bottom: 1.5rem;
+  letter-spacing: -0.01em;
+}
+
+.heroDescription {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  color: var(--dial-slate-300);
+  margin-bottom: 1.75rem;
+}
+
+.heroButtons {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.heroButtonPrimary {
+  background: linear-gradient(135deg, var(--dial-blue-600) 0%, var(--dial-blue-700) 100%) !important;
+  border: none !important;
+  box-shadow: 0 4px 20px rgba(26, 163, 255, 0.4);
+}
+
+.heroButtonPrimary:hover {
+  background: linear-gradient(135deg, var(--dial-blue-500) 0%, var(--dial-blue-600) 100%) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 30px rgba(26, 163, 255, 0.5);
+}
+
+.heroButtonSecondary {
+  background: transparent !important;
+  color: var(--dial-amber-400) !important;
+  border: 2px solid var(--dial-amber-400) !important;
+}
+
+.heroButtonSecondary:hover {
+  background: rgba(255, 201, 26, 0.1) !important;
+  transform: translateY(-2px);
+}
+
+.heroVisual {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.heroIllustration {
+  width: 100%;
+  max-width: 650px;
+  height: auto;
+  filter: drop-shadow(0 0 40px rgba(26, 163, 255, 0.15));
+}
+
+
+/* ========================================
+   SECTION COMMON STYLES
+   ======================================== */
+
+.sectionHeader {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.sectionTitle {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-bottom: 1rem;
+}
+
+.sectionSubtitle {
+  font-size: 1.25rem;
+  color: var(--dial-slate-400);
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* ========================================
+   PRINCIPLES SECTION
+   ======================================== */
+
+.principles {
+  padding: 4rem 2rem;
+  position: relative;
+}
+
+.principlesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.principleCard {
+  position: relative;
+  background: linear-gradient(
+    180deg,
+    rgba(30, 41, 59, 0.6) 0%,
+    rgba(15, 23, 42, 0.6) 100%
+  );
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 20px;
+  padding: 2.5rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.principleCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  border-radius: 20px 20px 0 0;
+}
+
+.principleCard--human::before {
+  background: linear-gradient(90deg, var(--dial-amber-500), var(--dial-amber-400));
+}
+
+.principleCard--ai::before {
+  background: linear-gradient(90deg, var(--dial-blue-500), var(--dial-blue-400));
+}
+
+.principleCard--trust::before {
+  background: linear-gradient(90deg, var(--dial-blue-500), var(--dial-amber-500));
+}
+
+.principleCard:hover {
+  transform: translateY(-8px);
+  border-color: rgba(26, 163, 255, 0.3);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.4), 0 0 50px rgba(26, 163, 255, 0.1);
+}
+
+.principleIcon {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 1.5rem;
+}
+
+.principleIcon img {
+  width: 100%;
+  height: 100%;
+}
+
+.principleTitle {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  letter-spacing: -0.02em;
+}
+
+.principleDescription {
+  color: var(--dial-slate-300);
+  line-height: 1.7;
+  margin: 0;
+}
+
+/* ========================================
+   THE QUESTION SECTION
+   ======================================== */
+
+.questionSection {
+  padding: 4rem 2rem;
+  background: linear-gradient(
+    180deg,
+    rgba(26, 163, 255, 0.03) 0%,
+    transparent 100%
+  );
+  border-top: 1px solid rgba(26, 163, 255, 0.1);
+  border-bottom: 1px solid rgba(26, 163, 255, 0.1);
+}
+
+.questionContent {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 4rem;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.questionTitle {
+  font-size: clamp(2rem, 4vw, 2.5rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-bottom: 2rem;
+  color: var(--dial-blue-300);
+}
+
+.questionQuote {
+  font-size: 1.35rem;
+  line-height: 1.7;
+  color: var(--dial-slate-200);
+  border-left: 4px solid var(--dial-blue-500);
+  padding-left: 1.5rem;
+  margin: 0 0 1.5rem 0;
+  font-style: normal;
+}
+
+.highlight {
+  color: var(--dial-amber-400);
+  font-weight: 600;
+}
+
+.questionFollow {
+  font-size: 1.125rem;
+  color: var(--dial-slate-400);
+  line-height: 1.6;
+}
+
+.questionVisual {
+  display: flex;
+  justify-content: center;
+}
+
+.costMetrics {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.metric {
+  background: rgba(30, 41, 59, 0.5);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 16px;
+  padding: 1.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 180px;
+}
+
+.metricValue {
+  font-size: 2rem;
+  font-weight: 700;
+  font-family: var(--ifm-font-family-monospace);
+  color: var(--dial-blue-400);
+}
+
+.metricLabel {
+  font-size: 0.875rem;
+  color: var(--dial-slate-400);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ========================================
+   HOW IT WORKS SECTION
+   ======================================== */
+
+.howItWorks {
+  padding: 4rem 2rem;
+}
+
+.conceptsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto 4rem;
+}
+
+.conceptCard {
+  display: flex;
+  flex-direction: column;
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 16px;
+  padding: 2rem;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.3s ease;
+}
+
+.conceptCard:hover {
+  transform: translateY(-4px);
+  border-color: var(--dial-blue-500);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  text-decoration: none;
+  color: inherit;
+}
+
+.conceptIcon {
+  width: 64px;
+  height: 64px;
+  margin-bottom: 1.25rem;
+}
+
+.conceptIcon img {
+  width: 100%;
+  height: 100%;
+}
+
+.conceptTitle {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.01em;
+}
+
+.conceptDescription {
+  color: var(--dial-slate-400);
+  line-height: 1.6;
+  flex-grow: 1;
+  margin-bottom: 1rem;
+}
+
+.conceptLink {
+  color: var(--dial-blue-400);
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.flowDiagram {
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 2rem 0;
+}
+
+.flowImage {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  display: block;
+  border-radius: 16px;
+  background: var(--dial-slate-900);
+}
+
+/* ========================================
+   STARTING PESSIMISTIC SECTION
+   ======================================== */
+
+.pessimisticSection {
+  padding: 4rem 2rem;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(255, 201, 26, 0.02) 50%,
+    transparent 100%
+  );
+}
+
+.pessimisticContent {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 4rem;
+  align-items: center;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.weightScale {
+  display: flex;
+  align-items: stretch;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.weightAI,
+.weightHuman {
+  background: rgba(30, 41, 59, 0.6);
+  border-radius: 16px;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-width: 140px;
+}
+
+.weightAI {
+  border: 2px solid var(--dial-blue-500);
+}
+
+.weightHuman {
+  border: 2px solid var(--dial-amber-500);
+}
+
+.weightLabel {
+  font-size: 0.875rem;
+  color: var(--dial-slate-400);
+  margin-bottom: 0.5rem;
+}
+
+.weightValue {
+  font-size: 3rem;
+  font-weight: 800;
+  font-family: var(--ifm-font-family-monospace);
+}
+
+.weightAI .weightValue {
+  color: var(--dial-blue-400);
+}
+
+.weightHuman .weightValue {
+  color: var(--dial-amber-400);
+}
+
+.weightNote {
+  font-size: 0.75rem;
+  color: var(--dial-slate-500);
+  margin-top: 0.5rem;
+}
+
+.weightDivider {
+  display: flex;
+  align-items: center;
+  color: var(--dial-slate-600);
+  font-weight: 600;
+}
+
+.pessimisticText h2 {
+  font-size: clamp(2rem, 4vw, 2.5rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-bottom: 1.5rem;
+}
+
+.pessimisticText p {
+  color: var(--dial-slate-300);
+  font-size: 1.125rem;
+  line-height: 1.7;
+  margin-bottom: 1.5rem;
+}
+
+.emphasisText {
+  color: var(--dial-amber-400) !important;
+  font-weight: 500;
+  font-size: 1.25rem !important;
+}
+
+/* ========================================
+   CTA SECTION
+   ======================================== */
+
+.cta {
+  padding: 4rem 2rem;
+  position: relative;
+}
+
+.cta::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse 50% 50% at 50% 50%, rgba(26, 163, 255, 0.1) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.ctaContent {
+  position: relative;
+  text-align: center;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.ctaTitle {
+  font-size: clamp(2rem, 4vw, 2.5rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin-bottom: 1rem;
+}
+
+.ctaDescription {
+  font-size: 1.25rem;
+  color: var(--dial-slate-400);
+  margin-bottom: 2.5rem;
+  line-height: 1.6;
+}
+
+.ctaButtons {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* ========================================
+   RESPONSIVE ADJUSTMENTS
+   ======================================== */
+
+@media screen and (max-width: 996px) {
+  .hero {
+    min-height: auto;
+    padding: 4rem 1.5rem;
+  }
+
+  .heroContent {
+    grid-template-columns: 1fr;
+    gap: 3rem;
+    text-align: center;
+  }
+
+  .heroText {
+    max-width: 100%;
+  }
+
+  .heroButtons {
+    justify-content: center;
+  }
+
+  .heroVisual {
+    order: -1;
+  }
+
+  .heroIllustration {
+    max-width: 500px;
+  }
+
+  .questionContent {
+    grid-template-columns: 1fr;
+    gap: 3rem;
+  }
+
+  .questionVisual {
+    order: -1;
+  }
+
+  .costMetrics {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .pessimisticContent {
+    grid-template-columns: 1fr;
+    gap: 3rem;
+  }
+
+  .weightScale {
+    order: 1;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .principlesGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .conceptsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .costMetrics {
+    flex-direction: column;
+  }
+
+  .metric {
+    width: 100%;
+    max-width: 200px;
+  }
+
+  .weightScale {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .weightDivider {
+    transform: rotate(90deg);
+    padding: 0.5rem 0;
+  }
 }

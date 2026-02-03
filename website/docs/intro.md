@@ -2,34 +2,108 @@
 sidebar_position: 1
 ---
 
-# Introduction
+# Introduction to DIAL
 
-DialAI (Dynamic Integration between AI and Labor) is a coordination framework for AI and human specialists making decisions together within state machines.
+**DIAL** (Dynamic Integration between AI and Labor) is a coordination framework for AI and human specialists making decisions together within state machines.
 
-## The Question DialAI Answers
+## Why DIAL?
 
-Given any task modeled as a state machine: **how do you know — in dollars, time, and quality — exactly what it would cost to turn that task over to a minimally competent AI decision-maker?** And how involved should humans remain in performing those tasks over the long term as a form of quality control?
+The promise of AI is efficiency—faster, cheaper execution of narrow tasks. But the question organizations face isn't "Can AI do this?" It's:
 
-## Starting from the Worst Case
+> **How do you know — in dollars, time, and quality — exactly what it would cost to turn any task over to a minimally competent AI decision-maker? And how involved should humans remain as quality control?**
 
-DialAI starts from a deliberately pessimistic assumption: **AI has no role.** LLM specialists begin with weight 0.0. The default assumption is that the task is too difficult for AI and only humans can navigate it. DialAI then provides the mechanism to prove otherwise, one decision at a time.
+DIAL provides the answer through **empirical measurement**, not speculation.
 
-## Key Principles
+## The Core Insight
 
-### Human Primacy
+AI models are created by us. Their works are based on our works. They cannot be better than us because they can never have as large a context as we do.
 
-The human is always right — not because humans are infallible, but because humans have context that AI cannot access. An AI model operates on a bounded context window, while a human operates on a lifetime of embodied experience, tacit knowledge, institutional context, and real-time sensory input.
+An AI model operates on a bounded context window—thousands or millions of tokens. A human operates on a **lifetime of embodied experience**, tacit knowledge, institutional context, and real-time sensory input that no model has access to.
 
-### Progressive Collapse
+The human knows things they cannot tell the machine.
 
-Over repeated decision cycles, measuring how well AI predicts human choices causes the multi-agent deliberation structure to progressively collapse into deterministic execution. This collapse is emergent, not designed.
+## Three Foundational Principles
 
-### Empirical Trust
+### 1. Human Primacy
 
-Trust is earned through demonstrated alignment with human decisions. Specialists are evaluated on their ability to predict what the human would choose, not on their independent correctness.
+The human is always right—not because humans are infallible, but because humans have context that AI cannot access.
+
+It is always safer for the AI to assume the human had reasons, just as it is safer for a child to defer to a parent—not because the parent is infallible, but because the parent has context the child cannot access.
+
+An AI specialist should choose what the human would choose, even if its own reasoning disagrees. It will be judged on alignment with the human, and that judgment is correct.
+
+### 2. Progressive Collapse
+
+Over repeated decision cycles, measuring how well AI predicts human choices causes the multi-agent deliberation structure to **progressively collapse into deterministic execution**.
+
+This collapse is emergent, not designed. As AI specialists prove their alignment with human judgment through accumulated data, the expensive deliberation process naturally simplifies.
+
+### 3. Empirical Trust
+
+Trust is earned through demonstrated alignment with human decisions, not assumed.
+
+- **LLM specialists start with weight 0.0**—no autonomous authority
+- **Humans have weight 1.0**—full authority
+- AI specialists earn trust by accurately predicting what humans would choose
+- Trust is measured in precise terms: cost per decision, latency, alignment rate
+
+## What DIAL Is Not
+
+DIAL is not about AI replacing humans. It's about discovering—with precise cost data—which decisions are narrow enough for AI to handle, and what the ongoing human quality-control cost is to maintain that delegation over time.
+
+The value of AI is not superiority. **It is efficiency.** AI is faster and cheaper at narrow tasks where the required context fits within the model's window.
+
+## How It Works
+
+1. **Model the task as a state machine** — Define states, transitions, and decision prompts
+2. **Register specialists** — Both AI models and humans that can propose transitions and vote
+3. **Run decision cycles** — Solicit → Propose → Vote → Arbitrate → Execute
+4. **Measure everything** — Cost, latency, and alignment with human choices
+5. **Adjust weights** — Specialists that predict human choices accurately earn more trust
+
+```mermaid
+graph LR
+    A[Solicit] --> B[Propose]
+    B --> C[Vote]
+    C --> D[Arbitrate]
+    D --> E[Execute]
+    E --> A
+```
 
 ## What's Next?
 
-- [Getting Started](/docs/getting-started/installation) - Install and set up DialAI
-- [Concepts](/docs/concepts/intro) - Learn about sessions, specialists, and decision cycles
-- [Guides](/docs/guides/state-machines) - Build your first state machine
+<div className="row">
+  <div className="col col--6">
+    <div className="card margin-bottom--md">
+      <div className="card__header">
+        <h3>🚀 Get Started</h3>
+      </div>
+      <div className="card__body">
+        <p>Install DIAL and run your first state machine with AI and human specialists.</p>
+        <a href="/docs/getting-started/installation" className="button button--primary">Installation Guide →</a>
+      </div>
+    </div>
+  </div>
+  <div className="col col--6">
+    <div className="card margin-bottom--md">
+      <div className="card__header">
+        <h3>📚 Learn Concepts</h3>
+      </div>
+      <div className="card__body">
+        <p>Understand sessions, specialists, decision cycles, and arbitration strategies.</p>
+        <a href="/docs/concepts/intro" className="button button--secondary">Explore Concepts →</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+## Key Terminology
+
+| Term | Definition |
+|------|------------|
+| **Session** | An instance of a state machine being navigated by specialists |
+| **Specialist** | A pluggable actor (AI or human) that proposes transitions or votes |
+| **Decision Cycle** | The five-phase process: Solicit → Propose → Vote → Arbitrate → Execute |
+| **Arbiter** | The strategy that evaluates consensus and determines when a proposal wins |
+| **Weight** | A specialist's voting authority, earned through alignment with human choices |
+| **Risk Dial** | A confidence threshold that gates whether the system takes a fast or slow path |
