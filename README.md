@@ -65,4 +65,21 @@ npm run lint
 
 ## License
 
-MIT
+DialAI is licensed under the Business Source License 1.1 (BUSL-1.1). This license allows free use for development, testing, evaluation, and internal use, but restricts commercial use, particularly by cloud providers offering DialAI as a hosted or managed service.
+
+**Key restrictions:**
+- You may not use DialAI to provide a service to third parties
+- You may not offer DialAI as a hosted or managed service
+- You may not use DialAI in a production environment to provide services to third parties
+
+**Permitted uses:**
+- Development, testing, and evaluation
+- Internal use within your organization
+- Contributing to the project
+
+**Change Date:** January 1, 2029  
+**Change License:** Apache License 2.0
+
+On the Change Date, DialAI will automatically convert to the Apache License 2.0, making it fully open source. This approach protects the project from cloud provider exploitation while ensuring eventual open source availability.
+
+See [LICENSE](LICENSE) for full terms.
