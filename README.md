@@ -42,7 +42,7 @@ await registerSpecialist({
 
 ## Documentation
 
-Full documentation is available at [dialai.dev](https://yourusername.github.io/dialai/) (coming soon).
+Full documentation is available at [https://eloquentanalytics.github.io/dialai/](https://eloquentanalytics.github.io/dialai/).
 
 ## Development
 
