@@ -39,3 +39,6 @@ pnpm-debug.log*
 # Website build
 website/build/
 website/.docusaurus/
+
+# GitHub workflows (temporarily excluded - add manually via GitHub UI or with workflow scope token)
+.github/workflows/
