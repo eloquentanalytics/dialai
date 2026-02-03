@@ -23,9 +23,7 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-
-      - name: Install root dependencies
-        run: npm ci
+          cache-dependency-path: website/package-lock.json
 
       - name: Install website dependencies
         working-directory: ./website
