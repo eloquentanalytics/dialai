@@ -8,13 +8,13 @@ const config: Config = {
   favicon: "img/favicon.ico",
 
   // Set the production url of your site here
-  url: "https://yourusername.github.io",
+  url: "https://eloquentanalytics.github.io",
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages, this is usually "/<projectName>/"
   baseUrl: "/dialai/",
 
   // GitHub pages deployment config.
-  organizationName: "yourusername",
+  organizationName: "eloquentanalytics",
   projectName: "dialai",
 
   onBrokenLinks: "throw",
@@ -34,7 +34,7 @@ const config: Config = {
       {
         docs: {
           sidebarPath: "./sidebars.ts",
-          editUrl: "https://github.com/yourusername/dialai/tree/main/website/",
+          editUrl: "https://github.com/eloquentanalytics/dialai/tree/main/website/",
         },
         blog: false,
         theme: {
@@ -59,7 +59,7 @@ const config: Config = {
           label: "Docs",
         },
         {
-          href: "https://github.com/yourusername/dialai",
+          href: "https://github.com/eloquentanalytics/dialai",
           label: "GitHub",
           position: "right",
         },
@@ -86,7 +86,7 @@ const config: Config = {
           items: [
             {
               label: "GitHub",
-              href: "https://github.com/yourusername/dialai",
+              href: "https://github.com/eloquentanalytics/dialai",
             },
           ],
         },

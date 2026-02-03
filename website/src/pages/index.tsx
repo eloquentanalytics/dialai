@@ -23,7 +23,7 @@ function HomepageHeader() {
           </Link>
           <Link
             className="button button--outline button--secondary button--lg"
-            to="https://github.com/yourusername/dialai"
+            to="https://github.com/eloquentanalytics/dialai"
             style={{ marginLeft: "1rem" }}
           >
             GitHub
