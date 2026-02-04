@@ -4,11 +4,36 @@ import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import Layout from "@theme/Layout";
 import Heading from "@theme/Heading";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import styles from "./index.module.css";
 
 // Import images directly for better bundling
 import HeroIllustrationSvg from "@site/static/img/hero-illustration.svg";
-import DiagramDecisionFlow from "@site/static/img/diagram-decision-flow.svg";
+
+// IntersectionObserver hook for entrance animations
+function useInView(options?: IntersectionObserverInit): [RefObject<HTMLElement | null>, boolean] {
+  const ref = useRef<HTMLElement | null>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setInView(true);
+          observer.unobserve(el);
+        }
+      },
+      { threshold: 0.15, ...options },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  return [ref, inView];
+}
 
 // Feature data for the main principles section
 const principles = [
@@ -41,35 +66,28 @@ const concepts = [
     title: "State Machines",
     icon: "img/icon-state-machine.svg",
     description:
-      "Model any task as a state machine. Define states, transitions, and decision prompts. DIAL coordinates specialists to navigate from any state back to the default.",
+      "Model any task as a state machine with defined states, transitions, and decision prompts.",
     link: "/docs/guides/state-machines",
   },
   {
     title: "Specialists",
     icon: "img/icon-specialists.svg",
     description:
-      "Pluggable actors — both AI models and humans — that propose transitions and vote on alternatives. Each specialist has a weight that evolves based on performance.",
+      "Pluggable AI and human actors that propose transitions and vote on alternatives.",
     link: "/docs/concepts/specialists",
   },
   {
     title: "Decision Cycle",
     icon: "img/icon-decision-cycle.svg",
     description:
-      "A five-phase cycle: Solicit → Propose → Vote → Arbitrate → Execute. The cycle repeats until the session returns to its default state.",
+      "A five-phase cycle — Solicit, Propose, Vote, Arbitrate, Execute — repeated until resolution.",
     link: "/docs/concepts/decision-cycle",
   },
 ];
 
 function HeroSection() {
-  const { siteConfig } = useDocusaurusContext();
-  const patternGrid = useBaseUrl("img/pattern-grid.svg");
-  
   return (
     <header className={styles.hero}>
-      <div 
-        className={styles.heroBackground} 
-        style={{ backgroundImage: `radial-gradient(ellipse 80% 50% at 20% 40%, rgba(26, 163, 255, 0.15) 0%, transparent 50%), radial-gradient(ellipse 60% 40% at 80% 60%, rgba(255, 201, 26, 0.1) 0%, transparent 40%), url('${patternGrid}')` }}
-      />
       <div className={styles.heroContent}>
         <div className={styles.heroText}>
           <Heading as="h1" className={styles.heroTitle}>
@@ -79,16 +97,15 @@ function HeroSection() {
             Dynamic Integration between AI and Labor
           </p>
           <p className={styles.heroDescription}>
-            A coordination framework for AI and human specialists making
-            decisions together within state machines. Know exactly what it costs
-            to delegate any task to AI — in dollars, time, and quality.
+            A framework for measuring exactly what it costs — in dollars, time,
+            and quality — to delegate any decision to AI.
           </p>
           <div className={styles.heroButtons}>
             <Link
               className={clsx("button button--secondary button--lg", styles.heroButtonPrimary)}
               to="/docs/intro"
             >
-              Get Started
+              Read the Docs
             </Link>
             <Link
               className={clsx("button button--outline button--secondary button--lg", styles.heroButtonSecondary)}
@@ -99,7 +116,7 @@ function HeroSection() {
           </div>
         </div>
         <div className={styles.heroVisual}>
-          <HeroIllustrationSvg 
+          <HeroIllustrationSvg
             className={styles.heroIllustration}
             role="img"
             aria-label="DIAL Framework - AI and Human Coordination"
@@ -126,8 +143,12 @@ function PrincipleCard({ title, icon, description, accent }) {
 }
 
 function PrinciplesSection() {
+  const [ref, inView] = useInView();
   return (
-    <section className={styles.principles}>
+    <section
+      ref={ref as RefObject<HTMLElement>}
+      className={clsx(styles.principles, inView && styles.animateIn)}
+    >
       <div className="container">
         <div className={styles.sectionHeader}>
           <Heading as="h2" className={styles.sectionTitle}>
@@ -149,8 +170,12 @@ function PrinciplesSection() {
 }
 
 function TheQuestionSection() {
+  const [ref, inView] = useInView();
   return (
-    <section className={styles.questionSection}>
+    <section
+      ref={ref as RefObject<HTMLElement>}
+      className={clsx(styles.questionSection, inView && styles.animateIn)}
+    >
       <div className="container">
         <div className={styles.questionContent}>
           <div className={styles.questionText}>
@@ -171,19 +196,27 @@ function TheQuestionSection() {
             </p>
           </div>
           <div className={styles.questionVisual}>
-            <div className={styles.costMetrics}>
-              <div className={styles.metric}>
-                <span className={styles.metricValue}>$0.003</span>
-                <span className={styles.metricLabel}>per decision</span>
+            <div className={styles.metricsIntro}>
+              <p className={styles.metricsLabel}>
+                DIAL tracks per-specialist:
+              </p>
+              <div className={styles.costMetrics}>
+                <div className={styles.metric}>
+                  <span className={styles.metricValue}>$0.003</span>
+                  <span className={styles.metricLabel}>costUSD</span>
+                </div>
+                <div className={styles.metric}>
+                  <span className={styles.metricValue}>~200ms</span>
+                  <span className={styles.metricLabel}>latencyMsec</span>
+                </div>
+                <div className={styles.metric}>
+                  <span className={styles.metricValue}>94.2%</span>
+                  <span className={styles.metricLabel}>alignment</span>
+                </div>
               </div>
-              <div className={styles.metric}>
-                <span className={styles.metricValue}>~200ms</span>
-                <span className={styles.metricLabel}>latency</span>
-              </div>
-              <div className={styles.metric}>
-                <span className={styles.metricValue}>94.2%</span>
-                <span className={styles.metricLabel}>alignment</span>
-              </div>
+              <p className={styles.metricsCaption}>
+                Illustrative framework output per specialist per decision cycle
+              </p>
             </div>
           </div>
         </div>
@@ -209,8 +242,12 @@ function ConceptCard({ title, icon, description, link }) {
 }
 
 function HowItWorksSection() {
+  const [ref, inView] = useInView();
   return (
-    <section className={styles.howItWorks}>
+    <section
+      ref={ref as RefObject<HTMLElement>}
+      className={clsx(styles.howItWorks, inView && styles.animateIn)}
+    >
       <div className="container">
         <div className={styles.sectionHeader}>
           <Heading as="h2" className={styles.sectionTitle}>
@@ -226,21 +263,18 @@ function HowItWorksSection() {
             <ConceptCard key={idx} {...concept} />
           ))}
         </div>
-        <div className={styles.flowDiagram}>
-          <DiagramDecisionFlow 
-            className={styles.flowImage}
-            role="img"
-            aria-label="Decision Cycle Flow"
-          />
-        </div>
       </div>
     </section>
   );
 }
 
 function StartingPessimisticSection() {
+  const [ref, inView] = useInView();
   return (
-    <section className={styles.pessimisticSection}>
+    <section
+      ref={ref as RefObject<HTMLElement>}
+      className={clsx(styles.pessimisticSection, inView && styles.animateIn)}
+    >
       <div className="container">
         <div className={styles.pessimisticContent}>
           <div className={styles.pessimisticVisual}>
@@ -280,8 +314,12 @@ function StartingPessimisticSection() {
 }
 
 function CTASection() {
+  const [ref, inView] = useInView();
   return (
-    <section className={styles.cta}>
+    <section
+      ref={ref as RefObject<HTMLElement>}
+      className={clsx(styles.cta, inView && styles.animateIn)}
+    >
       <div className="container">
         <div className={styles.ctaContent}>
           <Heading as="h2" className={styles.ctaTitle}>
@@ -316,7 +354,7 @@ export default function Home(): JSX.Element {
   return (
     <Layout
       title="Dynamic Integration between AI and Labor"
-      description="A coordination framework for AI and human specialists making decisions together within state machines. Know exactly what it costs to delegate tasks to AI."
+      description="A framework for measuring exactly what it costs — in dollars, time, and quality — to delegate any decision to AI."
     >
       <HeroSection />
       <main>

@@ -152,12 +152,12 @@ const config: Config = {
       darkTheme: prismThemes.dracula,
       additionalLanguages: ["bash", "json", "typescript"],
     },
-    // Announcement bar (optional)
+    // Announcement bar - simplified colors
     announcementBar: {
       id: "alpha_notice",
       content:
-        '⚡ DIAL is in active development. <a href="/docs/intro">Learn about the framework</a> and help shape the future of AI-human collaboration.',
-      backgroundColor: "#1e293b",
+        'DIAL is in active development. <a href="/dialai/docs/intro">Learn about the framework</a> and help shape the future of AI-human collaboration.',
+      backgroundColor: "#141b27",
       textColor: "#94a3b8",
       isCloseable: true,
     },
@@ -174,15 +174,7 @@ const config: Config = {
       tagName: "link",
       attributes: {
         rel: "preconnect",
-        href: "https://fonts.googleapis.com",
-      },
-    },
-    {
-      tagName: "link",
-      attributes: {
-        rel: "preconnect",
-        href: "https://fonts.gstatic.com",
-        crossorigin: "anonymous",
+        href: "https://cdn.jsdelivr.net",
       },
     },
   ],

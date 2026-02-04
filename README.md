@@ -1,8 +1,12 @@
-# DialAI
-
-**Dynamic Integration between AI and Labor**
-
-A coordination framework for AI and human specialists making decisions together within state machines.
+<div align="center">
+  <img src="website/static/img/logo.svg" alt="DIAL" width="120" height="120">
+  <h1>DIAL</h1>
+  <p><strong>Dynamic Integration between AI and Labor</strong></p>
+  <p>A coordination framework for AI and human specialists making<br>decisions together within state machines.</p>
+  <br>
+  <a href="https://eloquentanalytics.github.io/dialai/"><strong>Documentation</strong></a> · <a href="https://eloquentanalytics.github.io/dialai/docs/getting-started/installation"><strong>Get Started</strong></a> · <a href="https://github.com/eloquentanalytics/dialai/issues"><strong>Issues</strong></a>
+  <br><br>
+</div>
 
 ## Overview
 
