@@ -1,0 +1,23 @@
+# DIAL
+
+> Dynamic Integration between AI and Labor
+
+This file contains links to documentation sections following the llmstxt.org standard.
+
+## Table of Contents
+
+- [Agent Experience Development](https://eloquentanalytics.github.io/dialai/docs/agent-experience): DIAL is designed for LLM-driven agents as first-class participants. Every design decision — from the API shape to the documentation format to the w...
+- [API Reference](https://eloquentanalytics.github.io/dialai/docs/api/intro): The DialAI API provides 10 functions for creating sessions, registering specialists, and managing the decision cycle. All functions are synchronous...
+- [Arbitration](https://eloquentanalytics.github.io/dialai/docs/concepts/arbitration): **Arbitration** is the process of evaluating consensus and determining when a proposal has sufficient support to execute.
+- [Decision Cycle](https://eloquentanalytics.github.io/dialai/docs/concepts/decision-cycle): When a session is not in its default state, the system progresses through a repeating cycle until it reaches the goal.
+- [Human Primacy](https://eloquentanalytics.github.io/dialai/docs/concepts/human-primacy): **The human is always right** — not because humans are infallible, but because humans have context that AI cannot access.
+- [Core Concepts](https://eloquentanalytics.github.io/dialai/docs/concepts/intro): DIAL provides a structured approach to AI-human collaboration built around a few key abstractions. Understanding these concepts is essential to wor...
+- [Sessions](https://eloquentanalytics.github.io/dialai/docs/concepts/sessions): A **session** is an instance of a state machine that specialists navigate through decision cycles.
+- [Specialists](https://eloquentanalytics.github.io/dialai/docs/concepts/specialists): Specialists are the "pluggable" actors that participate in sessions. They can be AI models or humans.
+- [Examples](https://eloquentanalytics.github.io/dialai/docs/examples/intro): This section contains example implementations demonstrating DialAI usage.
+- [Installation](https://eloquentanalytics.github.io/dialai/docs/getting-started/installation): Get DIAL up and running in your project.
+- [Quick Start](https://eloquentanalytics.github.io/dialai/docs/getting-started/quick-start): Build your first DIAL state machine with specialists.
+- [Implementing Strategies](https://eloquentanalytics.github.io/dialai/docs/guides/implementing-strategies): Strategies are functions that define how specialists make decisions. Each specialist is registered with a strategy function that gets called during...
+- [Registering Specialists](https://eloquentanalytics.github.io/dialai/docs/guides/registering-specialists): Specialists are registered for a specific session type using the `registerSpecialist` function.
+- [State Machines](https://eloquentanalytics.github.io/dialai/docs/guides/state-machines): State machines define the structure of your sessions. Each session type has its own machine definition.
+- [Introduction to DIAL](https://eloquentanalytics.github.io/dialai/docs/intro): **DIAL** (Dynamic Integration between AI and Labor) is a coordination framework for AI and human specialists making decisions together within state...

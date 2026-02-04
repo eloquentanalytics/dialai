@@ -9,45 +9,43 @@
       <stop offset="100%" stop-color="#e6b000"/>
     </linearGradient>
   </defs>
-  
+
   <!-- Background -->
-  <rect width="80" height="80" rx="16" fill="#0f172a"/>
-  
+  <rect width="80" height="80" rx="16" fill="none"/>
+
   <!-- AI Specialists (left group) -->
   <g transform="translate(22, 30)">
-    <!-- AI 1 -->
     <rect x="-8" y="-8" width="16" height="16" rx="4" fill="url(#specAiGrad)"/>
-    <text y="4" text-anchor="middle" fill="#0f172a" font-family="monospace" font-size="8" font-weight="bold">AI</text>
+    <text y="4" text-anchor="middle" fill="#fff" font-family="monospace" font-size="8" font-weight="bold">AI</text>
   </g>
-  
+
   <g transform="translate(22, 50)">
-    <!-- AI 2 -->
     <rect x="-8" y="-8" width="16" height="16" rx="4" fill="url(#specAiGrad)" opacity="0.7"/>
-    <text y="4" text-anchor="middle" fill="#0f172a" font-family="monospace" font-size="8" font-weight="bold">AI</text>
+    <text y="4" text-anchor="middle" fill="#fff" font-family="monospace" font-size="8" font-weight="bold">AI</text>
   </g>
-  
+
   <!-- Arrows pointing to center -->
   <g stroke="#1aa3ff" stroke-width="1.5" opacity="0.6">
     <line x1="32" y1="30" x2="38" y2="38"/>
     <line x1="32" y1="50" x2="38" y2="42"/>
   </g>
-  
+
   <!-- Central coordination point -->
-  <circle cx="43" cy="40" r="6" fill="#1e293b" stroke="#475569" stroke-width="2"/>
-  
+  <circle cx="43" cy="40" r="6" fill="none" stroke="#94a3b8" stroke-width="2" opacity="0.6"/>
+
   <!-- Arrow to human -->
   <line x1="49" y1="40" x2="52" y2="40" stroke="#ffc91a" stroke-width="2"/>
-  
+
   <!-- Human Specialist (right) -->
   <g transform="translate(62, 40)">
     <circle r="12" fill="url(#specHumanGrad)"/>
     <!-- Human icon -->
-    <circle cy="-3" r="4" fill="#0f172a"/>
-    <path d="M-6,8 Q-6,2 0,2 Q6,2 6,8" fill="#0f172a"/>
+    <circle cy="-3" r="4" fill="#fff"/>
+    <path d="M-6,8 Q-6,2 0,2 Q6,2 6,8" fill="#fff"/>
   </g>
-  
+
   <!-- Weight labels -->
-  <g fill="#64748b" font-family="monospace" font-size="7">
+  <g fill="#94a3b8" font-family="monospace" font-size="7">
     <text x="22" y="68" text-anchor="middle">0.0→</text>
     <text x="62" y="68" text-anchor="middle">1.0</text>
   </g>

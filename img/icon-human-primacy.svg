@@ -12,10 +12,10 @@
       </feMerge>
     </filter>
   </defs>
-  
+
   <!-- Background -->
-  <rect width="80" height="80" rx="16" fill="#0f172a"/>
-  
+  <rect width="80" height="80" rx="16" fill="none"/>
+
   <!-- Human figure - elevated, glowing -->
   <g transform="translate(40, 35)" filter="url(#humanGlow)">
     <!-- Head -->
@@ -26,10 +26,10 @@
     <line x1="-12" y1="18" x2="-20" y2="8" stroke="url(#humanPrimacyGrad)" stroke-width="4" stroke-linecap="round"/>
     <line x1="12" y1="18" x2="20" y2="8" stroke="url(#humanPrimacyGrad)" stroke-width="4" stroke-linecap="round"/>
   </g>
-  
+
   <!-- Crown/primacy indicator -->
   <path d="M30,18 L35,10 L40,16 L45,10 L50,18" fill="none" stroke="#ffc91a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-  
+
   <!-- Radiating lines -->
   <g stroke="#ffc91a" stroke-width="1.5" opacity="0.5">
     <line x1="20" y1="30" x2="14" y2="24"/>
