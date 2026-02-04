@@ -92,6 +92,28 @@ An agent calling `submitProposal(sessionId, myId, "approve", "approved", "Docume
 
 This is agent experience development. The framework is built so that the agent's path from "I have a task" to "I took an action" is as short and unambiguous as possible.
 
+## Spec Change Workflow
+
+When a specification is updated, the change propagates through the codebase in a fixed order. This order is not a suggestion — it is the procedure an agent maintaining DIAL follows on every spec change.
+
+1. **Update the tests** — The spec changed, so the tests must change first. Write or modify tests that assert the new behavior described in the updated docs. These tests will fail. That is correct.
+2. **Update the implementation** — Modify the code in `/src` until the new tests pass and no existing tests regress.
+3. **Run the tests against the example machines** — Execute every machine definition in `/examples` through the CLI and programmatic API. The examples are integration tests. If a spec change breaks an example, the example is wrong — not the spec.
+4. **Fix the example machines** — Update any example that fails to conform to the new spec. Record what changed in each example and why.
+5. **Synthesize and write the changelog** — Combine the spec change, the implementation change, and the example fixes into a single changelog entry. Write it as an instruction to an agent that depends on DIAL: what changed, what breaks, what to do about it.
+
+Each change like this is a **branch**. The branch contains a series of commits following the steps above. When the branch is merged, the merge commit carries the changelog message and a version bump.
+
+### Versioning
+
+The current version is tracked in `VERSION.md` at the repository root. The format is a single line containing the semantic version number. The merge commit that closes a spec change branch increments the version:
+
+- **Patch** — bug fixes, example corrections, doc clarifications that do not change behavior
+- **Minor** — new functions, new parameters, new fields on existing types
+- **Major** — removed functions, changed return types, changed parameter semantics
+
+The version in `VERSION.md` is the version. There is no `package.json` version to keep in sync, no release script to run. An agent reading `VERSION.md` knows what version of the spec the codebase implements.
+
 ---
 
 ## API Reference
