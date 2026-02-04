@@ -168,17 +168,19 @@ export function evaluateConsensus(sessionId: string): ConsensusResult {
   for (const vote of sessionVotes) {
     if (vote.specialistId.toLowerCase().includes("human")) {
       if (vote.voteFor === "A") {
+        const preferred = proposals.get(vote.proposalIdA);
         return {
           consensusReached: true,
           winningProposalId: vote.proposalIdA,
-          reasoning: "Human voter override",
+          reasoning: `The human preferred: ${preferred?.toState ?? vote.proposalIdA}`,
         };
       }
       if (vote.voteFor === "B") {
+        const preferred = proposals.get(vote.proposalIdB);
         return {
           consensusReached: true,
           winningProposalId: vote.proposalIdB,
-          reasoning: "Human voter override",
+          reasoning: `The human preferred: ${preferred?.toState ?? vote.proposalIdB}`,
         };
       }
     }

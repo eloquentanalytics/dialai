@@ -286,7 +286,7 @@ describe("evaluateConsensus", () => {
     const result = evaluateConsensus(session.sessionId);
     expect(result.consensusReached).toBe(true);
     expect(result.winningProposalId).toBe(pB.proposalId);
-    expect(result.reasoning).toContain("Human");
+    expect(result.reasoning).toContain("human preferred");
   });
 });
 

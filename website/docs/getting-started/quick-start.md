@@ -124,12 +124,12 @@ submitVote(
 // Evaluate consensus — human votes win immediately
 const consensus = evaluateConsensus(session.sessionId);
 console.log(consensus.consensusReached); // true
-console.log(consensus.reasoning);        // "Human voter override"
+console.log(consensus.reasoning);        // "The human preferred: sure"
 
 // Execute the winning transition, recording the arbiter's reasoning
 executeTransition(session.sessionId, "yes", "sure", consensus.reasoning);
 console.log(session.currentState); // "sure"
-console.log(session.history);      // [{ fromState: "unsure", toState: "sure", reasoning: "Human voter override", ... }]
+console.log(session.history);      // [{ fromState: "unsure", toState: "sure", reasoning: "The human preferred: sure", ... }]
 ```
 
 Because the specialist ID `"human-reviewer"` contains "human", `evaluateConsensus` gives their vote priority. This is **human primacy** — humans always get the final say.

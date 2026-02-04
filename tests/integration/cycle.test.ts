@@ -87,7 +87,7 @@ describe("integration: load simple-machine.json and run", () => {
     const machine = JSON.parse(raw) as MachineDefinition;
 
     const session = runSession(machine);
-    expect(session.currentState).toBe("done");
-    expect(session.sessionTypeName).toBe("simple-task");
+    expect(session.currentState).toBe("sure");
+    expect(session.sessionTypeName).toBe("is-two-greater");
   });
 });
