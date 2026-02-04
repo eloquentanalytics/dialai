@@ -4,83 +4,176 @@ sidebar_position: 3
 
 # Implementing Strategies
 
-Strategies are pluggable implementations for specialist roles. They are loaded from `./strategies/{sessionTypeName}/{strategyFunctionKey}.ts`.
+Strategies are functions that define how specialists make decisions. Each specialist is registered with a strategy function that gets called during the decision cycle.
 
 ## Proposer Strategy
 
-A proposer strategy receives the decision prompt, event stream, and model ID, and returns a proposal:
+A proposer strategy receives the current state name and available transitions, and returns a transition choice:
 
 ```typescript
-import type { ProposalDecisionInput, SubmitProposalCommand } from "dialai";
+import type { ProposerStrategy } from "dialai";
 
-export async function myProposer(
-  input: ProposalDecisionInput
-): Promise<SubmitProposalCommand> {
-  const { prompt, eventStream, modelId } = input;
+const myProposer: ProposerStrategy = (currentState, transitions) => {
+  // currentState: string — the session's current state name
+  // transitions: Record<string, string> — maps transition name → target state
 
-  // Your logic here to generate a proposal
-  // Call LLM, analyze state, etc.
+  // Your logic here: call an LLM, apply rules, etc.
 
   return {
-    transitionName: "next",
-    toStateName: "working",
-    toParamsJSONString: JSON.stringify({ step: 1 }),
-    reasoning: "Based on the current state, I propose moving to working state.",
-    costUSD: 0.001,
-    latencyMsec: 150,
-    numInputTokens: 100,
-    numOutputTokens: 50
+    transitionName: "complete",
+    toState: "done",
+    reasoning: "Task is ready to be completed",
   };
-}
+};
+```
+
+### ProposerStrategy Type
+
+```typescript
+type ProposerStrategy = (
+  currentState: string,
+  transitions: Record<string, string>
+) => {
+  transitionName: string;
+  toState: string;
+  reasoning: string;
+};
+```
+
+### Example: Pick the First Transition
+
+```typescript
+const firstTransition: ProposerStrategy = (_currentState, transitions) => {
+  const name = Object.keys(transitions)[0];
+  return {
+    transitionName: name,
+    toState: transitions[name],
+    reasoning: "First available transition",
+  };
+};
+```
+
+### Example: Goal-Directed Proposer
+
+```typescript
+const goalDirected: ProposerStrategy = (_currentState, transitions) => {
+  // Prefer transitions that lead to the goal state
+  for (const [name, target] of Object.entries(transitions)) {
+    if (target === "done" || target === "approved" || target === "completed") {
+      return {
+        transitionName: name,
+        toState: target,
+        reasoning: `Transition "${name}" leads directly to goal state "${target}"`,
+      };
+    }
+  }
+  // Fallback to first transition
+  const name = Object.keys(transitions)[0];
+  return {
+    transitionName: name,
+    toState: transitions[name],
+    reasoning: "No direct path to goal; taking first available transition",
+  };
+};
 ```
 
 ## Voter Strategy
 
-A voter strategy compares two proposals:
+A voter strategy compares two proposals and returns a preference:
 
 ```typescript
-import type { VoteDecisionInput, SubmitVoteCommand } from "dialai";
+import type { VoterStrategy } from "dialai";
 
-export async function myVoter(
-  input: VoteDecisionInput
-): Promise<SubmitVoteCommand> {
-  const { prompt, eventStream, proposalA, proposalB, modelId } = input;
+const myVoter: VoterStrategy = (proposalA, proposalB) => {
+  // proposalA, proposalB: Proposal objects with:
+  //   proposalId, sessionId, specialistId, transitionName, toState, reasoning
 
   // Your logic to compare proposals
 
   return {
-    voteFor: "A", // or "B", "BOTH", "NEITHER"
-    reasoning: "Proposal A better aligns with the decision criteria.",
-    costUSD: 0.0005,
-    latencyMsec: 100,
-    numInputTokens: 200,
-    numOutputTokens: 30
+    voteFor: "A", // "A" | "B" | "BOTH" | "NEITHER"
+    reasoning: "Proposal A better aligns with the decision criteria",
   };
-}
+};
 ```
 
-## Arbiter Strategy
-
-An arbiter strategy evaluates consensus:
+### VoterStrategy Type
 
 ```typescript
-import type { ArbiterDecisionInput } from "dialai";
-
-export function myArbiter(
-  input: ArbiterDecisionInput
-): {
-  consensusReached: boolean;
-  winningProposalId?: string;
+type VoterStrategy = (
+  proposalA: Proposal,
+  proposalB: Proposal
+) => {
+  voteFor: VoteChoice; // "A" | "B" | "BOTH" | "NEITHER"
   reasoning: string;
-} {
-  const { proposals, votes, riskDial } = input;
+};
+```
 
-  // Your consensus logic here
+### Example: Prefer Goal-Reaching Proposals
 
-  return {
-    consensusReached: true,
-    winningProposalId: proposals[0].proposalId,
-    reasoning: "Proposal has sufficient weighted support."
-  };
-}
+```typescript
+const goalVoter: VoterStrategy = (proposalA, proposalB) => {
+  const aReachesGoal = proposalA.toState === "done";
+  const bReachesGoal = proposalB.toState === "done";
+
+  if (aReachesGoal && !bReachesGoal) {
+    return { voteFor: "A", reasoning: "Proposal A reaches the goal state" };
+  }
+  if (bReachesGoal && !aReachesGoal) {
+    return { voteFor: "B", reasoning: "Proposal B reaches the goal state" };
+  }
+  if (aReachesGoal && bReachesGoal) {
+    return { voteFor: "BOTH", reasoning: "Both proposals reach the goal" };
+  }
+  return { voteFor: "NEITHER", reasoning: "Neither proposal reaches the goal" };
+};
+```
+
+## Using Strategies with Specialists
+
+Register strategies when creating specialists:
+
+```typescript
+import { registerSpecialist } from "dialai";
+
+registerSpecialist({
+  specialistId: "goal-proposer",
+  sessionTypeName: "my-task",
+  role: "proposer",
+  strategy: goalDirected,
+});
+
+registerSpecialist({
+  specialistId: "goal-voter",
+  sessionTypeName: "my-task",
+  role: "voter",
+  strategy: goalVoter,
+});
+```
+
+## Direct Submission
+
+You can also bypass strategies and submit proposals or votes directly:
+
+```typescript
+import { submitProposal, submitVote } from "dialai";
+
+// Submit a proposal without a registered strategy
+const proposal = submitProposal(
+  sessionId,
+  "manual-proposer",
+  "approve",
+  "approved",
+  "Manually approved after review"
+);
+
+// Submit a vote directly
+const vote = submitVote(
+  sessionId,
+  "manual-voter",
+  proposalA.proposalId,
+  proposalB.proposalId,
+  "A",
+  "Prefer proposal A"
+);
 ```

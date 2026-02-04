@@ -4,63 +4,157 @@ sidebar_position: 2
 
 # Registering Specialists
 
-Specialists are registered for a specific session type and can be scoped to specific states.
+Specialists are registered for a specific session type using the `registerSpecialist` function.
 
 ## Basic Registration
 
 ```typescript
 import { registerSpecialist } from "dialai";
 
-await registerSpecialist({
-  specialistId: "specialist.my-task.proposer.gpt-4",
+registerSpecialist({
+  specialistId: "ai-proposer-1",
   sessionTypeName: "my-task",
-  specialistRole: "proposer",
-  strategyFunctionKey: "proposer",
-  modelId: "gpt-4",
-  displayName: "GPT-4 Proposer",
-  weight: 0.0,
-  temperature: 0.2,
-  maxTokens: 2000
+  role: "proposer",
+  strategy: (currentState, transitions) => {
+    const name = Object.keys(transitions)[0];
+    return {
+      transitionName: name,
+      toState: transitions[name],
+      reasoning: "First available transition",
+    };
+  },
 });
 ```
 
-## Specialist ID Format
+## Registration Options
 
-The recommended format for specialist IDs is:
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `specialistId` | `string` | Yes | — | Unique identifier for this specialist |
+| `sessionTypeName` | `string` | Yes | — | Which session type this specialist participates in |
+| `role` | `"proposer" \| "voter" \| "arbiter"` | Yes | — | The specialist's role |
+| `weight` | `number` | No | `1.0` | Voting weight used in consensus evaluation |
+| `strategy` | `ProposerStrategy \| VoterStrategy` | Yes | — | The strategy function |
+
+## Specialist ID Conventions
+
+Any naming scheme works, but including the role and purpose is helpful:
 
 ```
-specialist.{sessionType}.{role}.{provider}_{model}_{tier}
+ai-proposer-1
+ai-voter-gpt4
+human-reviewer
+human-approver-jane
 ```
 
-Example: `specialist.hanoi.proposer.nvidia_nemotron-3-nano-30b-a3b_free`
-
-This format encodes model parameters in the ID itself, ensuring each model configuration is a distinct specialist.
-
-## State-Scoped Specialists
-
-You can register a specialist to only be available in a specific state:
+To enable the human override in `evaluateConsensus`, include "human" (case-insensitive) anywhere in the `specialistId`:
 
 ```typescript
-await registerSpecialist({
-  specialistId: "specialist.my-task.proposer.gpt-4",
-  sessionTypeName: "my-task",
-  fromStateName: "working", // Only available in "working" state
-  specialistRole: "proposer",
-  // ... other fields
+// These all trigger human primacy:
+registerSpecialist({ specialistId: "human-reviewer", ... });
+registerSpecialist({ specialistId: "specialist.human.jane", ... });
+registerSpecialist({ specialistId: "HUMAN_APPROVER", ... });
+```
+
+## Proposer Specialists
+
+A proposer's strategy receives the current state name and the available transitions map, and returns a transition choice:
+
+```typescript
+import type { ProposerStrategy } from "dialai";
+
+const myProposer: ProposerStrategy = (currentState, transitions) => {
+  // transitions is Record<string, string> — maps transition name → target state
+  return {
+    transitionName: "approve",
+    toState: "approved",
+    reasoning: "Document meets standards",
+  };
+};
+
+registerSpecialist({
+  specialistId: "smart-proposer",
+  sessionTypeName: "document-review",
+  role: "proposer",
+  strategy: myProposer,
+});
+```
+
+## Voter Specialists
+
+A voter's strategy receives two proposals and returns a vote:
+
+```typescript
+import type { VoterStrategy } from "dialai";
+
+const myVoter: VoterStrategy = (proposalA, proposalB) => {
+  // proposalA and proposalB are Proposal objects with:
+  //   proposalId, sessionId, specialistId, transitionName, toState, reasoning
+  return {
+    voteFor: "A", // "A" | "B" | "BOTH" | "NEITHER"
+    reasoning: "Proposal A is more aligned with the goal",
+  };
+};
+
+registerSpecialist({
+  specialistId: "quality-voter",
+  sessionTypeName: "document-review",
+  role: "voter",
+  strategy: myVoter,
 });
 ```
 
 ## Human Specialists
 
-Human specialists are identified by including "human" (case-insensitive) anywhere in their `specialistId`:
+Human specialists can be registered with strategy functions that encode human preferences, or proposals/votes can be submitted directly via `submitProposal` and `submitVote`:
 
 ```typescript
-await registerSpecialist({
-  specialistId: "specialist.my-task.proposer.human",
+// Register a human specialist with a strategy
+registerSpecialist({
+  specialistId: "human-reviewer",
+  sessionTypeName: "document-review",
+  role: "voter",
+  strategy: (proposalA, proposalB) => ({
+    voteFor: "B",
+    reasoning: "Prefer the more conservative approach",
+  }),
+});
+
+// Or submit votes directly without a strategy
+import { submitVote } from "dialai";
+
+submitVote(
+  session.sessionId,
+  "human-reviewer",
+  proposalA.proposalId,
+  proposalB.proposalId,
+  "B",
+  "I prefer the more conservative approach"
+);
+```
+
+## Weight Configuration
+
+The `weight` parameter controls how much a specialist's vote counts during consensus evaluation:
+
+```typescript
+// Default weight is 1.0
+registerSpecialist({
+  specialistId: "standard-voter",
   sessionTypeName: "my-task",
-  specialistRole: "proposer",
-  // ... other fields
+  role: "voter",
+  weight: 1.0,
+  strategy: myVoter,
+});
+
+// Higher weight = more influence
+registerSpecialist({
+  specialistId: "senior-voter",
+  sessionTypeName: "my-task",
+  role: "voter",
+  weight: 2.0,
+  strategy: myVoter,
 });
 ```
 
-Human votes have weight 1.0 by default.
+Note: Human vote override ignores weights entirely — if a specialist's ID contains "human", their vote wins immediately regardless of weight.

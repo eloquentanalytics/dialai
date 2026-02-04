@@ -1,0 +1,12 @@
+{
+  "sessionTypeName": "is-two-greater",
+  "initialState": "unsure",
+  "defaultState": "sure",
+  "states": {
+    "unsure": {
+      "prompt": "Is 2 > 1?",
+      "transitions": { "yes": "sure", "no": "sure" }
+    },
+    "sure": {}
+  }
+}

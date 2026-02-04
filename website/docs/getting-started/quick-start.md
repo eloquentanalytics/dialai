@@ -4,396 +4,165 @@ sidebar_position: 2
 
 # Quick Start
 
-Build your first DIAL state machine with AI and human specialists in under 10 minutes.
+Build your first DIAL state machine with specialists.
 
 ## What We'll Build
 
-A simple **document review** workflow where:
-- AI specialists propose whether to approve or request changes
-- Humans can override any decision
-- The system learns which AI predictions align with human judgment
+A trivially simple machine that asks "Is 2 > 1?" and transitions from `unsure` to `sure` regardless of the answer:
 
 ```mermaid
 stateDiagram-v2
-    [*] --> pending
-    pending --> approved: APPROVE
-    pending --> needs_revision: REQUEST_CHANGES
-    needs_revision --> approved: APPROVE
-    needs_revision --> needs_revision: REQUEST_MORE_CHANGES
-    approved --> [*]
+    [*] --> unsure
+    unsure --> sure: yes
+    unsure --> sure: no
+    sure --> [*]
 ```
 
-## Step 1: Define the State Machine
+## Step 1: Define the Machine
 
-Create your state machine definition:
+Save this as `examples/simple-machine.json`:
+
+```json
+{
+  "sessionTypeName": "is-two-greater",
+  "initialState": "unsure",
+  "defaultState": "sure",
+  "states": {
+    "unsure": {
+      "prompt": "Is 2 > 1?",
+      "transitions": { "yes": "sure", "no": "sure" }
+    },
+    "sure": {}
+  }
+}
+```
+
+- **`initialState`** — where the session starts (`unsure`)
+- **`defaultState`** — the goal state where the machine comes to rest (`sure`)
+- **`prompt`** — the question specialists answer when the session is in that state
+- **`transitions`** — the available answers and what state each leads to
+
+Both `yes` and `no` lead to `sure`, so the machine always resolves in one cycle.
+
+Or define the same thing in TypeScript:
 
 ```typescript
-// src/machines/document-review.ts
+import type { MachineDefinition } from "dialai";
 
-export const documentReviewMachine = {
-  id: 'document-review',
-  initial: 'pending',
-  context: {
-    documentId: '',
-    content: '',
-    feedback: []
-  },
+const machine: MachineDefinition = {
+  sessionTypeName: "is-two-greater",
+  initialState: "unsure",
+  defaultState: "sure",
   states: {
-    pending: {
-      meta: {
-        prompt: `Review the document and decide:
-        - APPROVE: If the document meets quality standards
-        - REQUEST_CHANGES: If revisions are needed
-        
-        Consider: clarity, completeness, accuracy, and formatting.`
-      },
-      on: {
-        APPROVE: 'approved',
-        REQUEST_CHANGES: 'needs_revision'
-      }
+    unsure: {
+      prompt: "Is 2 > 1?",
+      transitions: { yes: "sure", no: "sure" },
     },
-    needs_revision: {
-      meta: {
-        prompt: `Review the revised document.
-        
-        Has the author addressed the previous feedback?
-        - APPROVE: If feedback has been addressed
-        - REQUEST_MORE_CHANGES: If more work is needed`
-      },
-      on: {
-        APPROVE: 'approved',
-        REQUEST_MORE_CHANGES: 'needs_revision'
-      }
-    },
-    approved: {
-      type: 'final',
-      meta: {
-        prompt: 'Document approved. No further action needed.'
-      }
-    }
-  }
+    sure: {},
+  },
 };
 ```
 
-## Step 2: Create Specialist Strategies
+## Step 2: Run It
 
-### Proposer Strategy
-
-The proposer analyzes the current state and suggests a transition:
+The quickest way to run a machine is with `runSession`, which registers a built-in proposer that picks the first available transition:
 
 ```typescript
-// src/strategies/document-review/proposer.ts
+import { runSession } from "dialai";
 
-import type { ProposalDecisionInput } from 'dialai';
+const session = runSession(machine);
 
-export async function propose(input: ProposalDecisionInput) {
-  const { prompt, eventStream, modelId } = input;
-  
-  // Get the document content from the latest state params
-  const latestTransition = eventStream
-    .filter(e => e.type === 'transition_executed')
-    .pop();
-  
-  const params = latestTransition?.toParamsJSONString 
-    ? JSON.parse(latestTransition.toParamsJSONString)
-    : {};
-  
-  // Call your LLM (simplified example)
-  const response = await callLLM({
-    model: modelId,
-    messages: [
-      {
-        role: 'system',
-        content: `You are a document reviewer. ${prompt}`
-      },
-      {
-        role: 'user',
-        content: `Review this document:\n\n${params.content || 'No content provided'}`
-      }
-    ]
-  });
-  
-  // Parse the LLM's decision
-  const decision = parseDecision(response);
-  
-  return {
-    transitionName: decision.transition,
-    toStateName: decision.targetState,
-    toParamsJSONString: JSON.stringify({
-      ...params,
-      feedback: decision.feedback
-    }),
-    reasoning: decision.reasoning
-  };
-}
-
-function parseDecision(response: string) {
-  // Your logic to extract transition, target state, feedback, and reasoning
-  if (response.toLowerCase().includes('approve')) {
-    return {
-      transition: 'APPROVE',
-      targetState: 'approved',
-      feedback: null,
-      reasoning: 'Document meets quality standards'
-    };
-  }
-  return {
-    transition: 'REQUEST_CHANGES',
-    targetState: 'needs_revision',
-    feedback: extractFeedback(response),
-    reasoning: 'Revisions needed'
-  };
-}
+console.log(session.currentState); // "sure"
 ```
 
-### Voter Strategy
+That's it — one cycle, done.
 
-The voter compares two proposals and expresses a preference:
+## Step 3: Add a Human Specialist
+
+The real point of DIAL is that humans can participate. Let's walk through the full API to see how a human votes `yes`.
 
 ```typescript
-// src/strategies/document-review/voter.ts
+import {
+  createSession,
+  submitProposal,
+  submitVote,
+  evaluateConsensus,
+  executeTransition,
+} from "dialai";
 
-import type { VoteDecisionInput } from 'dialai';
+// Create a session — starts in "unsure"
+const session = createSession(machine);
+console.log(session.currentState); // "unsure"
 
-export async function vote(input: VoteDecisionInput) {
-  const { prompt, proposalA, proposalB, modelId } = input;
-  
-  const response = await callLLM({
-    model: modelId,
-    messages: [
-      {
-        role: 'system',
-        content: `You are comparing two document review decisions. ${prompt}`
-      },
-      {
-        role: 'user',
-        content: `
-Proposal A: ${proposalA.transitionName}
-Reasoning: ${proposalA.reasoning}
+// Two specialists each submit a proposal
+const proposalYes = submitProposal(
+  session.sessionId,
+  "ai-specialist",
+  "yes",
+  "sure",
+  "2 is obviously greater than 1"
+);
 
-Proposal B: ${proposalB.transitionName}  
-Reasoning: ${proposalB.reasoning}
+const proposalNo = submitProposal(
+  session.sessionId,
+  "contrarian-ai",
+  "no",
+  "sure",
+  "I just like being difficult"
+);
 
-Which proposal better serves the review goals?
-Vote: A, B, BOTH (both acceptable), or NEITHER (both problematic)
-        `
-      }
-    ]
-  });
-  
-  return {
-    voteFor: parseVote(response), // 'A' | 'B' | 'BOTH' | 'NEITHER'
-    reasoning: response
-  };
-}
+// A human votes for "yes" (proposal A)
+submitVote(
+  session.sessionId,
+  "human-reviewer",
+  proposalYes.proposalId,
+  proposalNo.proposalId,
+  "A",
+  "Yes, 2 is greater than 1"
+);
+
+// Evaluate consensus — human votes win immediately
+const consensus = evaluateConsensus(session.sessionId);
+console.log(consensus.consensusReached); // true
+console.log(consensus.reasoning);        // "Human voter override"
+
+// Execute the winning transition, recording the arbiter's reasoning
+executeTransition(session.sessionId, "yes", "sure", consensus.reasoning);
+console.log(session.currentState); // "sure"
+console.log(session.history);      // [{ fromState: "unsure", toState: "sure", reasoning: "Human voter override", ... }]
 ```
 
-## Step 3: Register Specialists
+Because the specialist ID `"human-reviewer"` contains "human", `evaluateConsensus` gives their vote priority. This is **human primacy** — humans always get the final say.
 
-Register your AI and human specialists:
+## Step 4: Use the CLI
 
-```typescript
-// src/index.ts
+Run a machine definition from the command line:
 
-import { createDialClient } from 'dialai';
-import { documentReviewMachine } from './machines/document-review';
-
-async function setup() {
-  const dial = createDialClient();
-  
-  // Register the state machine
-  await dial.registerSessionType({
-    sessionTypeName: 'document-review',
-    machine: documentReviewMachine
-  });
-  
-  // Register an AI proposer (starts with weight 0.0)
-  await dial.registerSpecialist({
-    specialistId: 'specialist.document-review.proposer.gpt-4',
-    sessionTypeName: 'document-review',
-    specialistRole: 'proposer',
-    strategyFunctionKey: 'proposer',
-    modelId: 'gpt-4',
-    displayName: 'GPT-4 Reviewer',
-    weight: 0.0,  // Must earn trust
-    temperature: 0.2,
-    maxTokens: 1000
-  });
-  
-  // Register an AI voter (starts with weight 0.0)
-  await dial.registerSpecialist({
-    specialistId: 'specialist.document-review.voter.gpt-4',
-    sessionTypeName: 'document-review',
-    specialistRole: 'voter',
-    strategyFunctionKey: 'voter',
-    modelId: 'gpt-4',
-    displayName: 'GPT-4 Voter',
-    weight: 0.0,
-    temperature: 0.1,
-    maxTokens: 500
-  });
-  
-  // Register a human specialist (weight 1.0 by default)
-  await dial.registerSpecialist({
-    specialistId: 'specialist.document-review.human.reviewer',
-    sessionTypeName: 'document-review',
-    specialistRole: 'proposer',  // Humans can also propose
-    strategyFunctionKey: 'human', // Special handling
-    modelId: 'human',
-    displayName: 'Human Reviewer',
-    weight: 1.0  // Full authority
-  });
-  
-  console.log('Setup complete!');
-}
-
-setup().catch(console.error);
+```bash
+node dist/dialai/cli.js examples/simple-machine.json
 ```
 
-## Step 4: Run a Session
-
-Start a session and watch the decision cycle:
-
-```typescript
-// src/run-review.ts
-
-import { createDialClient } from 'dialai';
-
-async function runReview() {
-  const dial = createDialClient();
-  
-  // Start a new review session
-  const session = await dial.startSession({
-    sessionTypeName: 'document-review',
-    initialParamsJSONString: JSON.stringify({
-      documentId: 'doc-001',
-      content: `
-        # Project Proposal
-        
-        This proposal outlines a new feature for our application.
-        
-        ## Objectives
-        - Improve user experience
-        - Reduce load times by 50%
-        
-        ## Implementation
-        We will refactor the database queries and add caching.
-      `
-    })
-  });
-  
-  console.log('Session started:', session.sessionId);
-  console.log('Current state:', session.currentStateName);
-  
-  // Solicit proposals from AI specialists
-  await dial.solicitProposal({
-    sessionId: session.sessionId,
-    specialistId: 'specialist.document-review.proposer.gpt-4'
-  });
-  
-  // Wait for proposal submission (in real app, this would be event-driven)
-  await sleep(2000);
-  
-  // Check proposals
-  const proposals = await dial.getProposals({ sessionId: session.sessionId });
-  console.log('Proposals received:', proposals.length);
-  
-  // If we have multiple proposals, solicit votes
-  if (proposals.length > 1) {
-    await dial.solicitVote({
-      sessionId: session.sessionId,
-      specialistId: 'specialist.document-review.voter.gpt-4',
-      proposalIdA: proposals[0].proposalId,
-      proposalIdB: proposals[1].proposalId
-    });
-  }
-  
-  // Evaluate consensus
-  const consensus = await dial.evaluateConsensus({
-    sessionId: session.sessionId
-  });
-  
-  console.log('Consensus reached:', consensus.consensusReached);
-  
-  if (consensus.consensusReached && consensus.winningProposalId) {
-    const winner = proposals.find(p => p.proposalId === consensus.winningProposalId);
-    
-    // Execute the winning proposal
-    await dial.executeTransition({
-      sessionId: session.sessionId,
-      transitionName: winner.transitionName,
-      toStateName: winner.toStateName,
-      toParamsJSONString: winner.toParamsJSONString,
-      executionSource: 'PROPOSAL',
-      proposalId: winner.proposalId
-    });
-    
-    console.log('Transition executed!');
-  }
-  
-  // Check final state
-  const finalSession = await dial.getSession({ sessionId: session.sessionId });
-  console.log('Final state:', finalSession.currentStateName);
-}
-
-runReview().catch(console.error);
+Output:
 ```
-
-## Step 5: Human Interaction
-
-When a human needs to participate, they can:
-
-### Submit a Proposal
-
-```typescript
-// Human decides to request changes
-await dial.submitProposal({
-  sessionId: session.sessionId,
-  specialistId: 'specialist.document-review.human.reviewer',
-  transitionName: 'REQUEST_CHANGES',
-  toStateName: 'needs_revision',
-  toParamsJSONString: JSON.stringify({
-    feedback: ['Add more detail to the Implementation section']
-  }),
-  reasoning: 'The proposal lacks technical specifics'
-});
+Session type:  is-two-greater
+Initial state: unsure
+Goal state:    sure
+Final state:   sure
+Session ID:    a1b2c3d4-...
 ```
-
-### Cast a Vote
-
-```typescript
-// Human prefers proposal B over A
-await dial.submitVote({
-  sessionId: session.sessionId,
-  specialistId: 'specialist.document-review.human.reviewer',
-  proposalIdA: proposals[0].proposalId,
-  proposalIdB: proposals[1].proposalId,
-  voteFor: 'B',
-  reasoning: 'Proposal B provides more constructive feedback'
-});
-```
-
-**Human votes immediately win** — this is human primacy in action.
 
 ## What's Happening Under the Hood
 
-1. **Session created** in `pending` state
-2. **AI specialists solicited** to propose transitions
-3. **Proposals compared** through pairwise voting
-4. **Consensus evaluated** using weighted votes (AI weight 0.0, human weight 1.0)
-5. **Transition executed** to move to next state
-6. **Cycle repeats** until reaching `approved` (final state)
-
-Over time, as you evaluate AI alignment with human choices, you can:
-- Recalculate AI weights based on accuracy
-- Enable express lane automation for high-confidence states
-- Reduce human involvement where AI proves reliable
+1. **Session created** in `initialState` (`unsure`)
+2. **Proposers solicited** — each returns a proposed transition (`yes` or `no`)
+3. **Votes solicited** (if 2+ proposals) — pairwise comparisons
+4. **Consensus evaluated** — human votes override; otherwise weighted ahead-by-k
+5. **Transition executed** — `currentState` moves to `sure`, proposals/votes cleared
+6. **Cycle repeats** until `currentState === defaultState` (already there — done)
 
 ## Next Steps
 
-You've built your first DIAL workflow! Now explore:
-
 - **[State Machines](../guides/state-machines.md)** — Design more complex workflows
-- **[Registering Specialists](../guides/registering-specialists.md)** — Add more AI models
-- **[Implementing Strategies](../guides/implementing-strategies.md)** — Customize AI behavior
+- **[Registering Specialists](../guides/registering-specialists.md)** — Configure specialists with strategies
+- **[Implementing Strategies](../guides/implementing-strategies.md)** — Customize strategy functions
 - **[Concepts](../concepts/intro.md)** — Deep dive into DIAL's architecture

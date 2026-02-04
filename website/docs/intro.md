@@ -42,10 +42,9 @@ This collapse is emergent, not designed. As AI specialists prove their alignment
 
 Trust is earned through demonstrated alignment with human decisions, not assumed.
 
-- **LLM specialists start with weight 0.0**—no autonomous authority
-- **Humans have weight 1.0**—full authority
-- AI specialists earn trust by accurately predicting what humans would choose
-- Trust is measured in precise terms: cost per decision, latency, alignment rate
+- **Human specialists** are identified by including "human" in their `specialistId` — their votes override all AI votes immediately
+- **AI specialists** participate through weighted voting
+- Trust is built through alignment with human choices over time
 
 ## What DIAL Is Not
 
@@ -56,18 +55,16 @@ The value of AI is not superiority. **It is efficiency.** AI is faster and cheap
 ## How It Works
 
 1. **Model the task as a state machine** — Define states, transitions, and decision prompts
-2. **Register specialists** — Both AI models and humans that can propose transitions and vote
-3. **Run decision cycles** — Solicit → Propose → Vote → Arbitrate → Execute
-4. **Measure everything** — Cost, latency, and alignment with human choices
-5. **Adjust weights** — Specialists that predict human choices accurately earn more trust
+2. **Register specialists** — Both AI and humans that can propose transitions and vote
+3. **Run decision cycles** — Propose → Vote → Arbitrate → Execute
+4. **Reach the goal state** — The session completes when it reaches its `defaultState`
 
 ```mermaid
 graph LR
-    A[Solicit] --> B[Propose]
-    B --> C[Vote]
-    C --> D[Arbitrate]
-    D --> E[Execute]
-    E --> A
+    A[Propose] --> B[Vote]
+    B --> C[Arbitrate]
+    C --> D[Execute]
+    D --> A
 ```
 
 ## What's Next?
@@ -103,7 +100,7 @@ graph LR
 |------|------------|
 | **Session** | An instance of a state machine being navigated by specialists |
 | **Specialist** | A pluggable actor (AI or human) that proposes transitions or votes |
-| **Decision Cycle** | The five-phase process: Solicit → Propose → Vote → Arbitrate → Execute |
-| **Arbiter** | The strategy that evaluates consensus and determines when a proposal wins |
-| **Weight** | A specialist's voting authority, earned through alignment with human choices |
-| **Risk Dial** | A confidence threshold that gates whether the system takes a fast or slow path |
+| **Decision Cycle** | The repeating process: Propose → Vote → Arbitrate → Execute |
+| **Arbiter** | The built-in logic that evaluates consensus and determines when a proposal wins |
+| **Weight** | A specialist's voting authority (default 1.0) |
+| **Default State** | The goal state — the session is complete when it reaches this state |

@@ -18,6 +18,17 @@
   }
 }
 
+@keyframes heroFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Applied via useInView hook */
 .animateIn {
   animation: fadeSlideUp 0.3s ease both;
@@ -55,6 +66,7 @@
   max-width: 560px;
 }
 
+/* Hero entrance animation - staggered */
 .heroTitle {
   font-size: clamp(3.5rem, 8vw, 6rem);
   font-weight: 700;
@@ -62,6 +74,8 @@
   line-height: 1;
   margin-bottom: 0.5rem;
   color: var(--dial-slate-50);
+  animation: heroFadeIn 0.3s ease both;
+  animation-delay: 0ms;
 }
 
 .titleGradient {
@@ -74,6 +88,8 @@
   color: var(--dial-accent-light);
   margin-bottom: 1.25rem;
   letter-spacing: -0.01em;
+  animation: heroFadeIn 0.3s ease both;
+  animation-delay: 60ms;
 }
 
 .heroDescription {
@@ -81,28 +97,44 @@
   line-height: 1.7;
   color: var(--dial-slate-400);
   margin-bottom: 1.75rem;
+  animation: heroFadeIn 0.3s ease both;
+  animation-delay: 120ms;
 }
 
 .heroButtons {
   display: flex;
   gap: 0.875rem;
   flex-wrap: wrap;
+  animation: heroFadeIn 0.3s ease both;
+  animation-delay: 180ms;
 }
 
-/* Hero button overrides — use data-theme scoping instead of !important */
-[data-theme='dark'] .heroButtonPrimary {
+/* Hero button overrides — theme-aware */
+.heroButtonPrimary {
   background: var(--dial-accent);
   border: none;
+  color: white;
+}
+
+.heroButtonPrimary:hover {
+  background: #005a91;
+  color: white;
 }
 
 [data-theme='dark'] .heroButtonPrimary:hover {
   background: var(--dial-accent-light);
 }
 
-[data-theme='dark'] .heroButtonSecondary {
+.heroButtonSecondary {
   background: transparent;
-  color: var(--dial-slate-300);
-  border: 1px solid var(--dial-slate-600);
+  color: var(--dial-slate-100);
+  border: 1px solid var(--dial-slate-200);
+}
+
+.heroButtonSecondary:hover {
+  color: var(--dial-accent);
+  border-color: var(--dial-accent);
+  background: rgba(0, 112, 179, 0.05);
 }
 
 [data-theme='dark'] .heroButtonSecondary:hover {
@@ -115,6 +147,8 @@
   display: flex;
   justify-content: center;
   align-items: center;
+  animation: heroFadeIn 0.3s ease both;
+  animation-delay: 240ms;
 }
 
 .heroIllustration {
@@ -169,7 +203,7 @@
 .principleCard {
   position: relative;
   background: var(--dial-bg-surface);
-  border: 1px solid rgba(148, 163, 184, 0.1);
+  border: 1px solid var(--dial-border);
   border-radius: 8px;
   padding: 2rem;
   transition: border-color 0.2s ease;
@@ -199,7 +233,7 @@
 }
 
 .principleCard:hover {
-  border-color: rgba(26, 163, 255, 0.25);
+  border-color: var(--dial-border-hover);
 }
 
 .principleIcon {
@@ -236,8 +270,8 @@
 .questionSection {
   padding: 5rem 2rem;
   background: var(--dial-bg-secondary);
-  border-top: 1px solid rgba(148, 163, 184, 0.08);
-  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+  border-top: 1px solid var(--dial-border);
+  border-bottom: 1px solid var(--dial-border);
 }
 
 .questionContent {
@@ -303,7 +337,7 @@
 
 .metric {
   background: var(--dial-bg-surface);
-  border: 1px solid rgba(148, 163, 184, 0.1);
+  border: 1px solid var(--dial-border);
   border-radius: 8px;
   padding: 1.25rem 1.5rem;
   display: flex;
@@ -354,7 +388,7 @@
   display: flex;
   flex-direction: column;
   background: var(--dial-bg-surface);
-  border: 1px solid rgba(148, 163, 184, 0.1);
+  border: 1px solid var(--dial-border);
   border-radius: 8px;
   padding: 1.75rem;
   text-decoration: none;
@@ -402,13 +436,95 @@
 }
 
 /* ========================================
+   CODE EXAMPLE SECTION
+   ======================================== */
+
+.codeSection {
+  padding: 5rem 2rem;
+  background: var(--dial-bg-secondary);
+  border-top: 1px solid var(--dial-border);
+  border-bottom: 1px solid var(--dial-border);
+}
+
+.codeContent {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 3rem;
+  align-items: center;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.codeTextCol {
+  max-width: 400px;
+}
+
+.codeTextCol .sectionTitle {
+  text-align: left;
+}
+
+.codeTextCol .sectionSubtitle {
+  text-align: left;
+  max-width: none;
+}
+
+.codeBlock {
+  background: var(--dial-bg-surface);
+  border: 1px solid var(--dial-border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.codeHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--dial-border);
+}
+
+.codeDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--dial-slate-600);
+}
+
+.codeFilename {
+  margin-left: auto;
+  font-size: 0.75rem;
+  font-family: var(--ifm-font-family-monospace);
+  color: var(--dial-slate-500);
+}
+
+.codePre {
+  margin: 0;
+  padding: 1.25rem 1.5rem;
+  overflow-x: auto;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.8125rem;
+  line-height: 1.7;
+  color: var(--dial-slate-300);
+  background: transparent;
+  border: none;
+}
+
+.codePre code {
+  background: none;
+  padding: 0;
+  border: none;
+  font-size: inherit;
+  color: inherit;
+}
+
+/* ========================================
    STARTING PESSIMISTIC SECTION
    ======================================== */
 
 .pessimisticSection {
   padding: 5rem 2rem;
   background: var(--dial-bg-secondary);
-  border-top: 1px solid rgba(148, 163, 184, 0.08);
+  border-top: 1px solid var(--dial-border);
 }
 
 .pessimisticContent {
@@ -508,7 +624,7 @@
 .cta {
   padding: 5rem 2rem;
   background: var(--dial-bg-primary);
-  border-top: 1px solid rgba(148, 163, 184, 0.08);
+  border-top: 1px solid var(--dial-border);
 }
 
 .ctaContent {
@@ -593,6 +709,24 @@
 
   .weightScale {
     order: 1;
+  }
+
+  .codeContent {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .codeTextCol {
+    max-width: 100%;
+    text-align: center;
+  }
+
+  .codeTextCol .sectionTitle {
+    text-align: center;
+  }
+
+  .codeTextCol .sectionSubtitle {
+    text-align: center;
   }
 }
 

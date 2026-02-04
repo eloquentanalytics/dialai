@@ -5,42 +5,42 @@
       <stop offset="100%" stop-color="#0070b3"/>
     </linearGradient>
     <marker id="smArrow" markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
-      <polygon points="0 0, 6 2, 0 4" fill="#475569"/>
+      <polygon points="0 0, 6 2, 0 4" fill="#94a3b8"/>
     </marker>
   </defs>
-  
+
   <!-- Background -->
-  <rect width="80" height="80" rx="16" fill="#0f172a"/>
-  
+  <rect width="80" height="80" rx="16" fill="none"/>
+
   <!-- State nodes -->
   <!-- Initial state (double circle) -->
   <g transform="translate(20, 25)">
-    <circle r="10" fill="#1e293b" stroke="url(#smGrad)" stroke-width="2"/>
-    <circle r="6" fill="#1e293b" stroke="url(#smGrad)" stroke-width="1.5"/>
+    <circle r="10" fill="none" stroke="url(#smGrad)" stroke-width="2"/>
+    <circle r="6" fill="none" stroke="url(#smGrad)" stroke-width="1.5"/>
     <text y="3" text-anchor="middle" fill="#1aa3ff" font-size="8" font-weight="bold">S₀</text>
   </g>
-  
+
   <!-- State 1 -->
   <g transform="translate(55, 25)">
-    <circle r="10" fill="#1e293b" stroke="#475569" stroke-width="2"/>
+    <circle r="10" fill="none" stroke="#94a3b8" stroke-width="2" opacity="0.6"/>
     <text y="3" text-anchor="middle" fill="#94a3b8" font-size="8">S₁</text>
   </g>
-  
+
   <!-- State 2 -->
   <g transform="translate(20, 55)">
-    <circle r="10" fill="#1e293b" stroke="#475569" stroke-width="2"/>
+    <circle r="10" fill="none" stroke="#94a3b8" stroke-width="2" opacity="0.6"/>
     <text y="3" text-anchor="middle" fill="#94a3b8" font-size="8">S₂</text>
   </g>
-  
+
   <!-- Final state -->
   <g transform="translate(55, 55)">
-    <circle r="10" fill="#1e293b" stroke="#ffc91a" stroke-width="2"/>
+    <circle r="10" fill="none" stroke="#ffc91a" stroke-width="2"/>
     <circle r="6" fill="#ffc91a"/>
-    <text y="3" text-anchor="middle" fill="#0f172a" font-size="8" font-weight="bold">✓</text>
+    <text y="3" text-anchor="middle" fill="#fff" font-size="8" font-weight="bold">✓</text>
   </g>
-  
+
   <!-- Transitions -->
-  <g fill="none" stroke="#475569" stroke-width="1.5" marker-end="url(#smArrow)">
+  <g fill="none" stroke="#94a3b8" stroke-width="1.5" marker-end="url(#smArrow)" opacity="0.6">
     <line x1="30" y1="25" x2="43" y2="25"/>
     <line x1="20" y1="35" x2="20" y2="43"/>
     <line x1="55" y1="35" x2="55" y2="43"/>

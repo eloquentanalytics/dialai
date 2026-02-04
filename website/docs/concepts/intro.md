@@ -11,23 +11,21 @@ DIAL provides a structured approach to AI-human collaboration built around a few
 ```mermaid
 graph TB
     subgraph "Session (State Machine Instance)"
-        SM[State Machine Definition]
+        SM[Machine Definition]
         CS[Current State]
-        EP[Event Stream]
     end
-    
+
     subgraph "Specialists"
         H[Human Specialists]
         AI[AI Specialists]
-        T[Tool Specialists]
     end
-    
+
     subgraph "Decision Cycle"
         P[Proposers]
         V[Voters]
-        A[Arbiters]
+        A[Arbitration]
     end
-    
+
     SM --> CS
     CS --> P
     H --> P
@@ -35,22 +33,21 @@ graph TB
     P --> V
     V --> A
     A --> |Execute| CS
-    T --> |Direct Invoke| CS
 ```
 
 ## The Big Picture
 
-At its core, DIAL coordinates **specialists** (both AI and human) to navigate **state machines** through **decision cycles**. Every action is recorded, every cost is measured, and trust is earned through demonstrated alignment.
+At its core, DIAL coordinates **specialists** (both AI and human) to navigate **state machines** through **decision cycles**.
 
 ### Sessions & State Machines
 
-A **session** is an instance of a state machine. The machine defines:
-- A **default state** (the goal state)
-- Other **possible states**
-- **Transitions** between states
-- **Decision prompts** for each state
+A **session** is an instance of a state machine. The machine definition specifies:
+- A **`sessionTypeName`** identifying the type
+- An **`initialState`** where sessions begin
+- A **`defaultState`** (the goal state)
+- A set of **states**, each with optional `prompt` and `transitions`
 
-When a session is not in its default state, specialists work together to return it there.
+When a session is not in its default state, specialists work together to get it there.
 
 [Learn more about Sessions →](./sessions.md)
 
@@ -60,50 +57,46 @@ When a session is not in its default state, specialists work together to return 
 
 | Role | Description | Can be AI? | Can be Human? |
 |------|-------------|------------|---------------|
-| **Proposer** | Analyzes state, suggests transitions | ✅ | ✅ |
-| **Voter** | Compares proposals, expresses preferences | ✅ | ✅ |
-| **Arbiter** | Evaluates consensus | ✅ (deterministic) | ❌ |
-| **Tool** | Performs direct transitions | ✅ (deterministic) | ❌ |
+| **Proposer** | Analyzes state, suggests transitions | Yes | Yes |
+| **Voter** | Compares proposals, expresses preferences | Yes | Yes |
+| **Arbiter** | Evaluates consensus (built-in) | No | No |
 
-Human specialists are identified by including "human" in their `specialistId`. Human votes have weight 1.0 by default; AI votes start at 0.0.
+The Arbiter is always a fully deterministic, built-in component — never an AI model or a human. This is a deliberate safety constraint: the mechanism that decides whether consensus has been reached must be predictable and auditable.
+
+Human specialists are identified by including "human" (case-insensitive) in their `specialistId`. Human votes override AI votes immediately.
 
 [Learn more about Specialists →](./specialists.md)
 
 ### The Decision Cycle
 
-When a session needs to progress, DIAL runs a five-phase cycle:
+When a session needs to progress, DIAL runs a repeating cycle:
 
-1. **Solicit** — Ask proposers what should happen next
-2. **Propose** — Specialists submit recommendations with reasoning
-3. **Vote** — Compare pairs of proposals (A vs B)
-4. **Arbitrate** — Aggregate votes to find consensus
-5. **Execute** — Run the winning proposal's transition
+1. **Propose** — Solicit proposals from registered proposers
+2. **Vote** — If 2+ proposals, compare pairs via registered voters
+3. **Arbitrate** — Evaluate consensus using weighted voting
+4. **Execute** — Apply the winning proposal's transition
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Solicit
-    Solicit --> Propose
-    Propose --> Vote
+    [*] --> Propose
+    Propose --> Vote: 2+ proposals
+    Propose --> Arbitrate: 1 proposal
     Vote --> Arbitrate
     Arbitrate --> Execute: Consensus
-    Arbitrate --> Vote: No Consensus
+    Arbitrate --> Error: No Consensus
     Execute --> [*]: Default State
-    Execute --> Solicit: Continue
+    Execute --> Propose: Continue
 ```
 
 [Learn more about the Decision Cycle →](./decision-cycle.md)
 
 ### Arbitration & Consensus
 
-**Arbitration** is how DIAL decides when a proposal has won. The default strategy uses weighted voting:
+**Arbitration** is how DIAL decides when a proposal has won. The built-in strategy uses weighted voting:
 
-- Human votes win immediately (weight 1.0)
-- AI votes are weighted by their earned trust
-- A proposal must be ahead by `k` weighted votes to win
-
-The **risk dial** is a per-state threshold that gates automation:
-- **Below threshold**: Full deliberation (safer, slower)
-- **Above threshold**: Express lane with a trusted "champion" (faster, cheaper)
+- **0 proposals** — No consensus
+- **1 proposal** — Auto-consensus (single proposal wins)
+- **2+ proposals** — Human votes win immediately; otherwise tally weighted votes per proposal, leading proposal must be ahead by k=1.0 weighted votes
 
 [Learn more about Arbitration →](./arbitration.md)
 
@@ -113,46 +106,19 @@ The fundamental principle underlying DIAL:
 
 > **The human is always right—not because humans are infallible, but because humans have context that AI cannot access.**
 
-AI specialists are judged on their ability to predict what humans would choose. When humans disagree with each other, that disagreement is resolved by human mechanisms—AI has no standing to break the tie.
+AI specialists are judged on their ability to predict what humans would choose. When a human specialist votes, that vote wins immediately regardless of AI votes.
 
 [Learn more about Human Primacy →](./human-primacy.md)
 
-## Key Metrics
-
-DIAL measures everything:
-
-| Metric | What It Measures | Why It Matters |
-|--------|------------------|----------------|
-| **Cost per decision** | USD spent on LLM calls | Economics of delegation |
-| **Latency** | Time from solicitation to execution | User experience |
-| **Alignment rate** | % of AI predictions matching human choice | Trust calibration |
-| **Weight** | Earned voting authority | Specialist performance |
-| **Consensus rounds** | Iterations before agreement | Deliberation efficiency |
-
 ## Quick Reference
-
-### Weights
-
-| Specialist Type | Starting Weight | Can Increase? |
-|----------------|-----------------|---------------|
-| Human | 1.0 | No (always authoritative) |
-| AI (LLM) | 0.0 | Yes (through alignment) |
-| Tool | N/A | N/A (deterministic) |
 
 ### Vote Options
 
 When comparing proposals A and B, specialists vote:
 - **A** — Prefer proposal A
-- **B** — Prefer proposal B  
-- **BOTH** — Both are acceptable
-- **NEITHER** — Both are unacceptable
-
-### Execution Sources
-
-When a transition executes, the source is recorded:
-- **PROPOSAL** — From a winning proposal
-- **MANUAL** — Direct human intervention
-- **OVERRIDE** — Human overriding the system
+- **B** — Prefer proposal B
+- **BOTH** — Both are acceptable (adds weight to both)
+- **NEITHER** — Both are unacceptable (adds weight to neither)
 
 ## Next Steps
 
@@ -160,6 +126,6 @@ Dive deeper into each concept:
 
 - [Sessions](./sessions.md) — State machine instances
 - [Specialists](./specialists.md) — AI and human actors
-- [Decision Cycle](./decision-cycle.md) — The five-phase process
+- [Decision Cycle](./decision-cycle.md) — The decision process
 - [Arbitration](./arbitration.md) — Consensus strategies
 - [Human Primacy](./human-primacy.md) — The foundational principle

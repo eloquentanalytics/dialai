@@ -4,43 +4,72 @@ sidebar_position: 4
 
 # Decision Cycle
 
-When a session is not in its default state and no Tool specialist is registered for the current state, the system progresses through a repeating cycle.
+When a session is not in its default state, the system progresses through a repeating cycle until it reaches the goal.
 
-## The Five Phases
+## The Cycle
 
 ### 1. Proposal Solicitation
 
-Ask proposers what transition should happen next. The system solicits proposals from all registered proposers for the current state.
+The engine solicits proposals from all registered proposers for the session's type. Each proposer's strategy function is called with the current state and available transitions.
 
 ### 2. Proposal Submission
 
-Proposers submit their recommendations with reasoning. Each proposal includes:
+Proposers submit their recommendations. Each proposal includes:
 - The proposed transition name
-- The target state name
-- Parameters for the target state
+- The target state
 - Reasoning for the proposal
 
 ### 3. Vote Solicitation
 
-Voters compare pairs of proposals. The system generates pairwise comparisons and solicits votes from all registered voters.
+If there are 2 or more proposals, voters compare them pairwise. All registered voters for the session type are solicited for each pair.
 
 ### 4. Arbitration
 
-Arbiters aggregate votes to determine if a proposal has sufficient support. The default arbiter uses weighted voting:
-- LLMs begin with weight 0.0 (no autonomous authority)
-- Humans begin with weight 1.0 (full authority)
-- If a human votes, that decision wins immediately
-- Otherwise, the leading proposal must be ahead by k weighted votes to reach consensus
+The built-in `evaluateConsensus` function aggregates votes to determine if a proposal has sufficient support:
+
+- **0 proposals** — No consensus
+- **1 proposal** — Auto-consensus (single proposal wins immediately)
+- **2+ proposals** — Human votes override; otherwise weighted vote tallying with ahead-by-k threshold (k=1.0)
 
 ### 5. Transition Execution
 
-If consensus is reached, execute the winning proposal's transition. The cycle repeats until the session returns to its default state.
+If consensus is reached, the winning proposal's transition executes. The session's `currentState` is updated, and all proposals and votes for that session are cleared for the next cycle.
 
-## Fast Path (Express Lane)
+The cycle repeats until the session reaches its `defaultState`.
 
-If the risk dial crosses a confidence threshold, the system can temporarily enter an **express lane** where it:
-- Selects one trusted LLM specialist (a "champion") to submit the proposal
-- Skips broad proposal solicitation
-- Immediately evaluates the champion proposal with cheap guardrails
+## The Engine
 
-If the champion makes a suboptimal move, the system drops back into the full (slower, more expensive) proposal + voting mode until confidence is rebuilt.
+The `runSession` function automates the full cycle:
+
+```typescript
+import { runSession } from "dialai";
+import type { MachineDefinition } from "dialai";
+
+const machine: MachineDefinition = {
+  sessionTypeName: "my-task",
+  initialState: "pending",
+  defaultState: "done",
+  states: {
+    pending: {
+      prompt: "Should we complete this task?",
+      transitions: { complete: "done" },
+    },
+    done: {},
+  },
+};
+
+const session = runSession(machine);
+// session.currentState === "done"
+```
+
+`runSession` automatically:
+1. Creates a session
+2. Registers a built-in deterministic proposer (picks the first available transition)
+3. Loops: solicit proposals → solicit votes (if needed) → evaluate consensus → execute transition
+4. Returns the completed session
+
+## Error Handling
+
+- If no transitions are available from the current state, the built-in proposer throws
+- If consensus cannot be reached (e.g., tied votes with insufficient margin), the engine throws
+- If the winning proposal's transition is invalid, `executeTransition` throws

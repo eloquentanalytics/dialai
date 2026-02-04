@@ -3,38 +3,55 @@
  * A calm, confident theme with single accent color
  */
 
-/* Import Geist fonts */
-@import url('https://cdn.jsdelivr.net/npm/geist@1.2.0/dist/fonts/geist-sans/style.css');
-@import url('https://cdn.jsdelivr.net/npm/geist@1.2.0/dist/fonts/geist-mono/style.css');
+/* Self-hosted Geist fonts */
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/GeistVF.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/GeistMonoVF.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
 
 /* ========================================
-   CSS VARIABLES - LIGHT & DARK THEMES
+   CSS VARIABLES - LIGHT MODE (default)
    ======================================== */
 
 :root {
   /* Primary accent - single color */
   --dial-accent: #0070b3;
-  --dial-accent-light: #1aa3ff;
+  --dial-accent-light: #0070b3;
   --dial-accent-dark: #005a91;
-  
+
   /* Emphasis (used sparingly) */
-  --dial-emphasis: #ffc91a;
-  
-  /* Neutral palette */
-  --dial-slate-50: #f8fafc;
-  --dial-slate-100: #f1f5f9;
-  --dial-slate-200: #e2e8f0;
-  --dial-slate-300: #cbd5e1;
-  --dial-slate-400: #94a3b8;
-  --dial-slate-500: #64748b;
-  --dial-slate-600: #475569;
-  --dial-slate-700: #334155;
-  --dial-slate-800: #1e293b;
-  
-  /* Off-black backgrounds */
-  --dial-bg-primary: #0c1018;
-  --dial-bg-secondary: #141b27;
-  --dial-bg-surface: #1c2433;
+  --dial-emphasis: #c49000;
+
+  /* Neutral palette - light mode: dark text on light bg */
+  --dial-slate-50: #0f172a;
+  --dial-slate-100: #1e293b;
+  --dial-slate-200: #334155;
+  --dial-slate-300: #475569;
+  --dial-slate-400: #64748b;
+  --dial-slate-500: #94a3b8;
+  --dial-slate-600: #cbd5e1;
+  --dial-slate-700: #e2e8f0;
+  --dial-slate-800: #f1f5f9;
+
+  /* Light backgrounds */
+  --dial-bg-primary: #fafbfc;
+  --dial-bg-secondary: #f0f2f5;
+  --dial-bg-surface: #ffffff;
+
+  /* Border color */
+  --dial-border: rgba(0, 0, 0, 0.08);
+  --dial-border-hover: rgba(0, 112, 179, 0.3);
 
   /* Theme colors - light mode */
   --ifm-color-primary: #0070b3;
@@ -52,26 +69,52 @@
   --ifm-heading-font-weight: 600;
   --ifm-font-weight-bold: 600;
   --ifm-font-size-base: 106.25%; /* 17px */
-  
+
   /* Sizing */
   --ifm-code-font-size: 90%;
   --ifm-global-radius: 6px;
   --ifm-button-border-radius: 6px;
-  
+
   /* Misc */
   --docusaurus-highlighted-code-line-bg: rgba(0, 112, 179, 0.1);
   --ifm-navbar-height: 4rem;
-  
-  /* Shadows - simplified */
+
+  /* Shadows */
   --dial-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
   --dial-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* ========================================
-   DARK THEME (Primary theme for DIAL)
+   DARK THEME
    ======================================== */
 
 [data-theme='dark'] {
+  --dial-accent: #0070b3;
+  --dial-accent-light: #1aa3ff;
+  --dial-accent-dark: #005a91;
+
+  --dial-emphasis: #ffc91a;
+
+  /* Neutral palette - dark mode: light text on dark bg */
+  --dial-slate-50: #f8fafc;
+  --dial-slate-100: #f1f5f9;
+  --dial-slate-200: #e2e8f0;
+  --dial-slate-300: #cbd5e1;
+  --dial-slate-400: #94a3b8;
+  --dial-slate-500: #64748b;
+  --dial-slate-600: #475569;
+  --dial-slate-700: #334155;
+  --dial-slate-800: #1e293b;
+
+  /* Off-black backgrounds */
+  --dial-bg-primary: #0c1018;
+  --dial-bg-secondary: #141b27;
+  --dial-bg-surface: #1c2433;
+
+  /* Border color */
+  --dial-border: rgba(148, 163, 184, 0.1);
+  --dial-border-hover: rgba(26, 163, 255, 0.3);
+
   --ifm-color-primary: #1aa3ff;
   --ifm-color-primary-dark: #0090e6;
   --ifm-color-primary-darker: #0085d9;
@@ -79,15 +122,15 @@
   --ifm-color-primary-light: #3eb1ff;
   --ifm-color-primary-lighter: #4db8ff;
   --ifm-color-primary-lightest: #80ccff;
-  
+
   --ifm-background-color: var(--dial-bg-primary);
   --ifm-background-surface-color: var(--dial-bg-secondary);
   --ifm-navbar-background-color: rgba(12, 16, 24, 0.95);
   --ifm-footer-background-color: var(--dial-bg-primary);
-  
+
   --ifm-color-content: var(--dial-slate-200);
   --ifm-color-content-secondary: var(--dial-slate-400);
-  
+
   --ifm-code-background: rgba(26, 163, 255, 0.08);
   --docusaurus-highlighted-code-line-bg: rgba(26, 163, 255, 0.12);
 }
@@ -106,13 +149,26 @@ body {
 }
 
 /* ========================================
+   ANNOUNCEMENT BAR
+   ======================================== */
+
+[data-theme='dark'] div[class*="announcementBar"] {
+  background: #141b27;
+  color: #94a3b8;
+}
+
+[data-theme='dark'] div[class*="announcementBar"] a {
+  color: #1aa3ff;
+}
+
+/* ========================================
    NAVBAR
    ======================================== */
 
 .navbar {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--dial-border);
   box-shadow: none;
 }
 
@@ -184,13 +240,14 @@ body {
   border: none;
 }
 
-[data-theme='dark'] .button--secondary {
+.button--secondary {
   background: var(--dial-accent);
   color: white;
 }
 
-[data-theme='dark'] .button--secondary:hover {
+.button--secondary:hover {
   background: var(--dial-accent-light);
+  color: white;
 }
 
 .button--outline {
@@ -198,15 +255,19 @@ body {
   background: transparent;
 }
 
-[data-theme='dark'] .button--outline.button--secondary {
+.button--outline.button--secondary {
   background: transparent;
   color: var(--dial-slate-300);
   border-color: var(--dial-slate-600);
 }
 
-[data-theme='dark'] .button--outline.button--secondary:hover {
+.button--outline.button--secondary:hover {
   color: var(--dial-accent-light);
   border-color: var(--dial-accent-light);
+  background: rgba(0, 112, 179, 0.05);
+}
+
+[data-theme='dark'] .button--outline.button--secondary:hover {
   background: rgba(26, 163, 255, 0.05);
 }
 
@@ -220,15 +281,12 @@ body {
   overflow: hidden;
   transition: border-color 0.2s ease;
   height: 100%;
-}
-
-[data-theme='dark'] .card {
   background: var(--dial-bg-surface);
-  border: 1px solid rgba(148, 163, 184, 0.1);
+  border: 1px solid var(--dial-border);
 }
 
-[data-theme='dark'] .card:hover {
-  border-color: rgba(26, 163, 255, 0.3);
+.card:hover {
+  border-color: var(--dial-border-hover);
 }
 
 .card__header {
@@ -252,7 +310,7 @@ body {
   color: var(--dial-slate-400);
 }
 
-/* Feature cards - simplified */
+/* Feature cards */
 .feature-card {
   position: relative;
 }
@@ -282,7 +340,7 @@ body {
   letter-spacing: -0.01em;
   margin-top: 2.5rem;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  border-bottom: 1px solid var(--dial-border);
 }
 
 .markdown h3 {
@@ -296,7 +354,7 @@ body {
 
 [data-theme='dark'] pre {
   background: var(--dial-bg-secondary) !important;
-  border: 1px solid rgba(148, 163, 184, 0.08);
+  border: 1px solid var(--dial-border);
 }
 
 code {
@@ -312,7 +370,7 @@ code {
 
 /* Sidebar */
 .theme-doc-sidebar-container {
-  border-right: 1px solid rgba(148, 163, 184, 0.08);
+  border-right: 1px solid var(--dial-border);
 }
 
 .menu__link {
@@ -348,7 +406,7 @@ code {
    ======================================== */
 
 .footer {
-  border-top: 1px solid rgba(148, 163, 184, 0.08);
+  border-top: 1px solid var(--dial-border);
 }
 
 [data-theme='dark'] .footer--dark {
@@ -382,8 +440,12 @@ code {
   border-radius: 999px;
   font-size: 0.875rem;
   font-weight: 500;
-  background: rgba(26, 163, 255, 0.1);
+  background: rgba(0, 112, 179, 0.1);
   color: var(--dial-accent-light);
+}
+
+[data-theme='dark'] .dial-status {
+  background: rgba(26, 163, 255, 0.1);
 }
 
 /* ========================================
@@ -394,31 +456,22 @@ code {
   .hero {
     padding: 3rem 1rem;
   }
-  
+
   .hero__title {
     font-size: 2.25rem;
   }
-  
+
   .hero__subtitle {
     font-size: 1.0625rem;
   }
-  
+
   .card__header {
     padding: 1.25rem 1.25rem 0.5rem;
   }
-  
+
   .card__body {
     padding: 0.5rem 1.25rem 1.25rem;
   }
-}
-
-/* ========================================
-   ANIMATIONS - Minimal
-   ======================================== */
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
 }
 
 /* ========================================

@@ -1,11 +1,29 @@
-/**
- * DialAI - Dynamic Integration between AI and Labor
- *
- * A coordination framework for AI and human specialists making decisions
- * together within state machines.
- *
- * @packageDocumentation
- */
+export type {
+  MachineDefinition,
+  Session,
+  TransitionRecord,
+  Specialist,
+  Proposal,
+  Vote,
+  ConsensusResult,
+  ProposerStrategy,
+  VoterStrategy,
+  VoteChoice,
+} from "./types.js";
 
-// Core exports will be added as implementation progresses
-export {};
+export {
+  createSession,
+  getSession,
+  getSessions,
+  registerSpecialist,
+  submitProposal,
+  solicitProposal,
+  submitVote,
+  solicitVote,
+  evaluateConsensus,
+  executeTransition,
+} from "./api.js";
+
+export { sessions, specialists, proposals, votes, clear } from "./store.js";
+
+export { runSession } from "./engine.js";

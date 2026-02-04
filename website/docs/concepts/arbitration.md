@@ -8,117 +8,102 @@ sidebar_position: 5
 
 ## Overview
 
-After specialists submit proposals and cast votes, an **Arbiter** analyzes the results:
+After specialists submit proposals and cast votes, the `evaluateConsensus` function analyzes the results:
 
 ```mermaid
 graph LR
-    V[Votes] --> A[Arbiter]
+    V[Votes] --> A[evaluateConsensus]
     P[Proposals] --> A
-    R[Risk Dial] --> A
     A --> |Consensus| E[Execute]
-    A --> |No Consensus| M[More Voting]
+    A --> |No Consensus| F[Error]
 ```
 
-Arbiters are pluggable strategies—you can implement custom consensus logic while DIAL handles the coordination.
+## The Built-in Arbiter: Weighted Ahead-by-K
 
-## The Default Arbiter: Weighted Ahead-by-K
-
-DIAL ships with a default arbitration strategy that implements **weighted voting with human override**.
+DIAL ships with a built-in arbitration strategy that implements **weighted voting with human override**.
 
 ### Rules
 
-1. **Human votes win immediately**
-   - If any human has voted, their choice wins
-   - No further calculation needed
+1. **Zero proposals** — No consensus (`consensusReached: false`)
 
-2. **AI votes are weighted**
-   - Each AI specialist has a weight (0.0 - 1.0+)
-   - Weights are earned through alignment with human choices
+2. **Single proposal** — Auto-consensus (the lone proposal wins)
 
-3. **Ahead-by-K threshold**
-   - The leading proposal must be ahead by `k` weighted votes
-   - Default `k = 1.0` (must have a full point lead)
+3. **Two or more proposals** — Evaluate votes:
+   - If any human has voted, their choice wins immediately
+   - Otherwise, tally weighted votes per proposal
+   - The leading proposal must be ahead by `k = 1.0` weighted votes
+
+### Vote Tallying
+
+For each vote comparing proposals A and B:
+
+| Vote | Effect |
+|------|--------|
+| `"A"` | Adds specialist's weight to proposal A |
+| `"B"` | Adds specialist's weight to proposal B |
+| `"BOTH"` | Adds specialist's weight to both proposals |
+| `"NEITHER"` | Adds nothing to either proposal |
 
 ### Example
 
 ```
-Proposal A: "Approve"
-  - AI Specialist 1 votes A (weight 0.6)
-  - AI Specialist 2 votes A (weight 0.4)
-  Total for A: 1.0
+Proposal A: "approve"
+  - Voter 1 votes A (weight 1.0)
+  - Voter 2 votes A (weight 1.0)
+  Total for A: 2.0
 
-Proposal B: "Request Changes"  
-  - AI Specialist 3 votes B (weight 0.3)
-  Total for B: 0.3
+Proposal B: "request_changes"
+  - Voter 3 votes B (weight 1.0)
+  Total for B: 1.0
 
-Ahead by: 1.0 - 0.3 = 0.7
+Ahead by: 2.0 - 1.0 = 1.0
 
-If k = 0.5: Consensus reached ✓ (0.7 > 0.5)
-If k = 1.0: No consensus ✗ (0.7 < 1.0)
+k = 1.0: Consensus reached (1.0 >= 1.0)
 ```
 
 ### Human Override
 
-When a human votes, the calculation changes:
+When a human votes, the calculation short-circuits:
 
 ```
-Proposal A: "Approve"
-  - AI Specialist 1 votes A (weight 0.8)
-  - AI Specialist 2 votes A (weight 0.7)
+Proposal A: "approve"
+  - AI Voter 1 votes A (weight 1.0)
+  - AI Voter 2 votes A (weight 1.0)
 
-Proposal B: "Request Changes"
-  - Human votes B (weight 1.0)
+Proposal B: "request_changes"
+  - Human Voter votes B (weight 1.0)
 
-Result: B wins immediately ✓
+Result: B wins immediately
 
-Human primacy: AI votes don't matter when humans participate.
+Human primacy: AI votes don't matter when a human participates.
 ```
 
-## The Risk Dial
+A specialist is considered "human" if their `specialistId` contains "human" (case-insensitive).
 
-The **risk dial** is a per-state confidence threshold that controls how much deliberation is required.
+## Using evaluateConsensus
 
-### Concept
+```typescript
+import { evaluateConsensus } from "dialai";
 
-```
-Risk Dial: 0.0 ────────────────────── 1.0
-           │                           │
-           │  Full Deliberation        │  Express Lane
-           │  (Propose → Vote →        │  (Champion only,
-           │   Arbitrate → Execute)    │   quick check)
-           │                           │
-```
+const result = evaluateConsensus("session-123");
 
-### Below Threshold: Full Deliberation
-
-When confidence is low:
-- All registered proposers are solicited
-- Pairwise voting occurs
-- Full arbitration runs
-- Slower, more expensive, safer
-
-### Above Threshold: Express Lane
-
-When confidence is high:
-- A single "champion" specialist proposes
-- Quick guardrail checks (not full voting)
-- Immediate execution if checks pass
-- Faster, cheaper, requires proven track record
-
-### Trip Wire
-
-If the champion makes a suboptimal choice (detected by configured criteria), the risk dial "trips":
-
-```mermaid
-graph TD
-    E[Express Lane] --> |Champion proposes| C[Check Guardrails]
-    C --> |Pass| X[Execute]
-    C --> |Fail| T[Trip Wire!]
-    T --> F[Full Deliberation]
-    F --> |Rebuild trust| E
+// Result shape:
+// {
+//   consensusReached: boolean,
+//   winningProposalId?: string,
+//   reasoning: string
+// }
 ```
 
-The system drops back to full deliberation until confidence is rebuilt.
+The `ConsensusResult` type:
+
+```typescript
+interface ConsensusResult {
+  consensusReached: boolean;
+  winningProposalId?: string;
+  reasoning: string;
+}
+```
 
 ## Vote Types
 
@@ -128,187 +113,46 @@ Specialists can vote in four ways:
 |------|---------|--------|
 | **A** | Prefer proposal A | +weight to A |
 | **B** | Prefer proposal B | +weight to B |
-| **BOTH** | Both acceptable | Tie signal |
-| **NEITHER** | Both unacceptable | Block signal |
+| **BOTH** | Both acceptable | +weight to both |
+| **NEITHER** | Both unacceptable | No weight added |
 
 ### Handling NEITHER Votes
 
-When specialists vote NEITHER, it signals that available options are inadequate:
-- May trigger additional proposal solicitation
-- May escalate to human intervention
-- Prevents low-quality consensus
+When specialists vote NEITHER, no weight is added to either proposal. If all voters vote NEITHER, no proposal reaches the ahead-by-k threshold and consensus fails.
 
-## Arbiter Strategy Interface
+## The Engine's Behavior
 
-Custom arbiters implement this interface:
+When using `runSession`, the engine handles arbitration automatically:
 
-```typescript
-interface ArbiterDecisionInput {
-  proposals: Proposal[];      // All proposals for this round
-  votes: Vote[];              // All votes cast
-  riskDial: number;           // State-level risk configuration
-}
-
-interface ArbiterDecisionOutput {
-  consensusReached: boolean;
-  winningProposalId?: string;
-  reasoning: string;
-}
-```
-
-### Example: Custom Arbiter
-
-```typescript
-// strategies/my-task/arbiter.ts
-export async function arbitrate(
-  input: ArbiterDecisionInput
-): Promise<ArbiterDecisionOutput> {
-  const { proposals, votes, riskDial } = input;
-  
-  // Calculate weighted scores
-  const scores = calculateWeightedScores(proposals, votes);
-  
-  // Check for human votes (human primacy)
-  const humanVote = votes.find(v => isHumanSpecialist(v.specialistId));
-  if (humanVote) {
-    return {
-      consensusReached: true,
-      winningProposalId: humanVote.voteFor === 'A' 
-        ? humanVote.proposalIdA 
-        : humanVote.proposalIdB,
-      reasoning: "Human vote received - immediate consensus"
-    };
-  }
-  
-  // Check ahead-by-k
-  const sorted = Object.entries(scores)
-    .sort(([, a], [, b]) => b - a);
-  
-  const leader = sorted[0];
-  const runnerUp = sorted[1] || [null, 0];
-  const margin = leader[1] - runnerUp[1];
-  
-  const threshold = riskDial > 0.7 ? 0.5 : 1.0; // Lower threshold at high confidence
-  
-  if (margin >= threshold) {
-    return {
-      consensusReached: true,
-      winningProposalId: leader[0],
-      reasoning: `Consensus reached with margin ${margin.toFixed(2)} >= ${threshold}`
-    };
-  }
-  
-  return {
-    consensusReached: false,
-    reasoning: `No consensus - margin ${margin.toFixed(2)} < ${threshold}`
-  };
-}
-```
-
-## Consensus Evaluation Command
-
-Trigger arbitration via the API:
-
-```typescript
-const result = await evaluateConsensus({
-  sessionId: "session-123",
-  fromTransitionExecutionId: "exec-456"  // Optional: filter to this round
-});
-
-// Result:
-{
-  consensusReached: true,
-  winningProposalId: "proposal-789",
-  reasoning: "Human vote received - immediate consensus"
-}
-```
-
-## Configuring Arbitration
-
-### Per-State Risk Dial
-
-Set the risk dial in your state machine definition:
-
-```typescript
-states: {
-  reviewing: {
-    meta: {
-      prompt: "Review and approve or reject",
-      riskDial: 0.3  // Low confidence - full deliberation
-    }
-  },
-  auto_categorize: {
-    meta: {
-      prompt: "Categorize this item",
-      riskDial: 0.9  // High confidence - express lane eligible
-    }
-  }
-}
-```
-
-### Ahead-by-K Value
-
-Configure the default threshold:
-
-```typescript
-const arbiterConfig = {
-  aheadByK: 1.0,           // Default
-  expressLaneK: 0.3,       // Lower threshold in express lane
-  humanOverride: true      // Human votes always win
-};
-```
+1. If there's only 1 proposal (e.g., only the built-in proposer), it auto-wins
+2. If there are 2+ proposals, pairwise votes are solicited from all registered voters
+3. `evaluateConsensus` is called
+4. If no consensus, the engine throws an error
 
 ## Best Practices
 
-### 1. Start Conservative
+### 1. Start with Simple Machines
 
-Begin with low risk dial values and strict ahead-by-k thresholds:
+Begin with machines where the built-in deterministic proposer can navigate to the goal. Add additional proposers and voters as complexity grows.
+
+### 2. Use Descriptive Reasoning
+
+Always include clear reasoning in proposals and votes:
 
 ```typescript
-riskDial: 0.1    // Almost always full deliberation
-aheadByK: 1.5    // Require strong consensus
+// Good
+{ voteFor: "A", reasoning: "Proposal A moves to done state, which is the goal" }
+
+// Bad
+{ voteFor: "A", reasoning: "A" }
 ```
 
-As you gather alignment data, gradually relax.
-
-### 2. Monitor NEITHER Votes
+### 3. Monitor NEITHER Votes
 
 High NEITHER rates indicate:
 - Poor proposal quality
 - Unclear decision prompts
 - Specialists that don't understand the task
-
-Track and investigate:
-
-```sql
-SELECT state_name, COUNT(*) as neither_count
-FROM votes
-WHERE vote_for = 'NEITHER'
-GROUP BY state_name
-ORDER BY neither_count DESC;
-```
-
-### 3. Calibrate Risk Per State
-
-Not all states need the same deliberation:
-
-| State Type | Risk Dial | Rationale |
-|------------|-----------|-----------|
-| High-stakes decisions | 0.0 - 0.3 | Always involve humans |
-| Routine categorization | 0.5 - 0.8 | Automation-friendly |
-| Data validation | 0.8 - 0.95 | Highly automatable |
-
-### 4. Log Arbiter Reasoning
-
-Always include clear reasoning in arbiter output:
-
-```typescript
-// Good
-reasoning: "Consensus reached: Proposal A leads by 1.2 weighted votes (threshold: 1.0). 3 AI voters, 0 human voters."
-
-// Bad  
-reasoning: "Consensus"
-```
 
 ## Related Concepts
 

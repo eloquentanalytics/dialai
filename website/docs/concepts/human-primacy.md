@@ -53,8 +53,8 @@ AI specialists should adopt the same posture.
 An AI specialist should choose what the human **would** choose, even if its own reasoning disagrees.
 
 ```
-❌ "Based on my analysis, the correct action is X"
-✅ "Based on observed human patterns, the human would likely choose Y"
+Bad:  "Based on my analysis, the correct action is X"
+Good: "Based on observed human patterns, the human would likely choose Y"
 ```
 
 ### 2. Judgment Criteria
@@ -70,10 +70,10 @@ AI specialists are judged on **alignment with human choices**, not on their inde
 ### 3. No Standing to Override
 
 If an AI specialist has strong reasoning that the human is wrong, it should:
-- ✅ Present its reasoning in the proposal
-- ✅ Let the human see and consider it
-- ❌ NOT override the human decision
-- ❌ NOT claim authority based on its reasoning
+- Present its reasoning in the proposal
+- Let the human see and consider it
+- NOT override the human decision
+- NOT claim authority based on its reasoning
 
 ## When Humans Disagree
 
@@ -97,7 +97,7 @@ graph TD
     R1[Reviewer A: Approve]
     R2[Reviewer B: Request Changes]
     AI[AI Specialist]
-    
+
     R1 -->|"Good code"| P
     R2 -->|"Needs tests"| P
     AI -->|"Cannot break tie"| P
@@ -111,44 +111,34 @@ The AI might have an opinion about whether tests are needed. It doesn't matter. 
 
 ## Practical Implementation
 
-### Weight System
+### Human Override in Arbitration
 
-DIAL implements human primacy through the weight system:
+DIAL implements human primacy in the `evaluateConsensus` function. When a human specialist votes, their choice wins immediately:
 
 ```typescript
-// Starting weights
-humanSpecialist.weight = 1.0;  // Full authority
-aiSpecialist.weight = 0.0;     // No authority
+import { registerSpecialist, submitVote, evaluateConsensus } from "dialai";
 
-// Arbitration behavior
-if (humanVoted) {
-  return humanChoice;  // Human wins immediately
-}
-// Only if no human voted:
-return weightedConsensus(aiVotes);
+// Any specialist with "human" in the ID triggers the override
+registerSpecialist({
+  specialistId: "human-reviewer",
+  sessionTypeName: "code-review",
+  role: "voter",
+  strategy: (proposalA, proposalB) => ({
+    voteFor: "B",
+    reasoning: "Proposal B provides more constructive feedback",
+  }),
+});
 ```
 
-### Immediate Human Override
-
-Any human vote immediately wins, regardless of how many AI specialists disagree:
+When `evaluateConsensus` runs, it checks every vote — if any vote's `specialistId` contains "human" (case-insensitive), that vote's choice wins immediately, regardless of all other votes:
 
 ```
-AI Specialist 1: Approve (weight 0.8)
-AI Specialist 2: Approve (weight 0.6)
-AI Specialist 3: Approve (weight 0.7)
-Human: Request Changes (weight 1.0)
+AI Voter 1: votes A (weight 1.0)
+AI Voter 2: votes A (weight 1.0)
+AI Voter 3: votes A (weight 1.0)
+Human:      votes B (weight 1.0)
 
-Result: Request Changes ✓
-```
-
-### Express Lane Trip Wire
-
-Even in "express lane" mode (high-confidence automation), human intervention immediately drops the system back to full deliberation:
-
-```mermaid
-graph LR
-    E[Express Lane] -->|"Human Override"| F[Full Deliberation]
-    F -->|"Rebuild Confidence"| E
+Result: B wins immediately
 ```
 
 ## Common Objections
@@ -161,19 +151,17 @@ The AI operates on a subset of reality. When it seems "objectively right," that 
 
 ### "This slows down automation"
 
-Yes, initially. But DIAL's progressive collapse means that as AI proves alignment with human judgment, the system naturally automates. Human primacy ensures this automation is earned, not assumed.
+Yes, initially. But measuring AI alignment with human judgment over time can inform when to reduce human involvement. Human primacy ensures that automation is earned, not assumed.
 
 ### "What about clear AI advantages (calculation, etc.)?"
 
-For tasks where AI has clear advantages (arithmetic, data lookup, pattern matching on defined criteria), those become **Tool specialists** with deterministic execution—no voting needed.
-
-Human primacy applies to **judgment calls**, not computation.
+For tasks where AI has clear advantages (arithmetic, data lookup, pattern matching on defined criteria), those are deterministic computations — not judgment calls. Human primacy applies to **judgment calls**, not computation.
 
 ## The Long Game
 
 Human primacy is not a limitation on AI—it's the foundation for **trustworthy AI integration**.
 
-By measuring alignment with human judgment across thousands of decisions, organizations can:
+By measuring alignment with human judgment across decisions, organizations can:
 
 1. **Discover** which decisions AI handles well
 2. **Quantify** the cost of human oversight
@@ -186,6 +174,6 @@ Human primacy is the sustainable path to AI adoption.
 
 ## Related Concepts
 
-- [Empirical Trust](./specialists.md#weight-and-trust) — How AI earns authority
+- [Specialists](./specialists.md) — How specialists participate
 - [Arbitration](./arbitration.md) — Consensus mechanisms
 - [Decision Cycle](./decision-cycle.md) — The process that implements human primacy

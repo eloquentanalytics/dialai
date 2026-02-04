@@ -28,6 +28,8 @@ const config: Config = {
     locales: ["en"],
   },
 
+  plugins: ["docusaurus-plugin-llms"],
+
   presets: [
     [
       "classic",
@@ -45,14 +47,13 @@ const config: Config = {
   ],
 
   themeConfig: {
-    // Force dark mode as default
     colorMode: {
-      defaultMode: "dark",
+      defaultMode: "light",
       disableSwitch: false,
-      respectPrefersColorScheme: false,
+      respectPrefersColorScheme: true,
     },
     // Social card for sharing
-    image: "img/hero-illustration.svg",
+    image: "img/social-card.png",
     navbar: {
       title: "DIAL",
       logo: {
@@ -64,17 +65,12 @@ const config: Config = {
           type: "docSidebar",
           sidebarId: "tutorialSidebar",
           position: "left",
-          label: "Documentation",
+          label: "Docs",
         },
         {
           to: "/constitution",
           position: "left",
           label: "Constitution",
-        },
-        {
-          to: "/docs/concepts/intro",
-          position: "left",
-          label: "Concepts",
         },
         {
           to: "/docs/getting-started/installation",
@@ -136,6 +132,23 @@ const config: Config = {
               label: "Issues",
               href: "https://github.com/eloquentanalytics/dialai/issues",
             },
+            {
+              label: "Discussions",
+              href: "https://github.com/eloquentanalytics/dialai/discussions",
+            },
+          ],
+        },
+        {
+          title: "Legal",
+          items: [
+            {
+              label: "Privacy Policy",
+              to: "/privacy",
+            },
+            {
+              label: "Terms of Use",
+              to: "/terms",
+            },
           ],
         },
       ],
@@ -145,20 +158,19 @@ const config: Config = {
         width: 50,
         height: 50,
       },
-      copyright: `Copyright © ${new Date().getFullYear()} DIAL Contributors. Built with Docusaurus.`,
+      copyright: `Copyright \u00A9 ${new Date().getFullYear()} DIAL Contributors. Built with Docusaurus.`,
     },
     prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
       additionalLanguages: ["bash", "json", "typescript"],
     },
-    // Announcement bar - simplified colors
     announcementBar: {
       id: "alpha_notice",
       content:
-        'DIAL is in active development. <a href="/dialai/docs/intro">Learn about the framework</a> and help shape the future of AI-human collaboration.',
-      backgroundColor: "#141b27",
-      textColor: "#94a3b8",
+        'DIAL is in active development. <a href="/dialai/docs/intro">Read the docs</a> or <a href="https://github.com/eloquentanalytics/dialai/issues">open an issue</a>.',
+      backgroundColor: "#f0f2f5",
+      textColor: "#475569",
       isCloseable: true,
     },
   } satisfies Preset.ThemeConfig,
@@ -167,17 +179,6 @@ const config: Config = {
     mermaid: true,
   },
   themes: ["@docusaurus/theme-mermaid"],
-  
-  // Head tags for custom fonts
-  headTags: [
-    {
-      tagName: "link",
-      attributes: {
-        rel: "preconnect",
-        href: "https://cdn.jsdelivr.net",
-      },
-    },
-  ],
 };
 
 export default config;

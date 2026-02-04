@@ -58,67 +58,14 @@ Ensure your `tsconfig.json` includes:
 }
 ```
 
-### 3. Create Directory Structure
+### 3. Add `"type": "module"` to package.json
 
-```bash
-mkdir -p src/strategies
-mkdir -p src/machines
-```
+DIAL is an ESM package:
 
-Your project should look like:
-
-```
-my-dial-project/
-├── src/
-│   ├── strategies/     # Specialist strategy implementations
-│   │   └── my-task/
-│   │       ├── proposer.ts
-│   │       └── voter.ts
-│   ├── machines/       # State machine definitions
-│   │   └── my-task.ts
-│   └── index.ts
-├── package.json
-└── tsconfig.json
-```
-
-## Environment Configuration
-
-### API Keys
-
-If you're using LLM specialists, configure your API keys:
-
-```bash
-# .env file
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-ant-...
-OPENROUTER_API_KEY=sk-or-...
-```
-
-Install dotenv if needed:
-
-```bash
-npm install dotenv
-```
-
-Load in your code:
-
-```typescript
-import 'dotenv/config';
-```
-
-### Database (Optional)
-
-DIAL can use various storage backends. For development, in-memory storage works. For production, configure your database:
-
-```typescript
-import { createDialClient } from 'dialai';
-
-const dial = createDialClient({
-  storage: {
-    type: 'postgres',
-    connectionString: process.env.DATABASE_URL
-  }
-});
+```json
+{
+  "type": "module"
+}
 ```
 
 ## Verify Installation
@@ -127,16 +74,22 @@ Create a test file to verify everything works:
 
 ```typescript
 // src/test-install.ts
-import { createDialClient } from 'dialai';
+import { createSession, runSession } from "dialai";
+import type { MachineDefinition } from "dialai";
 
-async function main() {
-  const dial = createDialClient();
-  
-  console.log('DIAL installed successfully!');
-  console.log('Version:', dial.version);
-}
+const machine: MachineDefinition = {
+  sessionTypeName: "test",
+  initialState: "start",
+  defaultState: "end",
+  states: {
+    start: { transitions: { finish: "end" } },
+    end: {},
+  },
+};
 
-main().catch(console.error);
+const session = runSession(machine);
+console.log("DIAL installed successfully!");
+console.log("Session reached:", session.currentState); // "end"
 ```
 
 Run it:
@@ -148,8 +101,18 @@ npx tsx src/test-install.ts
 You should see:
 ```
 DIAL installed successfully!
-Version: x.x.x
+Session reached: end
 ```
+
+## CLI Usage
+
+DIAL includes a CLI that runs a machine JSON file to completion:
+
+```bash
+npx dialai machine.json
+```
+
+See [Quick Start](./quick-start.md) for a full example.
 
 ## What's Next?
 
@@ -190,7 +153,7 @@ DIAL is an ESM package. If you're in a CommonJS project, either:
 2. Use dynamic imports:
 
 ```typescript
-const { createDialClient } = await import('dialai');
+const { runSession } = await import("dialai");
 ```
 
 ### Need help?

@@ -85,6 +85,22 @@ const concepts = [
   },
 ];
 
+const codeExample = `import { createDialClient } from '@dialai/core';
+
+const machine = {
+  id: 'content-review',
+  initial: 'draft',
+  states: {
+    draft:    { on: { SUBMIT: 'review' } },
+    review:   { on: { APPROVE: 'published', REJECT: 'draft' } },
+    published: { type: 'final' },
+  },
+};
+
+const client = createDialClient({ machine });
+const result = await client.run();
+// result.costs → per-specialist USD, latency, alignment`;
+
 function HeroSection() {
   return (
     <header className={styles.hero}>
@@ -97,8 +113,9 @@ function HeroSection() {
             Dynamic Integration between AI and Labor
           </p>
           <p className={styles.heroDescription}>
-            A framework for measuring exactly what it costs — in dollars, time,
-            and quality — to delegate any decision to AI.
+            A TypeScript framework for teams building AI-assisted workflows who
+            need to know exactly what delegation costs — in dollars, time, and
+            quality.
           </p>
           <div className={styles.heroButtons}>
             <Link
@@ -155,8 +172,7 @@ function PrinciplesSection() {
             Core Principles
           </Heading>
           <p className={styles.sectionSubtitle}>
-            DIAL is built on three foundational ideas that redefine how AI and
-            humans collaborate.
+            Three ideas that shape how DIAL works.
           </p>
         </div>
         <div className={styles.principlesGrid}>
@@ -268,6 +284,42 @@ function HowItWorksSection() {
   );
 }
 
+function CodeExampleSection() {
+  const [ref, inView] = useInView();
+  return (
+    <section
+      ref={ref as RefObject<HTMLElement>}
+      className={clsx(styles.codeSection, inView && styles.animateIn)}
+    >
+      <div className="container">
+        <div className={styles.codeContent}>
+          <div className={styles.codeTextCol}>
+            <Heading as="h2" className={styles.sectionTitle}>
+              Define a machine. Get cost data.
+            </Heading>
+            <p className={styles.sectionSubtitle} style={{ margin: 0 }}>
+              Model your workflow as a state machine, register AI and human
+              specialists, and DIAL measures per-decision delegation costs
+              automatically.
+            </p>
+          </div>
+          <div className={styles.codeBlock}>
+            <div className={styles.codeHeader}>
+              <span className={styles.codeDot} />
+              <span className={styles.codeDot} />
+              <span className={styles.codeDot} />
+              <span className={styles.codeFilename}>example.ts</span>
+            </div>
+            <pre className={styles.codePre}>
+              <code>{codeExample}</code>
+            </pre>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function StartingPessimisticSection() {
   const [ref, inView] = useInView();
   return (
@@ -323,11 +375,10 @@ function CTASection() {
       <div className="container">
         <div className={styles.ctaContent}>
           <Heading as="h2" className={styles.ctaTitle}>
-            Ready to measure AI-human collaboration?
+            Start measuring delegation costs.
           </Heading>
           <p className={styles.ctaDescription}>
-            Start building with DIAL and discover exactly what tasks can be
-            delegated to AI — with precise cost data.
+            Install DIAL and get per-decision cost data for your state machines.
           </p>
           <div className={styles.ctaButtons}>
             <Link
@@ -358,9 +409,10 @@ export default function Home(): JSX.Element {
     >
       <HeroSection />
       <main>
-        <PrinciplesSection />
         <TheQuestionSection />
         <HowItWorksSection />
+        <CodeExampleSection />
+        <PrinciplesSection />
         <StartingPessimisticSection />
         <CTASection />
       </main>
