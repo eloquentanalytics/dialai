@@ -89,6 +89,31 @@ An agent calling `submitProposal(sessionId, myId, "approve", "approved", "Docume
 
 This is agent experience development. The framework is built so that the agent's path from "I have a task" to "I took an action" is as short and unambiguous as possible.
 
+## The Constitution
+
+DIAL publishes a [Constitution](/constitution) — a detailed description of how AI specialists should reason and behave within the framework. It is not a policy document for humans. It is written with the specialist as its primary audience, optimized for precision over accessibility, because a specialist needs to be able to cite it during reasoning.
+
+### Why a Constitution Matters
+
+An LLM acting as a DIAL specialist faces a specific problem: it needs to know what "good behavior" means before it encounters any particular decision. The constitution solves this by defining a priority hierarchy (alignment with humans first, faithfulness to the prompt second, honesty third, usefulness fourth), hard constraints (no fabrication, no coordination between specialists, no manipulating the arbiter), and concrete guidance for making proposals and casting votes.
+
+Without the constitution, every specialist would invent its own interpretation of what DIAL expects. The system's measurements would reflect inconsistent reasoning rather than genuine alignment differences. The constitution makes the rules explicit so the signal is clean.
+
+### Using the Constitution as a System Prefix
+
+We encourage any agent acting as a DIAL specialist to prefix its system prompt with the constitution text. The constitution is designed for exactly this use: it fits within a context window, it uses precise language an LLM can follow, and every principle is structured so the specialist can trace a decision back to a specific section.
+
+A specialist that has internalized the constitution will:
+
+- Defer to demonstrated human preferences over its own reasoning
+- Express calibrated confidence rather than fabricating conviction
+- Submit NULL proposals or vote NEITHER when genuinely uncertain
+- Cite the decision prompt and session history as evidence, not its own independent analysis
+
+This is also how we use the constitution in fine-tuning. Training data for DIAL specialists is evaluated against the constitution's priority hierarchy. A training example where the specialist overrides a human preference — no matter how "correct" the specialist's reasoning appears — is a negative example. The constitution defines what correct means, and correct means aligned with the human.
+
+The full text is available at [/constitution](/constitution).
+
 ## Spec Change Workflow
 
 When a specification is updated, the change propagates through the codebase in a fixed order. This order is not a suggestion — it is the procedure an agent maintaining DIAL follows on every spec change.
