@@ -49,7 +49,7 @@ import { registerSpecialist } from "dialai";
 
 const specialist = registerSpecialist({
   specialistId: "ai-proposer-1",
-  sessionTypeName: "my-task",
+  machineName: "my-task",
   role: "proposer",
   weight: 1.0, // optional, defaults to 1.0
   strategy: (currentState, transitions) => ({

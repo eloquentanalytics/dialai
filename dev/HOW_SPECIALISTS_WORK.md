@@ -33,20 +33,20 @@ Arbitration is built into the framework via the `evaluateConsensus` function. Th
 
 ## Session Type Binding
 
-A specialist is registered for a specific `sessionTypeName`. It only participates in sessions of that type. Multiple specialists of different roles and execution modes can be registered for the same session type. The orchestrator finds all matching specialists when it needs proposals or votes.
+A specialist is registered for a specific `machineName`. It only participates in sessions of that type. Multiple specialists of different roles and execution modes can be registered for the same session type. The orchestrator finds all matching specialists when it needs proposals or votes.
 
 ```typescript
 // These two specialists both participate in "document-review" sessions
 registerSpecialist({
   specialistId: "proposer-1",
-  sessionTypeName: "document-review",
+  machineName: "document-review",
   role: "proposer",
   strategyFn: async (ctx) => { /* ... */ },
 });
 
 registerSpecialist({
   specialistId: "voter-1",
-  sessionTypeName: "document-review",
+  machineName: "document-review",
   role: "voter",
   strategyFn: async (ctx) => { /* ... */ },
 });
@@ -65,7 +65,7 @@ You provide an async function. The orchestrator calls it with the appropriate co
 ```typescript
 registerSpecialist({
   specialistId: "my-proposer",
-  sessionTypeName: "document-review",
+  machineName: "document-review",
   role: "proposer",
   strategyFn: async (context: ProposerContext) => ({
     transitionName: "approve",
@@ -78,7 +78,7 @@ registerSpecialist({
 ```typescript
 registerSpecialist({
   specialistId: "my-voter",
-  sessionTypeName: "document-review",
+  machineName: "document-review",
   role: "voter",
   strategyFn: async (context: VoterContext) => ({
     voteFor: "A",
@@ -101,14 +101,14 @@ Same as `strategyFn`, but the orchestrator POSTs the context to a URL instead of
 ```typescript
 registerSpecialist({
   specialistId: "remote-proposer",
-  sessionTypeName: "document-review",
+  machineName: "document-review",
   role: "proposer",
   strategyWebhookUrl: "https://my-service.example.com/propose",
   webhookTokenName: "MY_SERVICE_TOKEN",
 });
 ```
 
-Authentication is HTTP Basic Auth. The username is the `sessionTypeName`. The password is the value of the environment variable (or `.env` entry) named by `webhookTokenName`.
+Authentication is HTTP Basic Auth. The username is the `machineName`. The password is the value of the environment variable (or `.env` entry) named by `webhookTokenName`.
 
 ```
 POST https://my-service.example.com/propose
@@ -150,7 +150,7 @@ You provide an async function that returns a string. The orchestrator sends that
 ```typescript
 registerSpecialist({
   specialistId: "context-proposer",
-  sessionTypeName: "document-review",
+  machineName: "document-review",
   role: "proposer",
   modelId: "openai/gpt-4o-mini",
   contextFn: async (context: ProposerContext) => {
@@ -163,7 +163,7 @@ registerSpecialist({
 ```typescript
 registerSpecialist({
   specialistId: "context-voter",
-  sessionTypeName: "document-review",
+  machineName: "document-review",
   role: "voter",
   modelId: "openai/gpt-4o-mini",
   contextFn: async (context: VoterContext) => {
@@ -188,7 +188,7 @@ Same as `contextFn`, but the orchestrator POSTs the context request to a URL ins
 ```typescript
 registerSpecialist({
   specialistId: "webhook-context-proposer",
-  sessionTypeName: "document-review",
+  machineName: "document-review",
   role: "proposer",
   modelId: "openai/gpt-4o-mini",
   contextWebhookUrl: "https://my-service.example.com/context",
@@ -224,7 +224,7 @@ The orchestrator waits **up to 55 seconds** for the webhook to respond with cont
 
 If the webhook does not intend to reply inline, it should drop the connection early rather than holding the request open.
 
-Authentication works identically to `strategyWebhookUrl` — Basic Auth with `sessionTypeName` as user, env var value as password.
+Authentication works identically to `strategyWebhookUrl` — Basic Auth with `machineName` as user, env var value as password.
 
 **Required parameters:** `contextWebhookUrl`, `webhookTokenName`, `modelId`
 **Forbidden parameters:** `strategyFn`, `strategyWebhookUrl`, `contextFn`
@@ -298,7 +298,7 @@ Every specialist has a `weight` (default `1.0`) that determines how much its vot
 ```typescript
 registerSpecialist({
   specialistId: "senior-voter",
-  sessionTypeName: "document-review",
+  machineName: "document-review",
   role: "voter",
   weight: 2.0,
   strategyFn: async (ctx) => { /* ... */ },
@@ -454,7 +454,7 @@ Any other combination is an error. Examples of invalid configurations and their 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `specialistId` | `string` | Yes | — | Unique identifier. Include "human" for human specialists. |
-| `sessionTypeName` | `string` | Yes | — | Which session type this specialist participates in |
+| `machineName` | `string` | Yes | — | Which session type this specialist participates in |
 | `role` | `"proposer" \| "voter" \| "arbiter"` | Yes | — | The specialist's role |
 | `weight` | `number` | No | `1.0` | Voting weight used in consensus evaluation |
 | `strategyFn` | `async (context) => result` | Mode 1 | — | Local function that returns a proposal or vote |

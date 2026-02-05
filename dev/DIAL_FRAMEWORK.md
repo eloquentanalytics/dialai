@@ -43,7 +43,7 @@ These JSON string fields hold arbitrary implementation-specific data:
 
 These string fields are matched by equality but their meaning is implementation-defined:
 
-- `sessionTypeName` - Identifies which state machine definition to use. The framework validates it exists but doesn't understand what it represents.
+- `machineName` - Identifies which state machine definition to use. The framework validates it exists but doesn't understand what it represents.
 - `specialistId` - Identifies a specialist (human or AI agent). The framework routes solicitations and tracks proposals/votes by this ID. **Human specialists are identified by including "human" (case-insensitive) anywhere in their specialistId** (e.g., `specialist.sheep.human`, `human_operator_1`). Human votes have weight 1.0 by default; LLM votes start at weight 0.0 and are scaled by the risk dial.
 - `transitionName` / `toStateName` - Identifies transitions and target states in the state machine.
 
@@ -51,14 +51,14 @@ These string fields are matched by equality but their meaning is implementation-
 
 ## Specialist Strategies
 
-All specialist roles are implemented as pluggable strategies loaded from `./strategies/{sessionTypeName}/{strategyFunctionKey}.ts`.
+All specialist roles are implemented as pluggable strategies loaded from `./strategies/{machineName}/{strategyFunctionKey}.ts`.
 
 **Solicitation**: Only proposers and voters are solicited via commands. Arbiters and tools are invoked directly by the framework when needed.
 
 ### Resolution
 
 1. Look up `specialistId` in `specialists` table
-2. If found: load strategy from `./strategies/{sessionTypeName}/{strategyFunctionKey}.ts`
+2. If found: load strategy from `./strategies/{machineName}/{strategyFunctionKey}.ts`
 3. If not found: use pure function specialist from session type registration
 
 ### Proposer Strategy Interface
@@ -106,13 +106,13 @@ All specialist roles are implemented as pluggable strategies loaded from `./stra
 Create a new session.
 
 API Input:
-- `sessionTypeName` (string, must match a known session type or returns 400)
+- `machineName` (string, must match a known session type or returns 400)
 - `metadataJSONString` (string, optional)
 - `initialParamsJSONString` (string, optional) - Override the machine's initial params
 
 Stored Command (API input + server-generated):
 - `commandCorrelationId` (string, UUID)
-- `sessionTypeName` (string)
+- `machineName` (string)
 - `metadataJSONString` (string, optional)
 - `initialParamsJSONString` (string, optional)
 - `receivedAtTimestamp` (string, ISO 8601)
@@ -300,10 +300,10 @@ Register an LLM-based specialist for a session type. See [Specialist Strategies]
 
 API Input:
 - `specialistId` (string) - Unique identifier for this specialist
-- `sessionTypeName` (string) - Session type this specialist is registered for
+- `machineName` (string) - Session type this specialist is registered for
 - `fromStateName` (string, optional) - If set, specialist is only available in this state. If null/omitted, available in all states.
 - `specialistRole` (string, enum, ['proposer'|'voter'|'arbiter'|'tool'])
-- `strategyFunctionKey` (string) - Strategy function identifier (e.g., "proposer" loads `./strategies/{sessionTypeName}/proposer.ts`)
+- `strategyFunctionKey` (string) - Strategy function identifier (e.g., "proposer" loads `./strategies/{machineName}/proposer.ts`)
 - `modelId` (string) - Model identifier passed to the strategy
 - `displayName` (string) - Human-readable name for UI display
 - `weight` (number, default: 1.0) - Voting weight for consensus calculation
@@ -378,7 +378,7 @@ Evaluative command that analyzes a specialist's voting history against human vot
 
 API Input:
 - `specialistId` (string) - The specialist to evaluate
-- `sessionTypeName` (string) - Session type (store) to query
+- `machineName` (string) - Session type (store) to query
 - `maxRounds` (number, optional) - Limit to last N transition rounds
 - `maxSeqNum` (number, optional) - Time-travel: only consider events up to this sequence number
 
@@ -391,7 +391,7 @@ Event Parameters:
 - `recalculationId` (string, UUID)
 - `commandCorrelationId` (string, UUID)
 - `specialistId` (string)
-- `sessionTypeName` (string)
+- `machineName` (string)
 - `recalculatedAtTimestamp` (string, ISO 8601)
 - `fromStateName` (string, nullable) - The specialist's registered state scope
 - `recommendedWeight` (number) - Calculated weight based on alignment
@@ -406,7 +406,7 @@ Materializations:
 
 ### command.evaluate_accuracy -> event.accuracy_evaluated
 
-Evaluative command that assesses a specialist's recent performance by comparing their proposals/votes against human decisions across all sessions within a sessionTypeName. Does NOT mutate state—the result event is stored in the event stream only.
+Evaluative command that assesses a specialist's recent performance by comparing their proposals/votes against human decisions across all sessions within a machineName. Does NOT mutate state—the result event is stored in the event stream only.
 
 **For proposers:** Compares the specialist's proposal against the human-endorsed proposal (identified by which proposal the human voter voted for) on three dimensions: transition name, target state, and parameters.
 
@@ -416,7 +416,7 @@ Rounds where the human voted NEITHER are excluded (no ground truth). When the hu
 
 API Input:
 - `specialistId` (string) - The specialist to evaluate
-- `sessionTypeName` (string) - Session type (store) to query
+- `machineName` (string) - Session type (store) to query
 - `lookback` (number, optional) - Limit to last N transition rounds
 - `maxSeqNum` (number, optional) - Time-travel: only consider events up to this sequence number
 
@@ -429,7 +429,7 @@ Event Parameters:
 - `evaluationId` (string, UUID)
 - `commandCorrelationId` (string, UUID)
 - `specialistId` (string)
-- `sessionTypeName` (string)
+- `machineName` (string)
 - `evaluatedAtTimestamp` (string, ISO 8601)
 - `totalRoundsCompared` (number) - Rounds with comparable data (excludes NEITHER)
 - `transitionMatchRate` (number, 0.0-1.0) - Proposers: transition name match; Voters: vote agreement

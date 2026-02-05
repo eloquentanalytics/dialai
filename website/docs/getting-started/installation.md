@@ -78,7 +78,7 @@ import { createSession, runSession } from "dialai";
 import type { MachineDefinition } from "dialai";
 
 const machine: MachineDefinition = {
-  sessionTypeName: "test",
+  machineName: "test",
   initialState: "start",
   defaultState: "end",
   states: {

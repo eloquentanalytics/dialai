@@ -13,7 +13,7 @@ import { sessions, specialists, proposals, votes } from "./store.js";
 export function createSession(machine: MachineDefinition): Session {
   const session: Session = {
     sessionId: crypto.randomUUID(),
-    sessionTypeName: machine.sessionTypeName,
+    machineName: machine.machineName,
     currentState: machine.initialState,
     machine,
     history: [],
@@ -37,14 +37,14 @@ export function getSessions(): Session[] {
 
 export function registerSpecialist(opts: {
   specialistId: string;
-  sessionTypeName: string;
+  machineName: string;
   role: "proposer" | "voter" | "arbiter";
   weight?: number;
   strategy: ProposerStrategy | VoterStrategy;
 }): Specialist {
   const specialist: Specialist = {
     specialistId: opts.specialistId,
-    sessionTypeName: opts.sessionTypeName,
+    machineName: opts.machineName,
     role: opts.role,
     weight: opts.weight ?? 1.0,
     strategy: opts.strategy,

@@ -138,14 +138,14 @@ import { registerSpecialist } from "dialai";
 
 registerSpecialist({
   specialistId: "goal-proposer",
-  sessionTypeName: "my-task",
+  machineName: "my-task",
   role: "proposer",
   strategy: goalDirected,
 });
 
 registerSpecialist({
   specialistId: "goal-voter",
-  sessionTypeName: "my-task",
+  machineName: "my-task",
   role: "voter",
   strategy: goalVoter,
 });

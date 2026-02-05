@@ -42,7 +42,7 @@ At its core, DIAL coordinates **specialists** (both AI and human) to navigate **
 ### Sessions & State Machines
 
 A **session** is an instance of a state machine. The machine definition specifies:
-- A **`sessionTypeName`** identifying the type
+- A **`machineName`** identifying the type
 - An **`initialState`** where sessions begin
 - A **`defaultState`** (the goal state)
 - A set of **states**, each with optional `prompt` and `transitions`

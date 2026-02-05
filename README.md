@@ -31,14 +31,14 @@ import { createSession, registerSpecialist } from "dialai";
 
 // Create a session with a state machine
 const session = createSession({
-  sessionTypeName: "my-task",
+  machineName: "my-task",
   initialState: "idle"
 });
 
 // Register an AI specialist
 await registerSpecialist({
   specialistId: "specialist.my-task.proposer.gpt-4",
-  sessionTypeName: "my-task",
+  machineName: "my-task",
   specialistRole: "proposer",
   modelId: "gpt-4"
 });

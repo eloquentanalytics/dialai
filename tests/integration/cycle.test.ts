@@ -18,7 +18,7 @@ describe("integration: full cycle with 2 proposers + 1 voter", () => {
 
   it("correct proposal wins via voter", () => {
     const machine: MachineDefinition = {
-      sessionTypeName: "int-test",
+      machineName: "int-test",
       initialState: "pending",
       defaultState: "done",
       states: {
@@ -50,7 +50,7 @@ describe("integration: full cycle with 2 proposers + 1 voter", () => {
     // Register voter that prefers A (complete)
     registerSpecialist({
       specialistId: "voter-1",
-      sessionTypeName: "int-test",
+      machineName: "int-test",
       role: "voter",
       strategy: () => ({ voteFor: "A" as const, reasoning: "prefer A" }),
     });
@@ -88,6 +88,6 @@ describe("integration: load simple-machine.json and run", () => {
 
     const session = runSession(machine);
     expect(session.currentState).toBe("sure");
-    expect(session.sessionTypeName).toBe("is-two-greater");
+    expect(session.machineName).toBe("is-two-greater");
   });
 });
