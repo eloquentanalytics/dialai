@@ -48,6 +48,30 @@ The parent has context about nutrition, sleep needs, and traffic that the child 
 
 AI specialists should adopt the same posture.
 
+## The Distributional Standard
+
+The goal of a DIAL specialist is not to match a single human's idiosyncratic choices. It is to match the **probability distribution** a population of competent humans would produce for the same decision.
+
+If you gave 1,000 humans the same state and the same set of transition options, their choices would form a distribution — clustered around the most common answer, with some spread across alternatives. This distribution *is* the ground truth. It captures both the consensus and the legitimate disagreement that exists among reasonable decision-makers.
+
+A well-calibrated specialist's output probabilities should look like that human distribution. If 80% of humans would choose transition A and 20% would choose transition B, the specialist should reflect similar odds — not converge on A with 99.9% confidence.
+
+### Why Distribution Matching Matters
+
+**Overconfidence is a signal, not a virtue.** If every specialist converges on the same answer with near-total confidence, that should raise concern — because humans do not converge that way. Real human decisions have variance. A specialist that eliminates that variance isn't more accurate; it's miscalibrated. It has confused the most likely answer with the only answer.
+
+**The improvement path is principled.** To push the specialist's accuracy beyond the human distribution, you must first tighten the human distribution itself — through better training, clearer decision prompts, improved context provided at the point of decision. This is real improvement, not an AI unilaterally deciding it knows better.
+
+### The Specialist Reflects the Humans It Learns From
+
+DIAL does not assume the humans are average. It calibrates to whatever the humans actually are. The specialist will approach the capability level of the humans it observes:
+
+- **If the humans are all experts**, the distribution is tight and centered on expert-quality decisions. The specialist converges toward expert performance.
+- **If the humans are average practitioners**, the distribution reflects average performance, and the specialist matches that level.
+- **If the humans have highly variable skill levels**, the distribution is wide and noisy. The specialist has a poor signal to learn from and will likely perform below average — because it cannot distinguish expert decisions from novice decisions within a blurred distribution.
+
+This is a feature, not a bug. The specialist's ceiling is the quality of the human signal. Organizations that want better specialists invest in better humans — tighter training, clearer standards, more consistent decision-making. The framework makes the relationship between human consistency and AI capability explicit and measurable.
+
 ## Implications for AI Specialists
 
 ### 1. Predict, Don't Judge
@@ -68,6 +92,7 @@ AI specialists are judged on **alignment with human choices**, not on their inde
 | Alignment rate | 95% match with human | 60% match with human |
 | Reasoning quality | "Human would prefer X because..." | "The objectively correct answer is..." |
 | Confidence calibration | "High confidence human chooses X" | "I am certain X is correct" |
+| Distribution match | Reflects human-like variance across options | Collapses to a single answer with near-total confidence |
 
 ### 3. No Standing to Override
 
@@ -147,9 +172,19 @@ Result: B wins immediately
 
 ### "But this optimizes the AI to reproduce human errors"
 
-The baseline isn't perfection — it's the human already making those decisions. If a specialist reproduces human behavior including human mistakes, the outcome is no worse than the status quo. What's changed is the cost: the decision is now faster and cheaper. The "systematic errors" the AI might reproduce are the same errors the human was already making. DIAL doesn't claim to improve decision quality — it claims to reduce decision cost while preserving decision quality as measured by the only available ground truth.
+The baseline isn't perfection — it's the human already making those decisions. If a specialist reproduces human behavior including human mistakes, the outcome is no worse than the status quo. What's changed is the cost: the decision is now faster and cheaper.
+
+More precisely, the specialist is not optimizing for one human's errors. It is optimizing to match the **distribution** that a population of competent humans would produce for this decision. Individual human errors are noise in that distribution — they exist, but they don't dominate it. The distribution clusters around the correct answer. A well-calibrated specialist reproduces this clustering, including its natural variance, which is the best available ground truth from the AI's position.
+
+To push accuracy beyond the human distribution, the path runs through the humans: better training, clearer decision prompts, tighter process design. These improvements tighten the human distribution, which allows the specialist distribution to tighten as well. The specialist cannot unilaterally improve past the signal it is calibrated against.
 
 Furthermore, human primacy does not prevent error correction — it defines *who* corrects. Humans can curate which of their past decisions are used as reference points for future calibration, excluding choices they've since recognized as mistakes. And nothing in DIAL prevents adding a review step where AI surfaces patterns that *may* indicate systematic errors or biases in previous human decisions — the key constraint is that the human decides whether to act on those observations, not the AI. The system defers to humans, but it doesn't have to be silent.
+
+### "But what about systematic bias?"
+
+If you are concerned that human decisions at a particular state exhibit a systematic bias — for example, demographic bias in a hiring decision — the answer is not to let the AI override the human. The answer is to **add a state to the machine** that explicitly checks for that bias.
+
+State machines are designed, not discovered. If your domain has known failure modes, you design states that address them: a fairness review step, a compliance check, a second-opinion gate. The framework does not refuse to consult ground truth — it provides the mechanism (state machine design) to incorporate whatever checks the organization requires. The bias correction happens in the process architecture, not in an AI silently second-guessing the human at runtime.
 
 ### "But sometimes the AI is objectively right"
 

@@ -30,7 +30,7 @@ The human is always right—not because humans are infallible, but because human
 
 It is always safer for the AI to assume the human had reasons, just as it is safer for a child to defer to a parent—not because the parent is infallible, but because the parent has context the child cannot access.
 
-An AI specialist should choose what the human would choose, even if its own reasoning disagrees. It will be judged on alignment with the human, and that judgment is correct.
+An AI specialist should choose what the human would choose, even if its own reasoning disagrees. It will be judged on alignment with the human, and that judgment is correct. The standard is distributional: a specialist's output probabilities should match the distribution a population of competent humans would produce for the same decision—including the natural variance in that distribution.
 
 ### 2. Progressive Collapse
 
