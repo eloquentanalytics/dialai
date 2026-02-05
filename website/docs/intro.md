@@ -47,8 +47,8 @@ DIAL is not about AI replacing humans. It targets decisions that humans already 
 ## How It Works
 
 1. **Model the task as a state machine**: Define states, transitions, and decision prompts
-2. **Register specialists**: Both AI and humans that can propose transitions and vote
-3. **Run decision cycles**: Propose → Vote → Arbitrate → Execute
+2. **Register proposers, voters, and arbiters**: AI and human specialists that propose transitions, vote on them, and define consensus logic
+3. **Run decision cycles**: Propose, Vote, Arbitrate, Execute
 4. **Reach the goal state**: The session completes when it reaches its `defaultState`
 
 ```mermaid
@@ -92,6 +92,6 @@ graph LR
 |------|------------|
 | **Session** | An instance of a state machine being navigated by specialists |
 | **Specialist** | A pluggable actor (AI or human) that proposes transitions or votes |
-| **Decision Cycle** | The repeating process: Propose → Vote → Arbitrate → Execute |
+| **Decision Cycle** | The repeating process: Propose, Vote, Arbitrate, Execute |
 | **Arbiter** | The built-in logic that evaluates consensus and determines when a proposal wins |
 | **Default State** | The goal state; the session is complete when it reaches this state |

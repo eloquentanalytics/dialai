@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # API Reference
 
-The DialAI API provides 10 functions for creating sessions, registering specialists, and managing the decision cycle. All functions are synchronous and use in-memory storage.
+The DialAI API provides 12 functions for creating sessions, registering specialists, and managing the decision cycle. All functions are synchronous except where noted; specialist strategy functions are async.
 
 ## Session Functions
 
@@ -40,21 +40,55 @@ const all = getSessions();
 
 ## Specialist Functions
 
-### `registerSpecialist(opts): Specialist`
+### `registerProposer(opts): Proposer`
 
-Registers a specialist for a session type.
+Registers a proposer for a session type. Supports four execution modes: `strategyFn`, `strategyWebhookUrl`, `contextFn + modelId`, or `contextWebhookUrl + modelId`. See the [registering specialists guide](../guides/registering-specialists.md) for details on all modes.
 
 ```typescript
-import { registerSpecialist } from "dialai";
+import { registerProposer } from "dialai";
 
-const specialist = registerSpecialist({
+const proposer = registerProposer({
   specialistId: "ai-proposer-1",
   machineName: "my-task",
-  role: "proposer",
-  strategy: (currentState, transitions) => ({
-    transitionName: Object.keys(transitions)[0],
-    toState: Object.values(transitions)[0],
+  strategyFn: async (ctx) => ({
+    transitionName: Object.keys(ctx.transitions)[0],
+    toState: Object.values(ctx.transitions)[0],
     reasoning: "First available",
+  }),
+});
+```
+
+### `registerVoter(opts): Voter`
+
+Registers a voter for a session type. Supports the same four execution modes as `registerProposer`. See the [registering specialists guide](../guides/registering-specialists.md) for details.
+
+```typescript
+import { registerVoter } from "dialai";
+
+const voter = registerVoter({
+  specialistId: "ai-voter-1",
+  machineName: "my-task",
+  strategyFn: async (ctx) => ({
+    voteFor: "A",
+    reasoning: "Proposal A is better aligned",
+  }),
+});
+```
+
+### `registerArbiter(opts): Arbiter`
+
+Registers a custom arbiter for a session type. Supports the same four execution modes as `registerProposer` and `registerVoter`. See the [registering specialists guide](../guides/registering-specialists.md) for details.
+
+```typescript
+import { registerArbiter } from "dialai";
+
+const arbiter = registerArbiter({
+  specialistId: "custom-arbiter",
+  machineName: "my-task",
+  strategyFn: async (ctx) => ({
+    consensusReached: true,
+    winningProposalId: ctx.proposals[0]?.proposalId,
+    reasoning: "First proposal wins",
   }),
 });
 ```
@@ -176,12 +210,15 @@ All types are exported from the main package:
 import type {
   MachineDefinition,
   Session,
-  Specialist,
+  Proposer,
+  Voter,
+  Arbiter,
   Proposal,
   Vote,
   ConsensusResult,
-  ProposerStrategy,
-  VoterStrategy,
+  ProposerContext,
+  VoterContext,
+  ArbiterContext,
   VoteChoice,
 } from "dialai";
 ```

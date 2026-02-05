@@ -94,7 +94,8 @@ const session = runSession(pipeline);
 ```typescript
 import {
   createSession,
-  registerSpecialist,
+  registerProposer,
+  registerVoter,
   solicitProposal,
   solicitVote,
   evaluateConsensus,
@@ -123,22 +124,20 @@ const machine: MachineDefinition = {
 };
 
 // Two proposers that disagree
-registerSpecialist({
+registerProposer({
   specialistId: "optimist",
   machineName: "review",
-  role: "proposer",
-  strategy: () => ({
+  strategyFn: async (ctx) => ({
     transitionName: "approve",
     toState: "approved",
     reasoning: "Looks good to me",
   }),
 });
 
-registerSpecialist({
+registerProposer({
   specialistId: "pessimist",
   machineName: "review",
-  role: "proposer",
-  strategy: () => ({
+  strategyFn: async (ctx) => ({
     transitionName: "reject",
     toState: "rejected",
     reasoning: "Needs more work",
@@ -146,13 +145,12 @@ registerSpecialist({
 });
 
 // A voter that prefers approval
-registerSpecialist({
+registerVoter({
   specialistId: "tiebreaker",
   machineName: "review",
-  role: "voter",
-  strategy: (proposalA, proposalB) => {
-    if (proposalA.toState === "approved") return { voteFor: "A", reasoning: "Approve" };
-    if (proposalB.toState === "approved") return { voteFor: "B", reasoning: "Approve" };
+  strategyFn: async (ctx) => {
+    if (ctx.proposalA.toState === "approved") return { voteFor: "A", reasoning: "Approve" };
+    if (ctx.proposalB.toState === "approved") return { voteFor: "B", reasoning: "Approve" };
     return { voteFor: "NEITHER", reasoning: "Neither approves" };
   },
 });

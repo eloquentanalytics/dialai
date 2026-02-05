@@ -4,18 +4,18 @@ sidebar_position: 3
 
 # Implementing Strategies
 
-Strategies are functions that define how specialists make decisions. Each specialist is registered with a strategy function that gets called during the decision cycle.
+Strategies are async functions that define how specialists make decisions. Each specialist is registered with a `strategyFn` that gets called during the decision cycle.
 
 ## Proposer Strategy
 
-A proposer strategy receives the current state name and available transitions, and returns a transition choice:
+A proposer `strategyFn` receives a `ProposerContext` and returns a transition choice:
 
 ```typescript
-import type { ProposerStrategy } from "dialai";
-
-const myProposer: ProposerStrategy = (currentState, transitions) => {
-  // currentState: string - the session's current state name
-  // transitions: Record<string, string> - maps transition name → target state
+const myProposer = async (ctx: ProposerContext) => {
+  // ctx.currentState: string - the session's current state name
+  // ctx.prompt: string - the decision prompt from the state definition
+  // ctx.transitions: Record<string, string> - maps transition name to target state
+  // ctx.history: TransitionRecord[] - prior transitions in this session
 
   // Your logic here: call an LLM, apply rules, etc.
 
@@ -27,27 +27,24 @@ const myProposer: ProposerStrategy = (currentState, transitions) => {
 };
 ```
 
-### ProposerStrategy Type
+### Proposer strategyFn Signature
 
 ```typescript
-type ProposerStrategy = (
-  currentState: string,
-  transitions: Record<string, string>
-) => {
+strategyFn: async (ctx: ProposerContext) => {
   transitionName: string;
   toState: string;
   reasoning: string;
-};
+}
 ```
 
 ### Example: Pick the First Transition
 
 ```typescript
-const firstTransition: ProposerStrategy = (_currentState, transitions) => {
-  const name = Object.keys(transitions)[0];
+const firstTransition = async (ctx: ProposerContext) => {
+  const name = Object.keys(ctx.transitions)[0];
   return {
     transitionName: name,
-    toState: transitions[name],
+    toState: ctx.transitions[name],
     reasoning: "First available transition",
   };
 };
@@ -56,9 +53,9 @@ const firstTransition: ProposerStrategy = (_currentState, transitions) => {
 ### Example: Goal-Directed Proposer
 
 ```typescript
-const goalDirected: ProposerStrategy = (_currentState, transitions) => {
+const goalDirected = async (ctx: ProposerContext) => {
   // Prefer transitions that lead to the goal state
-  for (const [name, target] of Object.entries(transitions)) {
+  for (const [name, target] of Object.entries(ctx.transitions)) {
     if (target === "done" || target === "approved" || target === "completed") {
       return {
         transitionName: name,
@@ -68,10 +65,10 @@ const goalDirected: ProposerStrategy = (_currentState, transitions) => {
     }
   }
   // Fallback to first transition
-  const name = Object.keys(transitions)[0];
+  const name = Object.keys(ctx.transitions)[0];
   return {
     transitionName: name,
-    toState: transitions[name],
+    toState: ctx.transitions[name],
     reasoning: "No direct path to goal; taking first available transition",
   };
 };
@@ -79,14 +76,15 @@ const goalDirected: ProposerStrategy = (_currentState, transitions) => {
 
 ## Voter Strategy
 
-A voter strategy compares two proposals and returns a preference:
+A voter `strategyFn` receives a `VoterContext` and returns a preference:
 
 ```typescript
-import type { VoterStrategy } from "dialai";
-
-const myVoter: VoterStrategy = (proposalA, proposalB) => {
-  // proposalA, proposalB: Proposal objects with:
+const myVoter = async (ctx: VoterContext) => {
+  // ctx.proposalA, ctx.proposalB: Proposal objects with:
   //   proposalId, sessionId, specialistId, transitionName, toState, reasoning
+  // ctx.currentState: string
+  // ctx.prompt: string
+  // ctx.history: TransitionRecord[]
 
   // Your logic to compare proposals
 
@@ -97,24 +95,21 @@ const myVoter: VoterStrategy = (proposalA, proposalB) => {
 };
 ```
 
-### VoterStrategy Type
+### Voter strategyFn Signature
 
 ```typescript
-type VoterStrategy = (
-  proposalA: Proposal,
-  proposalB: Proposal
-) => {
+strategyFn: async (ctx: VoterContext) => {
   voteFor: VoteChoice; // "A" | "B" | "BOTH" | "NEITHER"
   reasoning: string;
-};
+}
 ```
 
 ### Example: Prefer Goal-Reaching Proposals
 
 ```typescript
-const goalVoter: VoterStrategy = (proposalA, proposalB) => {
-  const aReachesGoal = proposalA.toState === "done";
-  const bReachesGoal = proposalB.toState === "done";
+const goalVoter = async (ctx: VoterContext) => {
+  const aReachesGoal = ctx.proposalA.toState === "done";
+  const bReachesGoal = ctx.proposalB.toState === "done";
 
   if (aReachesGoal && !bReachesGoal) {
     return { voteFor: "A", reasoning: "Proposal A reaches the goal state" };
@@ -129,25 +124,56 @@ const goalVoter: VoterStrategy = (proposalA, proposalB) => {
 };
 ```
 
+## Arbiter Strategy
+
+An arbiter `strategyFn` receives an `ArbiterContext` and returns a `ConsensusResult`:
+
+```typescript
+const myArbiter = async (ctx: ArbiterContext) => {
+  // ctx.proposals: Proposal[] - all proposals in the session
+  // ctx.votes: Vote[] - all votes in the session
+  // ctx.currentState: string
+  // ctx.history: TransitionRecord[]
+
+  // Custom consensus logic
+  const topProposal = ctx.proposals[0];
+  return {
+    consensusReached: true,
+    winningProposalId: topProposal?.proposalId,
+    reasoning: "Custom arbiter selected the first proposal",
+  };
+};
+```
+
+### Arbiter strategyFn Signature
+
+```typescript
+strategyFn: async (ctx: ArbiterContext) => ConsensusResult
+```
+
 ## Using Strategies with Specialists
 
 Register strategies when creating specialists:
 
 ```typescript
-import { registerSpecialist } from "dialai";
+import { registerProposer, registerVoter, registerArbiter } from "dialai";
 
-registerSpecialist({
+registerProposer({
   specialistId: "goal-proposer",
   machineName: "my-task",
-  role: "proposer",
-  strategy: goalDirected,
+  strategyFn: goalDirected,
 });
 
-registerSpecialist({
+registerVoter({
   specialistId: "goal-voter",
   machineName: "my-task",
-  role: "voter",
-  strategy: goalVoter,
+  strategyFn: goalVoter,
+});
+
+registerArbiter({
+  specialistId: "custom-arbiter",
+  machineName: "my-task",
+  strategyFn: myArbiter,
 });
 ```
 

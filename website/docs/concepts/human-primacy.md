@@ -127,14 +127,13 @@ Human disagreement between reviewers is resolved by human mechanisms (escalation
 DIAL implements human primacy in the `evaluateConsensus` function. When a human specialist votes, their choice wins immediately:
 
 ```typescript
-import { registerSpecialist, submitVote, evaluateConsensus } from "dialai";
+import { registerVoter, submitVote, evaluateConsensus } from "dialai";
 
 // Any specialist with "human" in the ID triggers the override
-registerSpecialist({
+registerVoter({
   specialistId: "human-reviewer",
   machineName: "code-review",
-  role: "voter",
-  strategy: (proposalA, proposalB) => ({
+  strategyFn: async (ctx) => ({
     voteFor: "B",
     reasoning: "Proposal B provides more constructive feedback",
   }),

@@ -8,7 +8,7 @@ DIAL is designed for LLM-driven agents as first-class participants. Every design
 
 ## Agents as Participants
 
-The specialist abstraction exists so that LLM agents can register themselves as proposers and voters in a decision cycle. An agent reading a state machine definition can determine what state the session is in, what transitions are available, and what the prompt is asking. It can then submit a proposal or cast a vote using the same API a human would use.
+The specialist abstraction exists so that LLM agents can register themselves as proposers, voters, and arbiters in a decision cycle. An agent reading a state machine definition can determine what state the session is in, what transitions are available, and what the prompt is asking. It can then submit a proposal or cast a vote using the same API a human would use.
 
 This is the point. DIAL does not treat agents as a backend detail or an orchestration layer. Agents sit alongside humans in the decision cycle and are evaluated by the same arbiter under the same rules. The difference is that human votes override, because [human primacy](./concepts/human-primacy.md) is a safety constraint on the system.
 
@@ -49,7 +49,7 @@ Final state:   sure
 Session ID:    a1b2c3d4-...
 ```
 
-The CLI is minimal by design. It demonstrates the exact sequence of API calls an agent would make (create a session, register specialists, solicit proposals, evaluate consensus, execute transitions) in a form that is easy for an agent to read, replicate, and extend.
+The CLI is minimal by design. It demonstrates the exact sequence of API calls an agent would make (create a session, register proposers and voters, solicit proposals, evaluate consensus, execute transitions) in a form that is easy for an agent to read, replicate, and extend.
 
 The help documentation and error messages are written for LLM comprehension. When the CLI fails, it says what went wrong and what the valid inputs are, in plain text that an agent can parse and act on.
 
@@ -70,14 +70,16 @@ A resource-oriented API exposes data: "here is a session, here are its proposals
 
 A tool-oriented API exposes actions: `submitProposal`, `submitVote`, `evaluateConsensus`, `executeTransition`. Each function is a discrete action with a clear purpose. An agent with tool-use capabilities can map these directly to its tool-calling interface.
 
-The 10 functions in the DIAL API are designed to be the 10 tools an agent needs:
+The 12 functions in the DIAL API are designed to be the 12 tools an agent needs:
 
 | Function | Action |
 |---|---|
 | `createSession` | Start a new decision process |
 | `getSession` | Check the current state |
 | `getSessions` | List all active processes |
-| `registerSpecialist` | Join a decision process as a participant |
+| `registerProposer` | Join a decision process as a proposer |
+| `registerVoter` | Join a decision process as a voter |
+| `registerArbiter` | Define custom consensus logic |
 | `submitProposal` | Propose a transition |
 | `solicitProposal` | Ask a specialist's strategy to propose |
 | `submitVote` | Cast a vote between two proposals |
