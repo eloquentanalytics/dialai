@@ -202,7 +202,7 @@ async function main(): Promise<void> {
   console.log(`Model: ${model}`);
   console.log();
 
-  const session = createSession(machine);
+  const session = await createSession(machine);
   console.log(`Session:       ${session.sessionId}`);
   console.log(`Machine:       ${machine.machineName}`);
   console.log(`Initial state: ${session.currentState}`);
@@ -234,7 +234,7 @@ async function main(): Promise<void> {
     const proposalResults: Proposal[] = [];
     for (let i = 0; i < aiProposals.length; i++) {
       const ap = aiProposals[i];
-      const proposal = submitProposal(
+      const proposal = await submitProposal(
         session.sessionId,
         `openrouter-proposer-${i + 1}`,
         ap.transitionName,
@@ -286,7 +286,7 @@ async function main(): Promise<void> {
         const vr = voteResults[k];
         const vt = voteTasks[k];
 
-        submitVote(
+        await submitVote(
           session.sessionId,
           `openrouter-${vt.voterName}`,
           vt.proposalIdA,
@@ -310,7 +310,7 @@ async function main(): Promise<void> {
 
     // Phase 3: Evaluate consensus
     console.log("Phase 3: Evaluating consensus...");
-    const consensus = evaluateConsensus(session.sessionId);
+    const consensus = await evaluateConsensus(session.sessionId);
     console.log(
       `  Consensus: ${consensus.consensusReached ? "YES" : "NO"} — ${consensus.reasoning}`
     );
@@ -340,7 +340,7 @@ async function main(): Promise<void> {
     console.log();
 
     // Phase 5: Execute transition with synthesized reasoning
-    executeTransition(
+    await executeTransition(
       session.sessionId,
       winningProposal.transitionName,
       winningProposal.toState,
@@ -353,7 +353,7 @@ async function main(): Promise<void> {
   }
 
   // Print final session summary
-  const finalSession = getSession(session.sessionId);
+  const finalSession = await getSession(session.sessionId);
   console.log("=== Session Complete ===");
   console.log(`Final state: ${finalSession.currentState}`);
   console.log("Transitions:");

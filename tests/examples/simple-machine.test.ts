@@ -54,12 +54,12 @@ describe("simple-machine: mock AI proposers + voters", () => {
   };
 
   it("two proposers disagree, voter breaks tie, cycle completes", async () => {
-    const session = createSession(branchingMachine);
+    const session = await createSession(branchingMachine);
 
     expect(session.currentState).toBe("pending");
 
     // Mock AI proposer 1: proposes "approve" transition
-    const p1 = submitProposal(
+    const p1 = await submitProposal(
       session.sessionId,
       "ai-proposer-1",
       "approve",
@@ -68,7 +68,7 @@ describe("simple-machine: mock AI proposers + voters", () => {
     );
 
     // Mock AI proposer 2: proposes "reject" transition
-    const p2 = submitProposal(
+    const p2 = await submitProposal(
       session.sessionId,
       "ai-proposer-2",
       "reject",
@@ -77,7 +77,7 @@ describe("simple-machine: mock AI proposers + voters", () => {
     );
 
     // Mock AI voter: prefers proposal A (approve)
-    registerVoter({
+    await registerVoter({
       specialistId: "ai-voter-1",
       machineName: "branching-task",
       strategyFn: async () => ({
@@ -93,11 +93,11 @@ describe("simple-machine: mock AI proposers + voters", () => {
       p2.proposalId
     );
 
-    const consensus = evaluateConsensus(session.sessionId);
+    const consensus = await evaluateConsensus(session.sessionId);
     expect(consensus.consensusReached).toBe(true);
     expect(consensus.winningProposalId).toBe(p1.proposalId);
 
-    executeTransition(session.sessionId, "approve", "done", consensus.reasoning);
+    await executeTransition(session.sessionId, "approve", "done", consensus.reasoning);
 
     expect(session.currentState).toBe("done");
     expect(session.history).toHaveLength(1);
@@ -105,16 +105,16 @@ describe("simple-machine: mock AI proposers + voters", () => {
   });
 
   it("three voters, majority wins", async () => {
-    const session = createSession(branchingMachine);
+    const session = await createSession(branchingMachine);
 
-    const pApprove = submitProposal(
+    const pApprove = await submitProposal(
       session.sessionId,
       "ai-proposer-1",
       "approve",
       "done",
       "Task is ready"
     );
-    const pReject = submitProposal(
+    const pReject = await submitProposal(
       session.sessionId,
       "ai-proposer-2",
       "reject",
@@ -123,17 +123,17 @@ describe("simple-machine: mock AI proposers + voters", () => {
     );
 
     // Register three mock AI voters: 2 vote A, 1 votes B
-    registerVoter({
+    await registerVoter({
       specialistId: "ai-voter-1",
       machineName: "branching-task",
       strategyFn: async () => ({ voteFor: "A" as const, reasoning: "A is correct" }),
     });
-    registerVoter({
+    await registerVoter({
       specialistId: "ai-voter-2",
       machineName: "branching-task",
       strategyFn: async () => ({ voteFor: "A" as const, reasoning: "A is right" }),
     });
-    registerVoter({
+    await registerVoter({
       specialistId: "ai-voter-3",
       machineName: "branching-task",
       strategyFn: async () => ({ voteFor: "B" as const, reasoning: "B seems better" }),
@@ -148,25 +148,25 @@ describe("simple-machine: mock AI proposers + voters", () => {
       );
     }
 
-    const consensus = evaluateConsensus(session.sessionId);
+    const consensus = await evaluateConsensus(session.sessionId);
     expect(consensus.consensusReached).toBe(true);
     expect(consensus.winningProposalId).toBe(pApprove.proposalId);
 
-    executeTransition(session.sessionId, "approve", "done", consensus.reasoning);
+    await executeTransition(session.sessionId, "approve", "done", consensus.reasoning);
     expect(session.currentState).toBe("done");
   });
 
   it("human voter overrides AI majority", async () => {
-    const session = createSession(branchingMachine);
+    const session = await createSession(branchingMachine);
 
-    const pApprove = submitProposal(
+    const pApprove = await submitProposal(
       session.sessionId,
       "ai-proposer-1",
       "approve",
       "done",
       "Approve it"
     );
-    const pReject = submitProposal(
+    const pReject = await submitProposal(
       session.sessionId,
       "ai-proposer-2",
       "reject",
@@ -175,19 +175,19 @@ describe("simple-machine: mock AI proposers + voters", () => {
     );
 
     // Two AI voters prefer "approve"
-    registerVoter({
+    await registerVoter({
       specialistId: "ai-voter-1",
       machineName: "branching-task",
       strategyFn: async () => ({ voteFor: "A" as const, reasoning: "approve" }),
     });
-    registerVoter({
+    await registerVoter({
       specialistId: "ai-voter-2",
       machineName: "branching-task",
       strategyFn: async () => ({ voteFor: "A" as const, reasoning: "approve" }),
     });
 
     // Human voter prefers "reject"
-    registerVoter({
+    await registerVoter({
       specialistId: "human-reviewer",
       machineName: "branching-task",
       strategyFn: async () => ({ voteFor: "B" as const, reasoning: "I disagree" }),
@@ -202,12 +202,12 @@ describe("simple-machine: mock AI proposers + voters", () => {
       );
     }
 
-    const consensus = evaluateConsensus(session.sessionId);
+    const consensus = await evaluateConsensus(session.sessionId);
     expect(consensus.consensusReached).toBe(true);
     expect(consensus.winningProposalId).toBe(pReject.proposalId);
     expect(consensus.reasoning).toContain("human preferred");
 
-    executeTransition(session.sessionId, "reject", "done", consensus.reasoning);
+    await executeTransition(session.sessionId, "reject", "done", consensus.reasoning);
     expect(session.currentState).toBe("done");
     expect(session.history[0].transitionName).toBe("reject");
   });

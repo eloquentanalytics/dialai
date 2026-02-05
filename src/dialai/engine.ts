@@ -10,11 +10,11 @@ import {
 } from "./api.js";
 
 export async function runSession(machine: MachineDefinition): Promise<Session> {
-  const session = createSession(machine);
+  const session = await createSession(machine);
 
   // Register a built-in deterministic proposer that picks the first transition
   const builtInProposerId = `__builtin-proposer-${session.sessionId}`;
-  registerProposer({
+  await registerProposer({
     specialistId: builtInProposerId,
     machineName: machine.machineName,
     strategyFn: async (ctx) => {
@@ -64,7 +64,7 @@ export async function runSession(machine: MachineDefinition): Promise<Session> {
       }
     }
 
-    const consensus = evaluateConsensus(session.sessionId);
+    const consensus = await evaluateConsensus(session.sessionId);
     if (!consensus.consensusReached || !consensus.winningProposalId) {
       throw new Error(`No consensus reached: ${consensus.reasoning}`);
     }
@@ -77,7 +77,7 @@ export async function runSession(machine: MachineDefinition): Promise<Session> {
       throw new Error("Winning proposal not found");
     }
 
-    executeTransition(
+    await executeTransition(
       session.sessionId,
       winningProposal.transitionName,
       winningProposal.toState,

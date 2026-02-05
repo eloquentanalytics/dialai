@@ -35,7 +35,7 @@ describe("openrouter example: mock LLM full deliberation cycle", () => {
   beforeEach(() => store.clear());
 
   it("two proposers + three voters reach consensus and execute", async () => {
-    const session = createSession(machine);
+    const session = await createSession(machine);
 
     // Phase 1: Simulate two AI proposers (mock LLM responses)
     const mockProposals = [
@@ -43,15 +43,16 @@ describe("openrouter example: mock LLM full deliberation cycle", () => {
       { transitionName: "approve", reasoning: "This task meets all criteria" },
     ];
 
-    const proposals: Proposal[] = mockProposals.map((mp, i) =>
-      submitProposal(
+    const proposals: Proposal[] = [];
+    for (const [i, mp] of mockProposals.entries()) {
+      proposals.push(await submitProposal(
         session.sessionId,
         `openrouter-proposer-${i + 1}`,
         mp.transitionName,
         machine.states.pending.transitions![mp.transitionName],
         mp.reasoning
-      )
-    );
+      ));
+    }
 
     expect(proposals).toHaveLength(2);
 
@@ -64,7 +65,7 @@ describe("openrouter example: mock LLM full deliberation cycle", () => {
 
     for (let v = 0; v < mockVotes.length; v++) {
       const mv = mockVotes[v];
-      registerVoter({
+      await registerVoter({
         specialistId: `openrouter-voter-${v + 1}`,
         machineName: "branching-task",
         strategyFn: async () => ({ voteFor: mv.voteFor, reasoning: mv.reasoning }),
@@ -86,7 +87,7 @@ describe("openrouter example: mock LLM full deliberation cycle", () => {
     }
 
     // Phase 3: Evaluate consensus
-    const consensus = evaluateConsensus(session.sessionId);
+    const consensus = await evaluateConsensus(session.sessionId);
     expect(consensus.consensusReached).toBe(true);
     expect(consensus.winningProposalId).toBeDefined();
 
@@ -100,7 +101,7 @@ describe("openrouter example: mock LLM full deliberation cycle", () => {
       "All participants agree that the task should be approved.";
 
     // Phase 5: Execute transition
-    executeTransition(
+    await executeTransition(
       session.sessionId,
       winner.transitionName,
       winner.toState,
@@ -113,17 +114,17 @@ describe("openrouter example: mock LLM full deliberation cycle", () => {
   });
 
   it("proposers disagree, voters pick the correct answer", async () => {
-    const session = createSession(machine);
+    const session = await createSession(machine);
 
     // Proposer 1 says approve, proposer 2 says reject
-    const pApprove = submitProposal(
+    const pApprove = await submitProposal(
       session.sessionId,
       "openrouter-proposer-1",
       "approve",
       "done",
       "The task is ready"
     );
-    const pReject = submitProposal(
+    const pReject = await submitProposal(
       session.sessionId,
       "openrouter-proposer-2",
       "reject",
@@ -134,7 +135,7 @@ describe("openrouter example: mock LLM full deliberation cycle", () => {
     // Three voters: 2 prefer A (approve), 1 prefers B (reject)
     const voterPreferences: Array<"A" | "B"> = ["A", "A", "B"];
     for (let v = 0; v < voterPreferences.length; v++) {
-      registerVoter({
+      await registerVoter({
         specialistId: `voter-${v + 1}`,
         machineName: "branching-task",
         strategyFn: async () => ({
@@ -151,22 +152,22 @@ describe("openrouter example: mock LLM full deliberation cycle", () => {
       );
     }
 
-    const consensus = evaluateConsensus(session.sessionId);
+    const consensus = await evaluateConsensus(session.sessionId);
     expect(consensus.consensusReached).toBe(true);
     expect(consensus.winningProposalId).toBe(pApprove.proposalId);
 
-    executeTransition(session.sessionId, "approve", "done", "Majority chose approve");
+    await executeTransition(session.sessionId, "approve", "done", "Majority chose approve");
     expect(session.currentState).toBe("done");
   });
 
   it("NEITHER votes prevent consensus", async () => {
-    const session = createSession(machine);
+    const session = await createSession(machine);
 
-    const pApprove = submitProposal(session.sessionId, "p-1", "approve", "done", "approve");
-    const pReject = submitProposal(session.sessionId, "p-2", "reject", "done", "reject");
+    const pApprove = await submitProposal(session.sessionId, "p-1", "approve", "done", "approve");
+    const pReject = await submitProposal(session.sessionId, "p-2", "reject", "done", "reject");
 
     // All voters vote NEITHER
-    registerVoter({
+    await registerVoter({
       specialistId: "voter-1",
       machineName: "branching-task",
       strategyFn: async () => ({
@@ -177,15 +178,15 @@ describe("openrouter example: mock LLM full deliberation cycle", () => {
 
     await solicitVote(session.sessionId, "voter-1", pApprove.proposalId, pReject.proposalId);
 
-    const consensus = evaluateConsensus(session.sessionId);
+    const consensus = await evaluateConsensus(session.sessionId);
     expect(consensus.consensusReached).toBe(false);
   });
 
   it("registered proposer strategies via solicitProposal", async () => {
-    const session = createSession(machine);
+    const session = await createSession(machine);
 
     // Register mock LLM proposers as actual specialists
-    registerProposer({
+    await registerProposer({
       specialistId: "mock-llm-proposer-1",
       machineName: "branching-task",
       strategyFn: async (ctx) => ({
@@ -195,7 +196,7 @@ describe("openrouter example: mock LLM full deliberation cycle", () => {
       }),
     });
 
-    registerProposer({
+    await registerProposer({
       specialistId: "mock-llm-proposer-2",
       machineName: "branching-task",
       strategyFn: async (ctx) => ({
@@ -215,7 +216,7 @@ describe("openrouter example: mock LLM full deliberation cycle", () => {
     expect(p2.reasoning).toBe("Mock LLM: I am not sure");
 
     // Register a mock AI voter and complete the cycle
-    registerVoter({
+    await registerVoter({
       specialistId: "mock-llm-voter",
       machineName: "branching-task",
       strategyFn: async () => ({
@@ -226,18 +227,18 @@ describe("openrouter example: mock LLM full deliberation cycle", () => {
 
     await solicitVote(session.sessionId, "mock-llm-voter", p1.proposalId, p2.proposalId);
 
-    const consensus = evaluateConsensus(session.sessionId);
+    const consensus = await evaluateConsensus(session.sessionId);
     expect(consensus.consensusReached).toBe(true);
     expect(consensus.winningProposalId).toBe(p1.proposalId);
 
-    executeTransition(session.sessionId, p1.transitionName, p1.toState, consensus.reasoning);
+    await executeTransition(session.sessionId, p1.transitionName, p1.toState, consensus.reasoning);
     expect(session.currentState).toBe("done");
   });
 
-  it("single proposal auto-consensus (no voters needed)", () => {
-    const session = createSession(machine);
+  it("single proposal auto-consensus (no voters needed)", async () => {
+    const session = await createSession(machine);
 
-    const proposal = submitProposal(
+    const proposal = await submitProposal(
       session.sessionId,
       "sole-proposer",
       "approve",
@@ -245,12 +246,12 @@ describe("openrouter example: mock LLM full deliberation cycle", () => {
       "Only one proposal submitted"
     );
 
-    const consensus = evaluateConsensus(session.sessionId);
+    const consensus = await evaluateConsensus(session.sessionId);
     expect(consensus.consensusReached).toBe(true);
     expect(consensus.winningProposalId).toBe(proposal.proposalId);
     expect(consensus.reasoning).toContain("Single proposal");
 
-    executeTransition(session.sessionId, "approve", "done", consensus.reasoning);
+    await executeTransition(session.sessionId, "approve", "done", consensus.reasoning);
     expect(session.currentState).toBe("done");
   });
 });

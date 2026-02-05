@@ -11,7 +11,7 @@ import type {
 } from "./types.js";
 import { sessions, specialists, proposals, votes } from "./store.js";
 
-export function createSession(machine: MachineDefinition): Session {
+export async function createSession(machine: MachineDefinition): Promise<Session> {
   const session: Session = {
     sessionId: crypto.randomUUID(),
     machineName: machine.machineName,
@@ -24,7 +24,7 @@ export function createSession(machine: MachineDefinition): Session {
   return session;
 }
 
-export function getSession(sessionId: string): Session {
+export async function getSession(sessionId: string): Promise<Session> {
   const session = sessions.get(sessionId);
   if (!session) {
     throw new Error(`Session not found: ${sessionId}`);
@@ -32,7 +32,7 @@ export function getSession(sessionId: string): Session {
   return session;
 }
 
-export function getSessions(): Session[] {
+export async function getSessions(): Promise<Session[]> {
   return [...sessions.values()];
 }
 
@@ -61,7 +61,7 @@ function validateExecutionMode(opts: {
   }
 }
 
-export function registerProposer(opts: {
+export async function registerProposer(opts: {
   specialistId: string;
   machineName: string;
   strategyFn?: Proposer["strategyFn"];
@@ -70,7 +70,7 @@ export function registerProposer(opts: {
   contextWebhookUrl?: string;
   modelId?: string;
   webhookTokenName?: string;
-}): Proposer {
+}): Promise<Proposer> {
   validateExecutionMode(opts);
   const proposer: Proposer = {
     role: "proposer",
@@ -87,7 +87,7 @@ export function registerProposer(opts: {
   return proposer;
 }
 
-export function registerVoter(opts: {
+export async function registerVoter(opts: {
   specialistId: string;
   machineName: string;
   strategyFn?: Voter["strategyFn"];
@@ -96,7 +96,7 @@ export function registerVoter(opts: {
   contextWebhookUrl?: string;
   modelId?: string;
   webhookTokenName?: string;
-}): Voter {
+}): Promise<Voter> {
   validateExecutionMode(opts);
   const voter: Voter = {
     role: "voter",
@@ -113,13 +113,13 @@ export function registerVoter(opts: {
   return voter;
 }
 
-export function submitProposal(
+export async function submitProposal(
   sessionId: string,
   specialistId: string,
   transitionName: string,
   toState: string,
   reasoning?: string
-): Proposal {
+): Promise<Proposal> {
   const proposal: Proposal = {
     proposalId: crypto.randomUUID(),
     sessionId,
@@ -136,7 +136,7 @@ export async function solicitProposal(
   sessionId: string,
   specialistId: string
 ): Promise<Proposal> {
-  const session = getSession(sessionId);
+  const session = await getSession(sessionId);
   const specialist = specialists.get(specialistId);
   if (!specialist) {
     throw new Error(`Specialist not found: ${specialistId}`);
@@ -159,7 +159,7 @@ export async function solicitProposal(
 
   if (specialist.strategyFn) {
     const result = await specialist.strategyFn(ctx);
-    return submitProposal(
+    return await submitProposal(
       sessionId,
       specialistId,
       result.transitionName,
@@ -181,14 +181,14 @@ export async function solicitProposal(
   );
 }
 
-export function submitVote(
+export async function submitVote(
   sessionId: string,
   specialistId: string,
   proposalIdA: string,
   proposalIdB: string,
   voteFor: "A" | "B" | "BOTH" | "NEITHER",
   reasoning?: string
-): Vote {
+): Promise<Vote> {
   const vote: Vote = {
     voteId: crypto.randomUUID(),
     sessionId,
@@ -208,7 +208,7 @@ export async function solicitVote(
   proposalIdA: string,
   proposalIdB: string
 ): Promise<Vote> {
-  const session = getSession(sessionId);
+  const session = await getSession(sessionId);
   const specialist = specialists.get(specialistId);
   if (!specialist) {
     throw new Error(`Specialist not found: ${specialistId}`);
@@ -237,7 +237,7 @@ export async function solicitVote(
 
   if (specialist.strategyFn) {
     const result = await specialist.strategyFn(ctx);
-    return submitVote(
+    return await submitVote(
       sessionId,
       specialistId,
       proposalIdA,
@@ -260,7 +260,7 @@ export async function solicitVote(
   );
 }
 
-export function evaluateConsensus(sessionId: string): ConsensusResult {
+export async function evaluateConsensus(sessionId: string): Promise<ConsensusResult> {
   const sessionProposals = [...proposals.values()].filter(
     (p) => p.sessionId === sessionId
   );
@@ -341,13 +341,13 @@ export function evaluateConsensus(sessionId: string): ConsensusResult {
   };
 }
 
-export function executeTransition(
+export async function executeTransition(
   sessionId: string,
   transitionName: string,
   toState: string,
   reasoning?: string
-): Session {
-  const session = getSession(sessionId);
+): Promise<Session> {
+  const session = await getSession(sessionId);
   const stateConfig = session.machine.states[session.currentState];
   const transitions = stateConfig?.transitions ?? {};
 

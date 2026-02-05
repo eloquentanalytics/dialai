@@ -29,17 +29,17 @@ describe("integration: full cycle with 2 proposers + 1 voter", () => {
       },
     };
 
-    const session = createSession(machine);
+    const session = await createSession(machine);
 
     // Two proposers: one picks "complete", the other picks "restart"
-    const pComplete = submitProposal(
+    const pComplete = await submitProposal(
       session.sessionId,
       "proposer-A",
       "complete",
       "done",
       "finish the task"
     );
-    const pRestart = submitProposal(
+    const pRestart = await submitProposal(
       session.sessionId,
       "proposer-B",
       "restart",
@@ -48,7 +48,7 @@ describe("integration: full cycle with 2 proposers + 1 voter", () => {
     );
 
     // Register voter that prefers A (complete)
-    registerVoter({
+    await registerVoter({
       specialistId: "voter-1",
       machineName: "int-test",
       strategyFn: async () => ({ voteFor: "A" as const, reasoning: "prefer A" }),
@@ -61,11 +61,11 @@ describe("integration: full cycle with 2 proposers + 1 voter", () => {
       pRestart.proposalId
     );
 
-    const result = evaluateConsensus(session.sessionId);
+    const result = await evaluateConsensus(session.sessionId);
     expect(result.consensusReached).toBe(true);
     expect(result.winningProposalId).toBe(pComplete.proposalId);
 
-    const updated = executeTransition(
+    const updated = await executeTransition(
       session.sessionId,
       "complete",
       "done"

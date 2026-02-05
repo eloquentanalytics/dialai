@@ -31,8 +31,8 @@ const simpleMachine: MachineDefinition = {
 describe("createSession", () => {
   beforeEach(() => store.clear());
 
-  it("creates with correct initial state and generates UUID", () => {
-    const session = createSession(simpleMachine);
+  it("creates with correct initial state and generates UUID", async () => {
+    const session = await createSession(simpleMachine);
     expect(session.currentState).toBe("pending");
     expect(session.machineName).toBe("simple-task");
     expect(session.sessionId).toMatch(
@@ -46,41 +46,41 @@ describe("createSession", () => {
 describe("getSession", () => {
   beforeEach(() => store.clear());
 
-  it("returns stored session", () => {
-    const session = createSession(simpleMachine);
-    const fetched = getSession(session.sessionId);
+  it("returns stored session", async () => {
+    const session = await createSession(simpleMachine);
+    const fetched = await getSession(session.sessionId);
     expect(fetched).toBe(session);
   });
 
-  it("throws on unknown ID", () => {
-    expect(() => getSession("nonexistent")).toThrow("Session not found");
+  it("throws on unknown ID", async () => {
+    await expect(getSession("nonexistent")).rejects.toThrow("Session not found");
   });
 });
 
 describe("getSessions", () => {
   beforeEach(() => store.clear());
 
-  it("returns all sessions", () => {
-    createSession(simpleMachine);
-    createSession(simpleMachine);
-    expect(getSessions()).toHaveLength(2);
+  it("returns all sessions", async () => {
+    await createSession(simpleMachine);
+    await createSession(simpleMachine);
+    expect(await getSessions()).toHaveLength(2);
   });
 
-  it("returns [] when empty", () => {
-    expect(getSessions()).toEqual([]);
+  it("returns [] when empty", async () => {
+    expect(await getSessions()).toEqual([]);
   });
 });
 
 describe("registerProposer", () => {
   beforeEach(() => store.clear());
 
-  it("stores with async strategyFn", () => {
+  it("stores with async strategyFn", async () => {
     const strategyFn = async () => ({
       transitionName: "complete",
       toState: "done",
       reasoning: "test",
     });
-    const spec = registerProposer({
+    const spec = await registerProposer({
       specialistId: "sp-1",
       machineName: "simple-task",
       strategyFn,
@@ -94,12 +94,12 @@ describe("registerProposer", () => {
 describe("registerVoter", () => {
   beforeEach(() => store.clear());
 
-  it("stores with async strategyFn", () => {
+  it("stores with async strategyFn", async () => {
     const strategyFn = async () => ({
       voteFor: "A" as const,
       reasoning: "test",
     });
-    const spec = registerVoter({
+    const spec = await registerVoter({
       specialistId: "v-1",
       machineName: "simple-task",
       strategyFn,
@@ -113,9 +113,9 @@ describe("registerVoter", () => {
 describe("submitProposal", () => {
   beforeEach(() => store.clear());
 
-  it("creates with UUID and stores", () => {
-    const session = createSession(simpleMachine);
-    const proposal = submitProposal(
+  it("creates with UUID and stores", async () => {
+    const session = await createSession(simpleMachine);
+    const proposal = await submitProposal(
       session.sessionId,
       "sp-1",
       "complete",
@@ -135,8 +135,8 @@ describe("solicitProposal", () => {
   beforeEach(() => store.clear());
 
   it("calls proposer strategy and stores resulting proposal", async () => {
-    const session = createSession(simpleMachine);
-    registerProposer({
+    const session = await createSession(simpleMachine);
+    await registerProposer({
       specialistId: "sp-1",
       machineName: "simple-task",
       strategyFn: async (ctx) => {
@@ -158,8 +158,8 @@ describe("solicitProposal", () => {
 describe("submitVote", () => {
   beforeEach(() => store.clear());
 
-  it("creates with UUID and stores", () => {
-    const vote = submitVote("s1", "sp-1", "pA", "pB", "A", "prefer A");
+  it("creates with UUID and stores", async () => {
+    const vote = await submitVote("s1", "sp-1", "pA", "pB", "A", "prefer A");
     expect(vote.voteId).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
     );
@@ -172,11 +172,11 @@ describe("solicitVote", () => {
   beforeEach(() => store.clear());
 
   it("calls voter strategy and stores resulting vote", async () => {
-    const session = createSession(simpleMachine);
-    const pA = submitProposal(session.sessionId, "sp-1", "complete", "done");
-    const pB = submitProposal(session.sessionId, "sp-2", "complete", "done");
+    const session = await createSession(simpleMachine);
+    const pA = await submitProposal(session.sessionId, "sp-1", "complete", "done");
+    const pB = await submitProposal(session.sessionId, "sp-2", "complete", "done");
 
-    registerVoter({
+    await registerVoter({
       specialistId: "voter-1",
       machineName: "simple-task",
       strategyFn: async () => ({ voteFor: "A" as const, reasoning: "A is better" }),
@@ -196,29 +196,29 @@ describe("solicitVote", () => {
 describe("evaluateConsensus", () => {
   beforeEach(() => store.clear());
 
-  it("single proposal -> consensus reached", () => {
-    const session = createSession(simpleMachine);
-    const proposal = submitProposal(
+  it("single proposal -> consensus reached", async () => {
+    const session = await createSession(simpleMachine);
+    const proposal = await submitProposal(
       session.sessionId,
       "sp-1",
       "complete",
       "done"
     );
-    const result = evaluateConsensus(session.sessionId);
+    const result = await evaluateConsensus(session.sessionId);
     expect(result.consensusReached).toBe(true);
     expect(result.winningProposalId).toBe(proposal.proposalId);
   });
 
-  it("zero proposals -> no consensus", () => {
-    const session = createSession(simpleMachine);
-    const result = evaluateConsensus(session.sessionId);
+  it("zero proposals -> no consensus", async () => {
+    const session = await createSession(simpleMachine);
+    const result = await evaluateConsensus(session.sessionId);
     expect(result.consensusReached).toBe(false);
   });
 
-  it("two proposals, votes decide winner", () => {
-    const session = createSession(simpleMachine);
-    const pA = submitProposal(session.sessionId, "sp-1", "complete", "done");
-    const pB = submitProposal(
+  it("two proposals, votes decide winner", async () => {
+    const session = await createSession(simpleMachine);
+    const pA = await submitProposal(session.sessionId, "sp-1", "complete", "done");
+    const pB = await submitProposal(
       session.sessionId,
       "sp-2",
       "complete",
@@ -226,13 +226,13 @@ describe("evaluateConsensus", () => {
       "alternate"
     );
 
-    registerVoter({
+    await registerVoter({
       specialistId: "voter-1",
       machineName: "simple-task",
       strategyFn: async () => ({ voteFor: "A" as const, reasoning: "A" }),
     });
 
-    submitVote(
+    await submitVote(
       session.sessionId,
       "voter-1",
       pA.proposalId,
@@ -240,15 +240,15 @@ describe("evaluateConsensus", () => {
       "A"
     );
 
-    const result = evaluateConsensus(session.sessionId);
+    const result = await evaluateConsensus(session.sessionId);
     expect(result.consensusReached).toBe(true);
     expect(result.winningProposalId).toBe(pA.proposalId);
   });
 
-  it("human voter overrides AI majority", () => {
-    const session = createSession(simpleMachine);
-    const pA = submitProposal(session.sessionId, "sp-1", "complete", "done");
-    const pB = submitProposal(
+  it("human voter overrides AI majority", async () => {
+    const session = await createSession(simpleMachine);
+    const pA = await submitProposal(session.sessionId, "sp-1", "complete", "done");
+    const pB = await submitProposal(
       session.sessionId,
       "sp-2",
       "complete",
@@ -256,31 +256,31 @@ describe("evaluateConsensus", () => {
       "other"
     );
 
-    registerVoter({
+    await registerVoter({
       specialistId: "ai-voter-1",
       machineName: "simple-task",
       strategyFn: async () => ({ voteFor: "A" as const, reasoning: "A" }),
     });
-    registerVoter({
+    await registerVoter({
       specialistId: "ai-voter-2",
       machineName: "simple-task",
       strategyFn: async () => ({ voteFor: "A" as const, reasoning: "A" }),
     });
-    registerVoter({
+    await registerVoter({
       specialistId: "human-reviewer",
       machineName: "simple-task",
       strategyFn: async () => ({ voteFor: "B" as const, reasoning: "B" }),
     });
 
     // Two AI votes for A
-    submitVote(
+    await submitVote(
       session.sessionId,
       "ai-voter-1",
       pA.proposalId,
       pB.proposalId,
       "A"
     );
-    submitVote(
+    await submitVote(
       session.sessionId,
       "ai-voter-2",
       pA.proposalId,
@@ -288,7 +288,7 @@ describe("evaluateConsensus", () => {
       "A"
     );
     // Human votes for B
-    submitVote(
+    await submitVote(
       session.sessionId,
       "human-reviewer",
       pA.proposalId,
@@ -296,7 +296,7 @@ describe("evaluateConsensus", () => {
       "B"
     );
 
-    const result = evaluateConsensus(session.sessionId);
+    const result = await evaluateConsensus(session.sessionId);
     expect(result.consensusReached).toBe(true);
     expect(result.winningProposalId).toBe(pB.proposalId);
     expect(result.reasoning).toContain("human preferred");
@@ -306,9 +306,9 @@ describe("evaluateConsensus", () => {
 describe("executeTransition", () => {
   beforeEach(() => store.clear());
 
-  it("updates session state", () => {
-    const session = createSession(simpleMachine);
-    const updated = executeTransition(
+  it("updates session state", async () => {
+    const session = await createSession(simpleMachine);
+    const updated = await executeTransition(
       session.sessionId,
       "complete",
       "done"
@@ -316,18 +316,18 @@ describe("executeTransition", () => {
     expect(updated.currentState).toBe("done");
   });
 
-  it("throws on invalid transition", () => {
-    const session = createSession(simpleMachine);
-    expect(() =>
+  it("throws on invalid transition", async () => {
+    const session = await createSession(simpleMachine);
+    await expect(
       executeTransition(session.sessionId, "invalid", "nowhere")
-    ).toThrow("Invalid transition");
+    ).rejects.toThrow("Invalid transition");
   });
 
-  it("clears proposals/votes for the session after execution", () => {
-    const session = createSession(simpleMachine);
-    submitProposal(session.sessionId, "sp-1", "complete", "done");
-    submitVote(session.sessionId, "v-1", "pA", "pB", "A");
-    executeTransition(session.sessionId, "complete", "done");
+  it("clears proposals/votes for the session after execution", async () => {
+    const session = await createSession(simpleMachine);
+    await submitProposal(session.sessionId, "sp-1", "complete", "done");
+    await submitVote(session.sessionId, "v-1", "pA", "pB", "A");
+    await executeTransition(session.sessionId, "complete", "done");
 
     const remainingProposals = [...store.proposals.values()].filter(
       (p) => p.sessionId === session.sessionId
@@ -339,9 +339,9 @@ describe("executeTransition", () => {
     expect(remainingVotes).toHaveLength(0);
   });
 
-  it("records transition with reasoning in session history", () => {
-    const session = createSession(simpleMachine);
-    executeTransition(session.sessionId, "complete", "done", "Consensus reached");
+  it("records transition with reasoning in session history", async () => {
+    const session = await createSession(simpleMachine);
+    await executeTransition(session.sessionId, "complete", "done", "Consensus reached");
     expect(session.history).toHaveLength(1);
     expect(session.history[0].fromState).toBe("pending");
     expect(session.history[0].toState).toBe("done");
@@ -350,9 +350,9 @@ describe("executeTransition", () => {
     expect(session.history[0].timestamp).toBeInstanceOf(Date);
   });
 
-  it("defaults reasoning to empty string when not provided", () => {
-    const session = createSession(simpleMachine);
-    executeTransition(session.sessionId, "complete", "done");
+  it("defaults reasoning to empty string when not provided", async () => {
+    const session = await createSession(simpleMachine);
+    await executeTransition(session.sessionId, "complete", "done");
     expect(session.history[0].reasoning).toBe("");
   });
 });
