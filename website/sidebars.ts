@@ -19,6 +19,7 @@ const sidebars: SidebarsConfig = {
         "concepts/decision-cycle",
         "concepts/arbitration",
         "concepts/human-primacy",
+        "concepts/related-work",
       ],
     },
     {

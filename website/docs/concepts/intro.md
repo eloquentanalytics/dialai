@@ -129,3 +129,4 @@ Dive deeper into each concept:
 - [Decision Cycle](./decision-cycle.md) — The decision process
 - [Arbitration](./arbitration.md) — Consensus strategies
 - [Human Primacy](./human-primacy.md) — The foundational principle
+- [Related Work](./related-work.md) — How DIAL relates to other approaches

@@ -117,43 +117,44 @@
 - At every point along the collapse trajectory, the system's decisions are bounded in alignment with human judgment by the risk dial setting.
 - The collapsed system's divergence from human choice is bounded by the same threshold as the fully deliberative system, because collapse only occurs when a specialist has demonstrated alignment >= r.
 
-## Theoretical Framings
+## Theoretical Connections
+
+The following are interpretive lenses — theoretical frameworks that DIAL's mechanics can be mapped onto after the fact. They were not used to derive the framework's design. They are included because they suggest testable predictions and connect DIAL to established research traditions, not because they add formal rigor the plain-language description lacks. Each section states a concrete prediction the lens generates; if we cannot state one, the lens does not belong here.
 
 ### Mechanism Design / Social Choice Theory
 - DIAL as a dynamic weighted voting mechanism where the electorate evolves based on track record of predicting the human.
 - Dictator emergence that is empirically justified — the dictator is the specialist that best predicts the human.
 - Arrow's impossibility theorem doesn't apply: dictatorial outcomes are explicitly the goal (when earned).
 - The risk dial as the mechanism designer's tradeoff between convergence speed and misalignment risk.
+- **Testable prediction:** Under monotonic weight update, no stable non-dictatorial equilibrium exists — the system must converge to a single dominant specialist or cycle indefinitely. If a non-dictatorial equilibrium is observed empirically, the weight update rule needs revision.
 
 ### Repeated Games with Reputation
 - Each round as a stage game. Payoff = agreement with human. Reputation = weight.
 - The collapse as a game-theoretic equilibrium where one player's strategy dominates.
 - The trip line as a punishment strategy maintaining incentive compatibility.
+- **Testable prediction:** Removing the trip line (no punishment for divergence after collapse) causes weight drift without self-correction. A system without the trip line will silently degrade when human preferences shift, while a system with the trip line will detect and recover.
 
 ### Information Theory
 - Entropy over "who predicts the human best" — initially maximal, reduced each round.
 - The risk dial as an acceptable residual entropy threshold.
 - Full collapse as zero conditional entropy: H(human_choice | champion_proposal) = 0.
+- **Testable prediction:** Entropy over the specialist weight distribution decreases monotonically under stationary human preferences. Measured entropy should track with the number of decision cycles completed. A plateau in entropy indicates the specialist population lacks a sufficiently aligned candidate.
 
-### Category Theory
-- States as objects, transitions as morphisms. Each specialist as a functor.
-- The consensus mechanism as a natural transformation selecting one morphism.
-- Weight recalibration as progressively restricting the functor set.
-- Collapse as a filtered colimit converging to a single functor.
-- The trip line as the inverse morphism restoring the full functor set.
+## Related Work
 
-## Distinction from Existing Work
+DIAL solves a different problem than the systems listed below. This comparison is specifically about **where ground truth originates** — not overall capability. DIAL is a measurement and delegation harness, not an alternative to agent frameworks or alignment techniques. It can wrap any of them.
 
-| Approach | Ground truth | Trust evolution | Collapse |
+| Approach | Ground truth source | Trust evolution | Collapse |
 |----------|-------------|-----------------|----------|
 | LangGraph / LangChain | Designer's choice | None | N/A (starts collapsed) |
 | Multi-agent debate | Human judges | None (static) | Never |
 | Constitutional AI / RLHF | Offline training signal | Offline | N/A (single model) |
 | Mixture of Experts | Gating network | Training time | Static routing |
-| DIAL | The human's actual runtime choices | Per-specialist, empirical, continuous | Progressive, reversible, per-state |
+| **DIAL** | **The human's actual runtime choices** | **Per-specialist, empirical, continuous** | **Progressive, reversible, per-state** |
 
 - Key distinction: DIAL's ground truth is the human participant's actual choices at runtime — not a training dataset, not a constitution, not a reward model. The system learns to predict a specific human (or group of humans) in a specific operational context.
 - DIAL is also distinct in its philosophical foundation: AI is not a peer to be negotiated with but a tool to be calibrated. The question is never "is the AI right?" but "does the AI predict the human?"
+- DIAL is complementary to these approaches, not competitive. A DIAL specialist can be a LangGraph agent, a constitutionally-trained model, or an MoE system. DIAL measures whether the specialist's outputs match what the human would choose — regardless of how the specialist produces those outputs.
 
 ## Open Questions
 
