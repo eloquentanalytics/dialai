@@ -41,6 +41,7 @@ const sidebars: SidebarsConfig = {
       label: "Examples",
       items: ["examples/intro"],
     },
+    "ecosystem",
   ],
 };
 
