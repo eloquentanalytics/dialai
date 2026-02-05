@@ -146,50 +146,50 @@ The version in `VERSION.md` is the version. There is no `package.json` version t
 ## API Reference
 
 
-The DialAI API provides 11 functions for creating sessions, registering specialists, and managing the decision cycle. Functions that invoke strategy functions (`solicitProposal`, `solicitVote`, `runSession`) are async and return Promises. All other functions are synchronous.
+The DialAI API provides 11 functions for creating sessions, registering specialists, and managing the decision cycle. All functions are async and return Promises.
 
 ## Session Functions
 
-### `createSession(machine: MachineDefinition): Session`
+### `createSession(machine: MachineDefinition): Promise<Session>`
 
 Creates a new session instance. Generates a UUID, sets `currentState` to `machine.initialState`, and stores the session.
 
 ```typescript
 import { createSession } from "dialai";
 
-const session = createSession(machine);
+const session = await createSession(machine);
 ```
 
-### `getSession(sessionId: string): Session`
+### `getSession(sessionId: string): Promise<Session>`
 
 Retrieves a session by ID. Throws if not found.
 
 ```typescript
 import { getSession } from "dialai";
 
-const session = getSession("a1b2c3d4-...");
+const session = await getSession("a1b2c3d4-...");
 ```
 
-### `getSessions(): Session[]`
+### `getSessions(): Promise<Session[]>`
 
 Returns all stored sessions.
 
 ```typescript
 import { getSessions } from "dialai";
 
-const all = getSessions();
+const all = await getSessions();
 ```
 
 ## Specialist Functions
 
-### `registerProposer(opts): Proposer`
+### `registerProposer(opts): Promise<Proposer>`
 
 Registers a proposer for a session type. Supports four execution modes: `strategyFn`, `strategyWebhookUrl`, `contextFn + modelId`, or `contextWebhookUrl + modelId`. See the [registering specialists guide](../guides/registering-specialists.md) for details on all modes.
 
 ```typescript
 import { registerProposer } from "dialai";
 
-const proposer = registerProposer({
+const proposer = await registerProposer({
   specialistId: "ai-proposer-1",
   machineName: "my-task",
   strategyFn: async (ctx) => ({
@@ -200,14 +200,14 @@ const proposer = registerProposer({
 });
 ```
 
-### `registerVoter(opts): Voter`
+### `registerVoter(opts): Promise<Voter>`
 
 Registers a voter for a session type. Supports the same four execution modes as `registerProposer`. See the [registering specialists guide](../guides/registering-specialists.md) for details.
 
 ```typescript
 import { registerVoter } from "dialai";
 
-const voter = registerVoter({
+const voter = await registerVoter({
   specialistId: "ai-voter-1",
   machineName: "my-task",
   strategyFn: async (ctx) => ({
@@ -219,14 +219,14 @@ const voter = registerVoter({
 
 ## Proposal Functions
 
-### `submitProposal(sessionId, specialistId, transitionName, toState, reasoning?): Proposal`
+### `submitProposal(sessionId, specialistId, transitionName, toState, reasoning?): Promise<Proposal>`
 
 Creates and stores a proposal with a generated UUID.
 
 ```typescript
 import { submitProposal } from "dialai";
 
-const proposal = submitProposal(
+const proposal = await submitProposal(
   session.sessionId,
   "ai-proposer-1",
   "approve",
@@ -237,7 +237,7 @@ const proposal = submitProposal(
 
 ### `solicitProposal(sessionId, specialistId): Promise<Proposal>`
 
-Calls the specialist's strategy function with the session's current state and transitions, then submits the resulting proposal. Async because strategy functions are async.
+Calls the specialist's strategy function with the session's current state and transitions, then submits the resulting proposal.
 
 ```typescript
 import { solicitProposal } from "dialai";
@@ -247,14 +247,14 @@ const proposal = await solicitProposal(session.sessionId, "ai-proposer-1");
 
 ## Vote Functions
 
-### `submitVote(sessionId, specialistId, proposalIdA, proposalIdB, voteFor, reasoning?): Vote`
+### `submitVote(sessionId, specialistId, proposalIdA, proposalIdB, voteFor, reasoning?): Promise<Vote>`
 
 Creates and stores a vote with a generated UUID.
 
 ```typescript
 import { submitVote } from "dialai";
 
-const vote = submitVote(
+const vote = await submitVote(
   session.sessionId,
   "ai-voter-1",
   proposalA.proposalId,
@@ -266,7 +266,7 @@ const vote = submitVote(
 
 ### `solicitVote(sessionId, specialistId, proposalIdA, proposalIdB): Promise<Vote>`
 
-Calls the specialist's strategy function with the two proposals, then submits the resulting vote. Async because strategy functions are async.
+Calls the specialist's strategy function with the two proposals, then submits the resulting vote.
 
 ```typescript
 import { solicitVote } from "dialai";
@@ -281,7 +281,7 @@ const vote = await solicitVote(
 
 ## Consensus & Execution
 
-### `evaluateConsensus(sessionId: string): ConsensusResult`
+### `evaluateConsensus(sessionId: string): Promise<ConsensusResult>`
 
 Evaluates consensus for all proposals and votes in the session:
 - **0 proposals**: `{ consensusReached: false }`
@@ -291,20 +291,20 @@ Evaluates consensus for all proposals and votes in the session:
 ```typescript
 import { evaluateConsensus } from "dialai";
 
-const result = evaluateConsensus(session.sessionId);
+const result = await evaluateConsensus(session.sessionId);
 if (result.consensusReached) {
   console.log("Winner:", result.winningProposalId);
 }
 ```
 
-### `executeTransition(sessionId, transitionName, toState, reasoning?): Session`
+### `executeTransition(sessionId, transitionName, toState, reasoning?): Promise<Session>`
 
 Validates the transition from the current state, records it in `session.history` with the given `reasoning`, updates `currentState`, and clears all proposals and votes for the session.
 
 ```typescript
 import { executeTransition } from "dialai";
 
-const updated = executeTransition(
+const updated = await executeTransition(
   session.sessionId,
   "approve",
   "approved",
@@ -318,7 +318,7 @@ console.log(updated.history);      // [{ fromState: "review", toState: "approved
 
 ### `runSession(machine: MachineDefinition): Promise<Session>`
 
-Runs a machine to completion. Creates a session, registers a built-in deterministic proposer, and loops through the decision cycle until `currentState === defaultState`. Async because it awaits strategy functions.
+Runs a machine to completion. Creates a session, registers a built-in deterministic proposer, and loops through the decision cycle until `currentState === defaultState`.
 
 ```typescript
 import { runSession } from "dialai";
