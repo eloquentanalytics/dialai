@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80">
   <defs>
     <linearGradient id="smGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#1aa3ff"/>
-      <stop offset="100%" stop-color="#0070b3"/>
+      <stop offset="0%" stop-color="#0070b3"/>
+      <stop offset="100%" stop-color="#004d80"/>
     </linearGradient>
     <marker id="smArrow" markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
       <polygon points="0 0, 6 2, 0 4" fill="#94a3b8"/>
@@ -17,7 +17,7 @@
   <g transform="translate(20, 25)">
     <circle r="10" fill="none" stroke="url(#smGrad)" stroke-width="2"/>
     <circle r="6" fill="none" stroke="url(#smGrad)" stroke-width="1.5"/>
-    <text y="3" text-anchor="middle" fill="#1aa3ff" font-size="8" font-weight="bold">S₀</text>
+    <text y="3" text-anchor="middle" fill="#0070b3" font-size="8" font-weight="bold">S₀</text>
   </g>
 
   <!-- State 1 -->
@@ -34,8 +34,8 @@
 
   <!-- Final state -->
   <g transform="translate(55, 55)">
-    <circle r="10" fill="none" stroke="#ffc91a" stroke-width="2"/>
-    <circle r="6" fill="#ffc91a"/>
+    <circle r="10" fill="none" stroke="#c28a00" stroke-width="2"/>
+    <circle r="6" fill="#c28a00"/>
     <text y="3" text-anchor="middle" fill="#fff" font-size="8" font-weight="bold">✓</text>
   </g>
 

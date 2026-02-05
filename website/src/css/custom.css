@@ -26,12 +26,12 @@
 
 :root {
   /* Primary accent - single color */
-  --dial-accent: #0070b3;
-  --dial-accent-light: #0070b3;
-  --dial-accent-dark: #005a91;
+  --dial-accent: #0062a3;
+  --dial-accent-light: #0078c8;
+  --dial-accent-dark: #004d80;
 
   /* Emphasis (used sparingly) */
-  --dial-emphasis: #c49000;
+  --dial-emphasis: #b37a00;
 
   /* Neutral palette - light mode: dark text on light bg */
   --dial-slate-50: #0f172a;
@@ -45,22 +45,22 @@
   --dial-slate-800: #f1f5f9;
 
   /* Light backgrounds */
-  --dial-bg-primary: #fafbfc;
-  --dial-bg-secondary: #f0f2f5;
+  --dial-bg-primary: #ffffff;
+  --dial-bg-secondary: #f5f6f8;
   --dial-bg-surface: #ffffff;
 
   /* Border color */
-  --dial-border: rgba(0, 0, 0, 0.08);
-  --dial-border-hover: rgba(0, 112, 179, 0.3);
+  --dial-border: rgba(0, 0, 0, 0.1);
+  --dial-border-hover: rgba(0, 98, 163, 0.35);
 
   /* Theme colors - light mode */
-  --ifm-color-primary: #0070b3;
-  --ifm-color-primary-dark: #0064a1;
-  --ifm-color-primary-darker: #005e98;
-  --ifm-color-primary-darkest: #004d7d;
-  --ifm-color-primary-light: #007cc5;
-  --ifm-color-primary-lighter: #0082ce;
-  --ifm-color-primary-lightest: #0093e9;
+  --ifm-color-primary: #0062a3;
+  --ifm-color-primary-dark: #005891;
+  --ifm-color-primary-darker: #005289;
+  --ifm-color-primary-darkest: #004470;
+  --ifm-color-primary-light: #006cb5;
+  --ifm-color-primary-lighter: #0072bd;
+  --ifm-color-primary-lightest: #0084d6;
 
   /* Typography */
   --ifm-font-family-base: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -76,12 +76,12 @@
   --ifm-button-border-radius: 6px;
 
   /* Misc */
-  --docusaurus-highlighted-code-line-bg: rgba(0, 112, 179, 0.1);
+  --docusaurus-highlighted-code-line-bg: rgba(0, 98, 163, 0.1);
   --ifm-navbar-height: 4rem;
 
   /* Shadows */
-  --dial-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --dial-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --dial-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --dial-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 /* ========================================
@@ -264,7 +264,7 @@ body {
 .button--outline.button--secondary:hover {
   color: var(--dial-accent-light);
   border-color: var(--dial-accent-light);
-  background: rgba(0, 112, 179, 0.05);
+  background: rgba(0, 98, 163, 0.05);
 }
 
 [data-theme='dark'] .button--outline.button--secondary:hover {
@@ -440,7 +440,7 @@ code {
   border-radius: 999px;
   font-size: 0.875rem;
   font-weight: 500;
-  background: rgba(0, 112, 179, 0.1);
+  background: rgba(0, 98, 163, 0.1);
   color: var(--dial-accent-light);
 }
 

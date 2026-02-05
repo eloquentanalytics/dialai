@@ -117,7 +117,7 @@
 }
 
 .heroButtonPrimary:hover {
-  background: #005a91;
+  background: #004d80;
   color: white;
 }
 
@@ -134,7 +134,7 @@
 .heroButtonSecondary:hover {
   color: var(--dial-accent);
   border-color: var(--dial-accent);
-  background: rgba(0, 112, 179, 0.05);
+  background: rgba(0, 98, 163, 0.05);
 }
 
 [data-theme='dark'] .heroButtonSecondary:hover {
@@ -487,7 +487,7 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: var(--dial-slate-600);
+  background: var(--dial-slate-500);
 }
 
 .codeFilename {
@@ -504,7 +504,7 @@
   font-family: var(--ifm-font-family-monospace);
   font-size: 0.8125rem;
   line-height: 1.7;
-  color: var(--dial-slate-300);
+  color: var(--dial-slate-200);
   background: transparent;
   border: none;
 }
