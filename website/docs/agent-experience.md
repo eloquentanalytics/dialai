@@ -42,10 +42,10 @@ node dist/dialai/cli.js examples/simple-machine.json
 ```
 
 ```
-Session type:  is-two-greater
-Initial state: unsure
-Goal state:    sure
-Final state:   sure
+Machine:       simple-task
+Initial state: pending
+Goal state:    done
+Final state:   done
 Session ID:    a1b2c3d4-...
 ```
 

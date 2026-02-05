@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import * as store from "../../src/dialai/store.js";
 import {
-  registerSpecialist,
+  registerVoter,
   submitProposal,
   solicitVote,
   evaluateConsensus,
@@ -16,7 +16,7 @@ import type { MachineDefinition } from "../../src/dialai/types.js";
 describe("integration: full cycle with 2 proposers + 1 voter", () => {
   beforeEach(() => store.clear());
 
-  it("correct proposal wins via voter", () => {
+  it("correct proposal wins via voter", async () => {
     const machine: MachineDefinition = {
       machineName: "int-test",
       initialState: "pending",
@@ -48,14 +48,13 @@ describe("integration: full cycle with 2 proposers + 1 voter", () => {
     );
 
     // Register voter that prefers A (complete)
-    registerSpecialist({
+    registerVoter({
       specialistId: "voter-1",
       machineName: "int-test",
-      role: "voter",
-      strategy: () => ({ voteFor: "A" as const, reasoning: "prefer A" }),
+      strategyFn: async () => ({ voteFor: "A" as const, reasoning: "prefer A" }),
     });
 
-    solicitVote(
+    await solicitVote(
       session.sessionId,
       "voter-1",
       pComplete.proposalId,
@@ -78,7 +77,7 @@ describe("integration: full cycle with 2 proposers + 1 voter", () => {
 describe("integration: load simple-machine.json and run", () => {
   beforeEach(() => store.clear());
 
-  it("reaches final state done", () => {
+  it("reaches final state done", async () => {
     const filePath = resolve(
       import.meta.dirname,
       "../../examples/simple-machine.json"
@@ -86,8 +85,8 @@ describe("integration: load simple-machine.json and run", () => {
     const raw = readFileSync(filePath, "utf-8");
     const machine = JSON.parse(raw) as MachineDefinition;
 
-    const session = runSession(machine);
-    expect(session.currentState).toBe("sure");
-    expect(session.machineName).toBe("is-two-greater");
+    const session = await runSession(machine);
+    expect(session.currentState).toBe("done");
+    expect(session.machineName).toBe("simple-task");
   });
 });

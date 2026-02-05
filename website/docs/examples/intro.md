@@ -33,7 +33,7 @@ node dist/dialai/cli.js examples/simple-machine.json
 
 Output:
 ```
-Session type:  simple-task
+Machine:       simple-task
 Initial state: pending
 Goal state:    done
 Final state:   done
@@ -59,7 +59,7 @@ const machine: MachineDefinition = {
   },
 };
 
-const session = runSession(machine);
+const session = await runSession(machine);
 console.log(session.currentState); // "done"
 ```
 
@@ -85,7 +85,7 @@ const pipeline: MachineDefinition = {
   },
 };
 
-const session = runSession(pipeline);
+const session = await runSession(pipeline);
 // queued → processing → complete
 ```
 
@@ -158,11 +158,11 @@ registerVoter({
 const session = createSession(machine);
 
 // Solicit from both proposers
-const p1 = solicitProposal(session.sessionId, "optimist");
-const p2 = solicitProposal(session.sessionId, "pessimist");
+const p1 = await solicitProposal(session.sessionId, "optimist");
+const p2 = await solicitProposal(session.sessionId, "pessimist");
 
 // Solicit vote
-solicitVote(session.sessionId, "tiebreaker", p1.proposalId, p2.proposalId);
+await solicitVote(session.sessionId, "tiebreaker", p1.proposalId, p2.proposalId);
 
 // Evaluate and execute
 const result = evaluateConsensus(session.sessionId);

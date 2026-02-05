@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import * as store from "../../src/dialai/store.js";
 import {
   createSession,
-  registerSpecialist,
+  registerVoter,
+  registerProposer,
   submitProposal,
   solicitProposal,
   solicitVote,
@@ -18,28 +19,28 @@ import type { MachineDefinition, Proposal } from "../../src/dialai/types.js";
  */
 
 const machine: MachineDefinition = {
-  machineName: "is-two-greater",
-  initialState: "unsure",
-  defaultState: "sure",
+  machineName: "branching-task",
+  initialState: "pending",
+  defaultState: "done",
   states: {
-    unsure: {
-      prompt: "Is 2 > 1?",
-      transitions: { yes: "sure", no: "sure" },
+    pending: {
+      prompt: "Should we approve or reject?",
+      transitions: { approve: "done", reject: "done" },
     },
-    sure: {},
+    done: {},
   },
 };
 
 describe("openrouter example: mock LLM full deliberation cycle", () => {
   beforeEach(() => store.clear());
 
-  it("two proposers + three voters reach consensus and execute", () => {
+  it("two proposers + three voters reach consensus and execute", async () => {
     const session = createSession(machine);
 
     // Phase 1: Simulate two AI proposers (mock LLM responses)
     const mockProposals = [
-      { transitionName: "yes", reasoning: "2 is greater than 1 by basic arithmetic" },
-      { transitionName: "yes", reasoning: "This is a fundamental mathematical truth" },
+      { transitionName: "approve", reasoning: "The task is ready to approve" },
+      { transitionName: "approve", reasoning: "This task meets all criteria" },
     ];
 
     const proposals: Proposal[] = mockProposals.map((mp, i) =>
@@ -47,7 +48,7 @@ describe("openrouter example: mock LLM full deliberation cycle", () => {
         session.sessionId,
         `openrouter-proposer-${i + 1}`,
         mp.transitionName,
-        machine.states.unsure.transitions![mp.transitionName],
+        machine.states.pending.transitions![mp.transitionName],
         mp.reasoning
       )
     );
@@ -63,11 +64,10 @@ describe("openrouter example: mock LLM full deliberation cycle", () => {
 
     for (let v = 0; v < mockVotes.length; v++) {
       const mv = mockVotes[v];
-      registerSpecialist({
+      registerVoter({
         specialistId: `openrouter-voter-${v + 1}`,
-        machineName: "is-two-greater",
-        role: "voter",
-        strategy: () => ({ voteFor: mv.voteFor, reasoning: mv.reasoning }),
+        machineName: "branching-task",
+        strategyFn: async () => ({ voteFor: mv.voteFor, reasoning: mv.reasoning }),
       });
     }
 
@@ -75,7 +75,7 @@ describe("openrouter example: mock LLM full deliberation cycle", () => {
     for (let i = 0; i < proposals.length; i++) {
       for (let j = i + 1; j < proposals.length; j++) {
         for (let v = 0; v < mockVotes.length; v++) {
-          solicitVote(
+          await solicitVote(
             session.sessionId,
             `openrouter-voter-${v + 1}`,
             proposals[i].proposalId,
@@ -93,11 +93,11 @@ describe("openrouter example: mock LLM full deliberation cycle", () => {
     const winner = proposals.find(
       (p) => p.proposalId === consensus.winningProposalId
     )!;
-    expect(winner.transitionName).toBe("yes");
+    expect(winner.transitionName).toBe("approve");
 
     // Phase 4: Simulate arbiter synthesis (mock LLM)
     const arbiterReasoning =
-      "All participants agree that 2 > 1 is a mathematical fact.";
+      "All participants agree that the task should be approved.";
 
     // Phase 5: Execute transition
     executeTransition(
@@ -107,136 +107,131 @@ describe("openrouter example: mock LLM full deliberation cycle", () => {
       arbiterReasoning
     );
 
-    expect(session.currentState).toBe("sure");
+    expect(session.currentState).toBe("done");
     expect(session.history).toHaveLength(1);
     expect(session.history[0].reasoning).toBe(arbiterReasoning);
   });
 
-  it("proposers disagree, voters pick the correct answer", () => {
+  it("proposers disagree, voters pick the correct answer", async () => {
     const session = createSession(machine);
 
-    // Proposer 1 says yes, proposer 2 says no
-    const pYes = submitProposal(
+    // Proposer 1 says approve, proposer 2 says reject
+    const pApprove = submitProposal(
       session.sessionId,
       "openrouter-proposer-1",
-      "yes",
-      "sure",
-      "2 > 1 is obviously true"
+      "approve",
+      "done",
+      "The task is ready"
     );
-    const pNo = submitProposal(
+    const pReject = submitProposal(
       session.sessionId,
       "openrouter-proposer-2",
-      "no",
-      "sure",
+      "reject",
+      "done",
       "I am uncertain about this"
     );
 
-    // Three voters: 2 prefer A (yes), 1 prefers B (no)
+    // Three voters: 2 prefer A (approve), 1 prefers B (reject)
     const voterPreferences: Array<"A" | "B"> = ["A", "A", "B"];
     for (let v = 0; v < voterPreferences.length; v++) {
-      registerSpecialist({
+      registerVoter({
         specialistId: `voter-${v + 1}`,
-        machineName: "is-two-greater",
-        role: "voter",
-        strategy: () => ({
+        machineName: "branching-task",
+        strategyFn: async () => ({
           voteFor: voterPreferences[v],
           reasoning: `I prefer ${voterPreferences[v]}`,
         }),
       });
 
-      solicitVote(
+      await solicitVote(
         session.sessionId,
         `voter-${v + 1}`,
-        pYes.proposalId,
-        pNo.proposalId
+        pApprove.proposalId,
+        pReject.proposalId
       );
     }
 
     const consensus = evaluateConsensus(session.sessionId);
     expect(consensus.consensusReached).toBe(true);
-    expect(consensus.winningProposalId).toBe(pYes.proposalId);
+    expect(consensus.winningProposalId).toBe(pApprove.proposalId);
 
-    executeTransition(session.sessionId, "yes", "sure", "Majority chose yes");
-    expect(session.currentState).toBe("sure");
+    executeTransition(session.sessionId, "approve", "done", "Majority chose approve");
+    expect(session.currentState).toBe("done");
   });
 
-  it("NEITHER votes prevent consensus", () => {
+  it("NEITHER votes prevent consensus", async () => {
     const session = createSession(machine);
 
-    const pYes = submitProposal(session.sessionId, "p-1", "yes", "sure", "yes");
-    const pNo = submitProposal(session.sessionId, "p-2", "no", "sure", "no");
+    const pApprove = submitProposal(session.sessionId, "p-1", "approve", "done", "approve");
+    const pReject = submitProposal(session.sessionId, "p-2", "reject", "done", "reject");
 
     // All voters vote NEITHER
-    registerSpecialist({
+    registerVoter({
       specialistId: "voter-1",
-      machineName: "is-two-greater",
-      role: "voter",
-      strategy: () => ({
+      machineName: "branching-task",
+      strategyFn: async () => ({
         voteFor: "NEITHER" as const,
         reasoning: "Both proposals are inadequate",
       }),
     });
 
-    solicitVote(session.sessionId, "voter-1", pYes.proposalId, pNo.proposalId);
+    await solicitVote(session.sessionId, "voter-1", pApprove.proposalId, pReject.proposalId);
 
     const consensus = evaluateConsensus(session.sessionId);
     expect(consensus.consensusReached).toBe(false);
   });
 
-  it("registered proposer strategies via solicitProposal", () => {
+  it("registered proposer strategies via solicitProposal", async () => {
     const session = createSession(machine);
 
     // Register mock LLM proposers as actual specialists
-    registerSpecialist({
+    registerProposer({
       specialistId: "mock-llm-proposer-1",
-      machineName: "is-two-greater",
-      role: "proposer",
-      strategy: (_state: string, transitions: Record<string, string>) => ({
-        transitionName: "yes",
-        toState: transitions["yes"],
-        reasoning: "Mock LLM: 2 > 1 is true",
+      machineName: "branching-task",
+      strategyFn: async (ctx) => ({
+        transitionName: "approve",
+        toState: ctx.transitions["approve"],
+        reasoning: "Mock LLM: task is ready",
       }),
     });
 
-    registerSpecialist({
+    registerProposer({
       specialistId: "mock-llm-proposer-2",
-      machineName: "is-two-greater",
-      role: "proposer",
-      strategy: (_state: string, transitions: Record<string, string>) => ({
-        transitionName: "no",
-        toState: transitions["no"],
+      machineName: "branching-task",
+      strategyFn: async (ctx) => ({
+        transitionName: "reject",
+        toState: ctx.transitions["reject"],
         reasoning: "Mock LLM: I am not sure",
       }),
     });
 
     // Solicit proposals through the strategy interface
-    const p1 = solicitProposal(session.sessionId, "mock-llm-proposer-1");
-    const p2 = solicitProposal(session.sessionId, "mock-llm-proposer-2");
+    const p1 = await solicitProposal(session.sessionId, "mock-llm-proposer-1");
+    const p2 = await solicitProposal(session.sessionId, "mock-llm-proposer-2");
 
-    expect(p1.transitionName).toBe("yes");
-    expect(p1.reasoning).toBe("Mock LLM: 2 > 1 is true");
-    expect(p2.transitionName).toBe("no");
+    expect(p1.transitionName).toBe("approve");
+    expect(p1.reasoning).toBe("Mock LLM: task is ready");
+    expect(p2.transitionName).toBe("reject");
     expect(p2.reasoning).toBe("Mock LLM: I am not sure");
 
     // Register a mock AI voter and complete the cycle
-    registerSpecialist({
+    registerVoter({
       specialistId: "mock-llm-voter",
-      machineName: "is-two-greater",
-      role: "voter",
-      strategy: () => ({
+      machineName: "branching-task",
+      strategyFn: async () => ({
         voteFor: "A" as const,
-        reasoning: "Mock LLM: yes is the correct answer",
+        reasoning: "Mock LLM: approve is the correct answer",
       }),
     });
 
-    solicitVote(session.sessionId, "mock-llm-voter", p1.proposalId, p2.proposalId);
+    await solicitVote(session.sessionId, "mock-llm-voter", p1.proposalId, p2.proposalId);
 
     const consensus = evaluateConsensus(session.sessionId);
     expect(consensus.consensusReached).toBe(true);
     expect(consensus.winningProposalId).toBe(p1.proposalId);
 
     executeTransition(session.sessionId, p1.transitionName, p1.toState, consensus.reasoning);
-    expect(session.currentState).toBe("sure");
+    expect(session.currentState).toBe("done");
   });
 
   it("single proposal auto-consensus (no voters needed)", () => {
@@ -245,8 +240,8 @@ describe("openrouter example: mock LLM full deliberation cycle", () => {
     const proposal = submitProposal(
       session.sessionId,
       "sole-proposer",
-      "yes",
-      "sure",
+      "approve",
+      "done",
       "Only one proposal submitted"
     );
 
@@ -255,7 +250,7 @@ describe("openrouter example: mock LLM full deliberation cycle", () => {
     expect(consensus.winningProposalId).toBe(proposal.proposalId);
     expect(consensus.reasoning).toContain("Single proposal");
 
-    executeTransition(session.sessionId, "yes", "sure", consensus.reasoning);
-    expect(session.currentState).toBe("sure");
+    executeTransition(session.sessionId, "approve", "done", consensus.reasoning);
+    expect(session.currentState).toBe("done");
   });
 });

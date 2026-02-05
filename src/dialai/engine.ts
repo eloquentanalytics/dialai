@@ -2,30 +2,29 @@ import type { MachineDefinition, Session } from "./types.js";
 import { specialists } from "./store.js";
 import {
   createSession,
-  registerSpecialist,
+  registerProposer,
   solicitProposal,
   solicitVote,
   evaluateConsensus,
   executeTransition,
 } from "./api.js";
 
-export function runSession(machine: MachineDefinition): Session {
+export async function runSession(machine: MachineDefinition): Promise<Session> {
   const session = createSession(machine);
 
   // Register a built-in deterministic proposer that picks the first transition
   const builtInProposerId = `__builtin-proposer-${session.sessionId}`;
-  registerSpecialist({
+  registerProposer({
     specialistId: builtInProposerId,
     machineName: machine.machineName,
-    role: "proposer",
-    strategy: (_currentState: string, transitions: Record<string, string>) => {
-      const name = Object.keys(transitions)[0];
+    strategyFn: async (ctx) => {
+      const name = Object.keys(ctx.transitions)[0];
       if (!name) {
         throw new Error("No transitions available from current state");
       }
       return {
         transitionName: name,
-        toState: transitions[name],
+        toState: ctx.transitions[name],
         reasoning: "First available transition",
       };
     },
@@ -39,8 +38,10 @@ export function runSession(machine: MachineDefinition): Session {
     );
 
     // Solicit proposals
-    const proposals = proposers.map((p) =>
-      solicitProposal(session.sessionId, p.specialistId)
+    const proposals = await Promise.all(
+      proposers.map((p) =>
+        solicitProposal(session.sessionId, p.specialistId)
+      )
     );
 
     // If 2+ proposals, solicit pairwise votes
@@ -52,7 +53,7 @@ export function runSession(machine: MachineDefinition): Session {
       for (let i = 0; i < proposals.length; i++) {
         for (let j = i + 1; j < proposals.length; j++) {
           for (const voter of voters) {
-            solicitVote(
+            await solicitVote(
               session.sessionId,
               voter.specialistId,
               proposals[i].proposalId,

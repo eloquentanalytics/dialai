@@ -54,7 +54,7 @@ const machine: MachineDefinition = {
   },
 };
 
-const session = runSession(machine);
+const session = await runSession(machine);
 // session.currentState === "done"
 ```
 

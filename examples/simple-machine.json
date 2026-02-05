@@ -1,12 +1,12 @@
 {
-  "machineName": "is-two-greater",
-  "initialState": "unsure",
-  "defaultState": "sure",
+  "machineName": "simple-task",
+  "initialState": "pending",
+  "defaultState": "done",
   "states": {
-    "unsure": {
-      "prompt": "Is 2 > 1?",
-      "transitions": { "yes": "sure", "no": "sure" }
+    "pending": {
+      "prompt": "Should we complete this task?",
+      "transitions": { "complete": "done" }
     },
-    "sure": {}
+    "done": {}
   }
 }

@@ -2,9 +2,8 @@
 /**
  * simple-machine-openrouter.ts
  *
- * Runs the same "is 2 > 1?" state machine as simple-machine.json,
- * but uses OpenRouter LLMs for proposing transitions, voting, and
- * synthesizing arbiter reasoning.
+ * Runs the "simple-task" state machine using OpenRouter LLMs for proposing
+ * transitions, voting, and synthesizing arbiter reasoning.
  *
  * Usage:
  *   OPENROUTER_API_TOKEN=sk-... npx tsx examples/simple-machine-openrouter.ts
@@ -31,15 +30,15 @@ import { getCompletion } from "./get-completion-from-openai-compatible-endpoint.
 const model = process.env.OPENROUTER_MODEL ?? "openai/gpt-4o-mini";
 
 const machine: MachineDefinition = {
-  machineName: "is-two-greater",
-  initialState: "unsure",
-  defaultState: "sure",
+  machineName: "simple-task",
+  initialState: "pending",
+  defaultState: "done",
   states: {
-    unsure: {
-      prompt: "Is 2 > 1?",
-      transitions: { yes: "sure", no: "sure" },
+    pending: {
+      prompt: "Should we complete this task?",
+      transitions: { complete: "done" },
     },
-    sure: {},
+    done: {},
   },
 };
 

@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import * as store from "../../src/dialai/store.js";
 import {
   createSession,
-  registerSpecialist,
+  registerVoter,
   submitProposal,
   solicitVote,
   evaluateConsensus,
@@ -24,57 +24,69 @@ function loadSimpleMachine(): MachineDefinition {
 describe("simple-machine.json: single proposer via runSession", () => {
   beforeEach(() => store.clear());
 
-  it("reaches goal state with built-in proposer", () => {
+  it("reaches goal state with built-in proposer", async () => {
     const machine = loadSimpleMachine();
-    const session = runSession(machine);
+    const session = await runSession(machine);
 
-    expect(session.machineName).toBe("is-two-greater");
-    expect(session.currentState).toBe("sure");
+    expect(session.machineName).toBe("simple-task");
+    expect(session.currentState).toBe("done");
     expect(session.history).toHaveLength(1);
-    expect(session.history[0].fromState).toBe("unsure");
-    expect(session.history[0].toState).toBe("sure");
+    expect(session.history[0].fromState).toBe("pending");
+    expect(session.history[0].toState).toBe("done");
   });
 });
 
-describe("simple-machine.json: mock AI proposers + voters", () => {
+describe("simple-machine: mock AI proposers + voters", () => {
   beforeEach(() => store.clear());
 
-  it("two proposers disagree, voter breaks tie, cycle completes", () => {
-    const machine = loadSimpleMachine();
-    const session = createSession(machine);
+  // Use an inline branching machine for disagreement scenarios
+  const branchingMachine: MachineDefinition = {
+    machineName: "branching-task",
+    initialState: "pending",
+    defaultState: "done",
+    states: {
+      pending: {
+        prompt: "Should we approve or reject?",
+        transitions: { approve: "done", reject: "done" },
+      },
+      done: {},
+    },
+  };
 
-    expect(session.currentState).toBe("unsure");
+  it("two proposers disagree, voter breaks tie, cycle completes", async () => {
+    const session = createSession(branchingMachine);
 
-    // Mock AI proposer 1: proposes "yes" transition
+    expect(session.currentState).toBe("pending");
+
+    // Mock AI proposer 1: proposes "approve" transition
     const p1 = submitProposal(
       session.sessionId,
       "ai-proposer-1",
-      "yes",
-      "sure",
-      "2 is greater than 1, so yes"
+      "approve",
+      "done",
+      "Task looks good, approve it"
     );
 
-    // Mock AI proposer 2: proposes "no" transition
+    // Mock AI proposer 2: proposes "reject" transition
     const p2 = submitProposal(
       session.sessionId,
       "ai-proposer-2",
-      "no",
-      "sure",
-      "I am confused, so no"
+      "reject",
+      "done",
+      "I have concerns, reject it"
     );
 
-    // Mock AI voter: prefers proposal A (yes)
-    registerSpecialist({
+    // Mock AI voter: prefers proposal A (approve)
+    registerVoter({
       specialistId: "ai-voter-1",
-      machineName: "is-two-greater",
-      role: "voter",
-      strategy: () => ({
+      machineName: "branching-task",
+      strategyFn: async () => ({
         voteFor: "A" as const,
-        reasoning: "Proposal A correctly identifies 2 > 1",
+        reasoning: "Proposal A correctly approves the task",
       }),
     });
 
-    solicitVote(
+    await solicitVote(
       session.sessionId,
       "ai-voter-1",
       p1.proposalId,
@@ -85,126 +97,118 @@ describe("simple-machine.json: mock AI proposers + voters", () => {
     expect(consensus.consensusReached).toBe(true);
     expect(consensus.winningProposalId).toBe(p1.proposalId);
 
-    executeTransition(session.sessionId, "yes", "sure", consensus.reasoning);
+    executeTransition(session.sessionId, "approve", "done", consensus.reasoning);
 
-    expect(session.currentState).toBe("sure");
+    expect(session.currentState).toBe("done");
     expect(session.history).toHaveLength(1);
-    expect(session.history[0].transitionName).toBe("yes");
+    expect(session.history[0].transitionName).toBe("approve");
   });
 
-  it("three voters, majority wins", () => {
-    const machine = loadSimpleMachine();
-    const session = createSession(machine);
+  it("three voters, majority wins", async () => {
+    const session = createSession(branchingMachine);
 
-    const pYes = submitProposal(
+    const pApprove = submitProposal(
       session.sessionId,
       "ai-proposer-1",
-      "yes",
-      "sure",
-      "2 > 1 is true"
+      "approve",
+      "done",
+      "Task is ready"
     );
-    const pNo = submitProposal(
+    const pReject = submitProposal(
       session.sessionId,
       "ai-proposer-2",
-      "no",
-      "sure",
-      "2 > 1 is false"
+      "reject",
+      "done",
+      "Task needs more work"
     );
 
     // Register three mock AI voters: 2 vote A, 1 votes B
-    registerSpecialist({
+    registerVoter({
       specialistId: "ai-voter-1",
-      machineName: "is-two-greater",
-      role: "voter",
-      strategy: () => ({ voteFor: "A" as const, reasoning: "A is correct" }),
+      machineName: "branching-task",
+      strategyFn: async () => ({ voteFor: "A" as const, reasoning: "A is correct" }),
     });
-    registerSpecialist({
+    registerVoter({
       specialistId: "ai-voter-2",
-      machineName: "is-two-greater",
-      role: "voter",
-      strategy: () => ({ voteFor: "A" as const, reasoning: "A is right" }),
+      machineName: "branching-task",
+      strategyFn: async () => ({ voteFor: "A" as const, reasoning: "A is right" }),
     });
-    registerSpecialist({
+    registerVoter({
       specialistId: "ai-voter-3",
-      machineName: "is-two-greater",
-      role: "voter",
-      strategy: () => ({ voteFor: "B" as const, reasoning: "B seems better" }),
+      machineName: "branching-task",
+      strategyFn: async () => ({ voteFor: "B" as const, reasoning: "B seems better" }),
     });
 
     for (const voterId of ["ai-voter-1", "ai-voter-2", "ai-voter-3"]) {
-      solicitVote(
+      await solicitVote(
         session.sessionId,
         voterId,
-        pYes.proposalId,
-        pNo.proposalId
+        pApprove.proposalId,
+        pReject.proposalId
       );
     }
 
     const consensus = evaluateConsensus(session.sessionId);
     expect(consensus.consensusReached).toBe(true);
-    expect(consensus.winningProposalId).toBe(pYes.proposalId);
+    expect(consensus.winningProposalId).toBe(pApprove.proposalId);
 
-    executeTransition(session.sessionId, "yes", "sure", consensus.reasoning);
-    expect(session.currentState).toBe("sure");
+    executeTransition(session.sessionId, "approve", "done", consensus.reasoning);
+    expect(session.currentState).toBe("done");
   });
 
-  it("human voter overrides AI majority", () => {
-    const machine = loadSimpleMachine();
-    const session = createSession(machine);
+  it("human voter overrides AI majority", async () => {
+    const session = createSession(branchingMachine);
 
-    const pYes = submitProposal(
+    const pApprove = submitProposal(
       session.sessionId,
       "ai-proposer-1",
-      "yes",
-      "sure",
-      "2 > 1"
+      "approve",
+      "done",
+      "Approve it"
     );
-    const pNo = submitProposal(
+    const pReject = submitProposal(
       session.sessionId,
       "ai-proposer-2",
-      "no",
-      "sure",
-      "not sure"
+      "reject",
+      "done",
+      "Not sure"
     );
 
-    // Two AI voters prefer "yes"
-    registerSpecialist({
+    // Two AI voters prefer "approve"
+    registerVoter({
       specialistId: "ai-voter-1",
-      machineName: "is-two-greater",
-      role: "voter",
-      strategy: () => ({ voteFor: "A" as const, reasoning: "yes" }),
+      machineName: "branching-task",
+      strategyFn: async () => ({ voteFor: "A" as const, reasoning: "approve" }),
     });
-    registerSpecialist({
+    registerVoter({
       specialistId: "ai-voter-2",
-      machineName: "is-two-greater",
-      role: "voter",
-      strategy: () => ({ voteFor: "A" as const, reasoning: "yes" }),
+      machineName: "branching-task",
+      strategyFn: async () => ({ voteFor: "A" as const, reasoning: "approve" }),
     });
 
-    // Human voter prefers "no"
-    registerSpecialist({
+    // Human voter prefers "reject"
+    registerVoter({
       specialistId: "human-reviewer",
-      machineName: "is-two-greater",
-      role: "voter",
-      strategy: () => ({ voteFor: "B" as const, reasoning: "I disagree" }),
+      machineName: "branching-task",
+      strategyFn: async () => ({ voteFor: "B" as const, reasoning: "I disagree" }),
     });
 
     for (const voterId of ["ai-voter-1", "ai-voter-2", "human-reviewer"]) {
-      solicitVote(
+      await solicitVote(
         session.sessionId,
         voterId,
-        pYes.proposalId,
-        pNo.proposalId
+        pApprove.proposalId,
+        pReject.proposalId
       );
     }
 
     const consensus = evaluateConsensus(session.sessionId);
     expect(consensus.consensusReached).toBe(true);
-    expect(consensus.winningProposalId).toBe(pNo.proposalId);
+    expect(consensus.winningProposalId).toBe(pReject.proposalId);
     expect(consensus.reasoning).toContain("human preferred");
 
-    executeTransition(session.sessionId, "no", "sure", consensus.reasoning);
-    expect(session.currentState).toBe("sure");
-    expect(session.history[0].transitionName).toBe("no");
+    executeTransition(session.sessionId, "reject", "done", consensus.reasoning);
+    expect(session.currentState).toBe("done");
+    expect(session.history[0].transitionName).toBe("reject");
   });
 });

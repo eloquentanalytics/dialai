@@ -28,23 +28,68 @@ export interface Session {
   createdAt: Date;
 }
 
-export type ProposerStrategy = (
-  currentState: string,
-  transitions: Record<string, string>
-) => { transitionName: string; toState: string; reasoning: string };
+export interface ProposerContext {
+  sessionId: string;
+  currentState: string;
+  prompt: string;
+  transitions: Record<string, string>;
+  history: TransitionRecord[];
+}
 
-export type VoterStrategy = (
-  proposalA: Proposal,
-  proposalB: Proposal
-) => { voteFor: VoteChoice; reasoning: string };
+export interface VoterContext {
+  sessionId: string;
+  currentState: string;
+  prompt: string;
+  proposalA: Proposal;
+  proposalB: Proposal;
+  history: TransitionRecord[];
+}
 
-export interface Specialist {
+export interface ArbiterContext {
+  sessionId: string;
+  currentState: string;
+  proposals: Proposal[];
+  votes: Vote[];
+  history: TransitionRecord[];
+}
+
+export interface Proposer {
+  role: "proposer";
   specialistId: string;
   machineName: string;
-  role: "proposer" | "voter" | "arbiter";
-  weight: number;
-  strategy: ProposerStrategy | VoterStrategy;
+  strategyFn?: (ctx: ProposerContext) => Promise<{ transitionName: string; toState: string; reasoning: string }>;
+  strategyWebhookUrl?: string;
+  contextFn?: (ctx: ProposerContext) => Promise<string>;
+  contextWebhookUrl?: string;
+  modelId?: string;
+  webhookTokenName?: string;
 }
+
+export interface Voter {
+  role: "voter";
+  specialistId: string;
+  machineName: string;
+  strategyFn?: (ctx: VoterContext) => Promise<{ voteFor: VoteChoice; reasoning: string }>;
+  strategyWebhookUrl?: string;
+  contextFn?: (ctx: VoterContext) => Promise<string>;
+  contextWebhookUrl?: string;
+  modelId?: string;
+  webhookTokenName?: string;
+}
+
+export interface Arbiter {
+  role: "arbiter";
+  specialistId: string;
+  machineName: string;
+  strategyFn?: (ctx: ArbiterContext) => Promise<ConsensusResult>;
+  strategyWebhookUrl?: string;
+  contextFn?: (ctx: ArbiterContext) => Promise<string>;
+  contextWebhookUrl?: string;
+  modelId?: string;
+  webhookTokenName?: string;
+}
+
+export type Specialist = Proposer | Voter | Arbiter;
 
 export interface Proposal {
   proposalId: string;

@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { runSession } from "./engine.js";
 import type { MachineDefinition } from "./types.js";
 
-function main(): void {
+async function main(): Promise<void> {
   const args = process.argv.slice(2);
   if (args.length !== 1) {
     console.error("Usage: dialai <machine.json>");
@@ -23,7 +23,7 @@ function main(): void {
   }
 
   try {
-    const session = runSession(machine);
+    const session = await runSession(machine);
     console.log(`Machine:       ${session.machineName}`);
     console.log(`Initial state: ${session.machine.initialState}`);
     console.log(`Goal state:    ${session.machine.defaultState}`);

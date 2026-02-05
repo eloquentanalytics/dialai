@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # API Reference
 
-The DialAI API provides 12 functions for creating sessions, registering specialists, and managing the decision cycle. All functions are synchronous except where noted; specialist strategy functions are async.
+The DialAI API provides 12 functions for creating sessions, registering specialists, and managing the decision cycle. Functions that invoke strategy functions (`solicitProposal`, `solicitVote`, `runSession`) are async and return Promises. All other functions are synchronous.
 
 ## Session Functions
 
@@ -111,14 +111,14 @@ const proposal = submitProposal(
 );
 ```
 
-### `solicitProposal(sessionId, specialistId): Proposal`
+### `solicitProposal(sessionId, specialistId): Promise<Proposal>`
 
-Calls the specialist's strategy function with the session's current state and transitions, then submits the resulting proposal.
+Calls the specialist's strategy function with the session's current state and transitions, then submits the resulting proposal. Async because strategy functions are async.
 
 ```typescript
 import { solicitProposal } from "dialai";
 
-const proposal = solicitProposal(session.sessionId, "ai-proposer-1");
+const proposal = await solicitProposal(session.sessionId, "ai-proposer-1");
 ```
 
 ## Vote Functions
@@ -140,14 +140,14 @@ const vote = submitVote(
 );
 ```
 
-### `solicitVote(sessionId, specialistId, proposalIdA, proposalIdB): Vote`
+### `solicitVote(sessionId, specialistId, proposalIdA, proposalIdB): Promise<Vote>`
 
-Calls the specialist's strategy function with the two proposals, then submits the resulting vote.
+Calls the specialist's strategy function with the two proposals, then submits the resulting vote. Async because strategy functions are async.
 
 ```typescript
 import { solicitVote } from "dialai";
 
-const vote = solicitVote(
+const vote = await solicitVote(
   session.sessionId,
   "ai-voter-1",
   proposalA.proposalId,
@@ -192,14 +192,14 @@ console.log(updated.history);      // [{ fromState: "review", toState: "approved
 
 ## Engine
 
-### `runSession(machine: MachineDefinition): Session`
+### `runSession(machine: MachineDefinition): Promise<Session>`
 
-Runs a machine to completion. Creates a session, registers a built-in deterministic proposer, and loops through the decision cycle until `currentState === defaultState`.
+Runs a machine to completion. Creates a session, registers a built-in deterministic proposer, and loops through the decision cycle until `currentState === defaultState`. Async because it awaits strategy functions.
 
 ```typescript
 import { runSession } from "dialai";
 
-const session = runSession(machine);
+const session = await runSession(machine);
 ```
 
 ## Types

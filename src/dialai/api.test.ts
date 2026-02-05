@@ -4,7 +4,8 @@ import {
   createSession,
   getSession,
   getSessions,
-  registerSpecialist,
+  registerProposer,
+  registerVoter,
   submitProposal,
   solicitProposal,
   submitVote,
@@ -70,24 +71,42 @@ describe("getSessions", () => {
   });
 });
 
-describe("registerSpecialist", () => {
+describe("registerProposer", () => {
   beforeEach(() => store.clear());
 
-  it("stores with strategy and defaults weight to 1.0", () => {
-    const strategy = () => ({
+  it("stores with async strategyFn", () => {
+    const strategyFn = async () => ({
       transitionName: "complete",
       toState: "done",
       reasoning: "test",
     });
-    const spec = registerSpecialist({
+    const spec = registerProposer({
       specialistId: "sp-1",
       machineName: "simple-task",
-      role: "proposer",
-      strategy,
+      strategyFn,
     });
-    expect(spec.weight).toBe(1.0);
-    expect(spec.strategy).toBe(strategy);
+    expect(spec.role).toBe("proposer");
+    expect(spec.strategyFn).toBe(strategyFn);
     expect(store.specialists.get("sp-1")).toBe(spec);
+  });
+});
+
+describe("registerVoter", () => {
+  beforeEach(() => store.clear());
+
+  it("stores with async strategyFn", () => {
+    const strategyFn = async () => ({
+      voteFor: "A" as const,
+      reasoning: "test",
+    });
+    const spec = registerVoter({
+      specialistId: "v-1",
+      machineName: "simple-task",
+      strategyFn,
+    });
+    expect(spec.role).toBe("voter");
+    expect(spec.strategyFn).toBe(strategyFn);
+    expect(store.specialists.get("v-1")).toBe(spec);
   });
 });
 
@@ -115,22 +134,21 @@ describe("submitProposal", () => {
 describe("solicitProposal", () => {
   beforeEach(() => store.clear());
 
-  it("calls proposer strategy and stores resulting proposal", () => {
+  it("calls proposer strategy and stores resulting proposal", async () => {
     const session = createSession(simpleMachine);
-    registerSpecialist({
+    registerProposer({
       specialistId: "sp-1",
       machineName: "simple-task",
-      role: "proposer",
-      strategy: (_state: string, transitions: Record<string, string>) => {
-        const name = Object.keys(transitions)[0];
+      strategyFn: async (ctx) => {
+        const name = Object.keys(ctx.transitions)[0];
         return {
           transitionName: name,
-          toState: transitions[name],
+          toState: ctx.transitions[name],
           reasoning: "first available",
         };
       },
     });
-    const proposal = solicitProposal(session.sessionId, "sp-1");
+    const proposal = await solicitProposal(session.sessionId, "sp-1");
     expect(proposal.transitionName).toBe("complete");
     expect(proposal.toState).toBe("done");
     expect(store.proposals.get(proposal.proposalId)).toBe(proposal);
@@ -153,19 +171,18 @@ describe("submitVote", () => {
 describe("solicitVote", () => {
   beforeEach(() => store.clear());
 
-  it("calls voter strategy and stores resulting vote", () => {
+  it("calls voter strategy and stores resulting vote", async () => {
     const session = createSession(simpleMachine);
     const pA = submitProposal(session.sessionId, "sp-1", "complete", "done");
     const pB = submitProposal(session.sessionId, "sp-2", "complete", "done");
 
-    registerSpecialist({
+    registerVoter({
       specialistId: "voter-1",
       machineName: "simple-task",
-      role: "voter",
-      strategy: () => ({ voteFor: "A" as const, reasoning: "A is better" }),
+      strategyFn: async () => ({ voteFor: "A" as const, reasoning: "A is better" }),
     });
 
-    const vote = solicitVote(
+    const vote = await solicitVote(
       session.sessionId,
       "voter-1",
       pA.proposalId,
@@ -179,7 +196,7 @@ describe("solicitVote", () => {
 describe("evaluateConsensus", () => {
   beforeEach(() => store.clear());
 
-  it("single proposal → consensus reached", () => {
+  it("single proposal -> consensus reached", () => {
     const session = createSession(simpleMachine);
     const proposal = submitProposal(
       session.sessionId,
@@ -192,7 +209,7 @@ describe("evaluateConsensus", () => {
     expect(result.winningProposalId).toBe(proposal.proposalId);
   });
 
-  it("zero proposals → no consensus", () => {
+  it("zero proposals -> no consensus", () => {
     const session = createSession(simpleMachine);
     const result = evaluateConsensus(session.sessionId);
     expect(result.consensusReached).toBe(false);
@@ -209,11 +226,10 @@ describe("evaluateConsensus", () => {
       "alternate"
     );
 
-    registerSpecialist({
+    registerVoter({
       specialistId: "voter-1",
       machineName: "simple-task",
-      role: "voter",
-      strategy: () => ({ voteFor: "A" as const, reasoning: "A" }),
+      strategyFn: async () => ({ voteFor: "A" as const, reasoning: "A" }),
     });
 
     submitVote(
@@ -240,23 +256,20 @@ describe("evaluateConsensus", () => {
       "other"
     );
 
-    registerSpecialist({
+    registerVoter({
       specialistId: "ai-voter-1",
       machineName: "simple-task",
-      role: "voter",
-      strategy: () => ({ voteFor: "A" as const, reasoning: "A" }),
+      strategyFn: async () => ({ voteFor: "A" as const, reasoning: "A" }),
     });
-    registerSpecialist({
+    registerVoter({
       specialistId: "ai-voter-2",
       machineName: "simple-task",
-      role: "voter",
-      strategy: () => ({ voteFor: "A" as const, reasoning: "A" }),
+      strategyFn: async () => ({ voteFor: "A" as const, reasoning: "A" }),
     });
-    registerSpecialist({
+    registerVoter({
       specialistId: "human-reviewer",
       machineName: "simple-task",
-      role: "voter",
-      strategy: () => ({ voteFor: "B" as const, reasoning: "B" }),
+      strategyFn: async () => ({ voteFor: "B" as const, reasoning: "B" }),
     });
 
     // Two AI votes for A
