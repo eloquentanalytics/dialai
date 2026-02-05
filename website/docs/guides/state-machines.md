@@ -6,6 +6,17 @@ sidebar_position: 1
 
 State machines define the structure of your sessions. Each session type has its own machine definition.
 
+## Why State Machines?
+
+Every agentic AI system is a state machine — the agent occupies a state, takes an action, and transitions to a new state. Frameworks like LangGraph make this explicit: agents are graphs of states and edges. Even "open-ended" agent loops (observe → reason → act → observe) follow this structure.
+
+DIAL makes the state machine explicit so that each transition becomes a **measurable decision point**. This doesn't limit what you can model — it clarifies *where decisions happen* so they can be calibrated. You don't need a DIAL decision point at every micro-step; you place them at the boundaries where delegation risk matters. An agent's internal tool-call loop can remain opaque. DIAL measures the outcomes at the states you care about.
+
+This means open-ended tasks fit naturally:
+- **Document generation** — Proposals *are* the candidate documents. Specialists propose drafts, voters compare them, the human picks or edits the winner.
+- **Agentic workflows** — The default state is the agent's normal operating mode. It transitions out for decisions that need deliberation (tool selection, plan changes) and back when resolved.
+- **Research and exploration** — Model as a loop: the agent explores, then a decision determines whether findings are sufficient or more exploration is needed.
+
 ## Defining a Machine
 
 A `MachineDefinition` defines:
@@ -169,6 +180,69 @@ const branching: MachineDefinition = {
       transitions: { resolve: "resolved", escalate: "escalated" },
     },
     resolved: {},
+  },
+};
+```
+
+### Agentic Workflow
+
+An agent's operating loop modeled as a DIAL machine. The default state is the agent running normally — it transitions out when a decision needs deliberation, and back when resolved.
+
+```typescript
+const agentLoop: MachineDefinition = {
+  machineName: "coding-agent",
+  initialState: "operating",
+  defaultState: "done",
+  states: {
+    operating: {
+      prompt:
+        "The agent is working. Should it continue, use a tool, replan, or finalize?",
+      transitions: {
+        use_tool: "tool_selection",
+        replan: "planning",
+        finalize: "done",
+      },
+    },
+    tool_selection: {
+      prompt: "Which tool should the agent use for this step?",
+      transitions: { selected: "operating" },
+    },
+    planning: {
+      prompt: "The current approach isn't working. What should the new plan be?",
+      transitions: { resume: "operating" },
+    },
+    done: {},
+  },
+};
+```
+
+### Document Generation
+
+For open-ended generation tasks, the specialist proposals *are* the candidate outputs. Voters compare drafts, and the human selects or edits the winner.
+
+```typescript
+const docGen: MachineDefinition = {
+  machineName: "report-generation",
+  initialState: "drafting",
+  defaultState: "published",
+  states: {
+    drafting: {
+      prompt:
+        "Generate a draft of the report. Each proposal should be a complete draft.",
+      transitions: {
+        accept: "published",
+        revise: "revising",
+      },
+    },
+    revising: {
+      prompt:
+        "Revise the draft based on feedback. Each proposal should be a revised version.",
+      transitions: {
+        accept: "published",
+        revise: "revising",
+      },
+    },
+    published: {},
   },
 };
 ```
