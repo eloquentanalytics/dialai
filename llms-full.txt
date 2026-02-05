@@ -11,7 +11,7 @@ DIAL is designed for LLM-driven agents as first-class participants. Every design
 
 ## Agents as Participants
 
-The specialist abstraction exists so that LLM agents can register themselves as proposers, voters, and arbiters in a decision cycle. An agent reading a state machine definition can determine what state the session is in, what transitions are available, and what the prompt is asking. It can then submit a proposal or cast a vote using the same API a human would use.
+The specialist abstraction exists so that LLM agents can register themselves as proposers and voters in a decision cycle. An agent reading a state machine definition can determine what state the session is in, what transitions are available, and what the prompt is asking. It can then submit a proposal or cast a vote using the same API a human would use.
 
 This is the point. DIAL does not treat agents as a backend detail or an orchestration layer. Agents sit alongside humans in the decision cycle and are evaluated by the same arbiter under the same rules. The difference is that human votes override, because [human primacy](./concepts/human-primacy.md) is a safety constraint on the system.
 
@@ -73,7 +73,7 @@ A resource-oriented API exposes data: "here is a session, here are its proposals
 
 A tool-oriented API exposes actions: `submitProposal`, `submitVote`, `evaluateConsensus`, `executeTransition`. Each function is a discrete action with a clear purpose. An agent with tool-use capabilities can map these directly to its tool-calling interface.
 
-The 12 functions in the DIAL API are designed to be the 12 tools an agent needs:
+The 11 functions in the DIAL API are designed to be the 11 tools an agent needs:
 
 | Function | Action |
 |---|---|
@@ -82,7 +82,6 @@ The 12 functions in the DIAL API are designed to be the 12 tools an agent needs:
 | `getSessions` | List all active processes |
 | `registerProposer` | Join a decision process as a proposer |
 | `registerVoter` | Join a decision process as a voter |
-| `registerArbiter` | Define custom consensus logic |
 | `submitProposal` | Propose a transition |
 | `solicitProposal` | Ask a specialist's strategy to propose |
 | `submitVote` | Cast a vote between two proposals |
@@ -147,7 +146,7 @@ The version in `VERSION.md` is the version. There is no `package.json` version t
 ## API Reference
 
 
-The DialAI API provides 12 functions for creating sessions, registering specialists, and managing the decision cycle. Functions that invoke strategy functions (`solicitProposal`, `solicitVote`, `runSession`) are async and return Promises. All other functions are synchronous.
+The DialAI API provides 11 functions for creating sessions, registering specialists, and managing the decision cycle. Functions that invoke strategy functions (`solicitProposal`, `solicitVote`, `runSession`) are async and return Promises. All other functions are synchronous.
 
 ## Session Functions
 
@@ -214,24 +213,6 @@ const voter = registerVoter({
   strategyFn: async (ctx) => ({
     voteFor: "A",
     reasoning: "Proposal A is better aligned",
-  }),
-});
-```
-
-### `registerArbiter(opts): Arbiter`
-
-Registers a custom arbiter for a session type. Supports the same four execution modes as `registerProposer` and `registerVoter`. See the [registering specialists guide](../guides/registering-specialists.md) for details.
-
-```typescript
-import { registerArbiter } from "dialai";
-
-const arbiter = registerArbiter({
-  specialistId: "custom-arbiter",
-  machineName: "my-task",
-  strategyFn: async (ctx) => ({
-    consensusReached: true,
-    winningProposalId: ctx.proposals[0]?.proposalId,
-    reasoning: "First proposal wins",
   }),
 });
 ```
@@ -355,13 +336,11 @@ import type {
   Session,
   Proposer,
   Voter,
-  Arbiter,
   Proposal,
   Vote,
   ConsensusResult,
   ProposerContext,
   VoterContext,
-  ArbiterContext,
   VoteChoice,
 } from "dialai";
 ```
@@ -1175,7 +1154,7 @@ Voters evaluate proposals and express preferences between them. They compare pai
 
 ### Arbiters
 
-Arbitration is built into the framework via the `evaluateConsensus` function. For custom consensus logic, register an arbiter with `registerArbiter` and a `strategyFn` that receives an `ArbiterContext` and returns a `ConsensusResult`.
+Arbitration is built into the framework via the `evaluateConsensus` function, which tallies votes and applies human primacy rules automatically.
 
 ## Human vs AI Specialists
 
@@ -1215,20 +1194,20 @@ registerVoter({
 
 ### Registration Options
 
-Each registration function (`registerProposer`, `registerVoter`, `registerArbiter`) accepts:
+Each registration function (`registerProposer`, `registerVoter`) accepts:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `specialistId` | `string` | Yes | Unique identifier. Include "human" for human specialists. |
 | `machineName` | `string` | Yes | Which session type this specialist participates in |
-| `strategyFn` | `async (context) => result` | Mode 1 | Local function that returns a proposal, vote, or ConsensusResult |
+| `strategyFn` | `async (context) => result` | Mode 1 | Local function that returns a proposal or vote |
 | `strategyWebhookUrl` | `string` | Mode 2 | URL to POST context to; expects result response |
 | `contextFn` | `async (context) => string` | Mode 3 | Local function returning context for the LLM |
 | `contextWebhookUrl` | `string` | Mode 4 | URL to POST context request to; expects context response |
 | `modelId` | `string` | Modes 3, 4 | LLM model identifier |
 | `webhookTokenName` | `string` | Modes 2, 4 | Env var name holding the webhook auth token |
 
-All three registration functions support the same four execution modes. See the [registering specialists guide](../guides/registering-specialists.md) for full details.
+Both registration functions support the same four execution modes. See the [registering specialists guide](../guides/registering-specialists.md) for full details.
 
 ---
 
@@ -1694,7 +1673,7 @@ const consensus = evaluateConsensus(session.sessionId);
 console.log(consensus.consensusReached); // true
 console.log(consensus.reasoning);        // "The human preferred: done"
 
-// Execute the winning transition, recording the arbiter's reasoning
+// Execute the winning transition, recording the consensus reasoning
 executeTransition(session.sessionId, "complete", "done", consensus.reasoning);
 console.log(session.currentState); // "done"
 console.log(session.history);      // [{ fromState: "pending", toState: "done", reasoning: "The human preferred: done", ... }]
@@ -1860,39 +1839,12 @@ const goalVoter = async (ctx: VoterContext) => {
 };
 ```
 
-## Arbiter Strategy
-
-An arbiter `strategyFn` receives an `ArbiterContext` and returns a `ConsensusResult`:
-
-```typescript
-const myArbiter = async (ctx: ArbiterContext) => {
-  // ctx.proposals: Proposal[] - all proposals in the session
-  // ctx.votes: Vote[] - all votes in the session
-  // ctx.currentState: string
-  // ctx.history: TransitionRecord[]
-
-  // Custom consensus logic
-  const topProposal = ctx.proposals[0];
-  return {
-    consensusReached: true,
-    winningProposalId: topProposal?.proposalId,
-    reasoning: "Custom arbiter selected the first proposal",
-  };
-};
-```
-
-### Arbiter strategyFn Signature
-
-```typescript
-strategyFn: async (ctx: ArbiterContext) => ConsensusResult
-```
-
 ## Using Strategies with Specialists
 
 Register strategies when creating specialists:
 
 ```typescript
-import { registerProposer, registerVoter, registerArbiter } from "dialai";
+import { registerProposer, registerVoter } from "dialai";
 
 registerProposer({
   specialistId: "goal-proposer",
@@ -1904,12 +1856,6 @@ registerVoter({
   specialistId: "goal-voter",
   machineName: "my-task",
   strategyFn: goalVoter,
-});
-
-registerArbiter({
-  specialistId: "custom-arbiter",
-  machineName: "my-task",
-  strategyFn: myArbiter,
 });
 ```
 
@@ -1945,7 +1891,7 @@ const vote = submitVote(
 ## Registering Specialists
 
 
-Specialists are registered using one of three functions: `registerProposer`, `registerVoter`, or `registerArbiter`. Each function accepts configuration for how the specialist produces its output.
+Specialists are registered using one of two functions: `registerProposer` or `registerVoter`. Each function accepts configuration for how the specialist produces its output.
 
 ## Proposer Registration
 
@@ -1985,31 +1931,9 @@ registerVoter({
 });
 ```
 
-## Arbiter Registration
-
-An arbiter defines custom consensus logic. It receives all proposals and votes and returns a `ConsensusResult`. Arbiters support the same four execution modes as proposers and voters.
-
-```typescript
-import { registerArbiter } from "dialai";
-
-registerArbiter({
-  specialistId: "custom-arbiter",
-  machineName: "my-task",
-  strategyFn: async (ctx) => {
-    // ctx contains proposals, votes, history
-    const topProposal = ctx.proposals[0];
-    return {
-      consensusReached: true,
-      winningProposalId: topProposal?.proposalId,
-      reasoning: "Custom logic selected the first proposal",
-    };
-  },
-});
-```
-
 ## Execution Modes
 
-All three registration functions support four execution modes. They are mutually exclusive.
+Both registration functions support four execution modes. They are mutually exclusive.
 
 ### 1. `strategyFn` -- Local Function
 
@@ -2162,18 +2086,6 @@ interface VoterContext {
   prompt: string;
   proposalA: Proposal;
   proposalB: Proposal;
-  history: TransitionRecord[];
-}
-```
-
-### ArbiterContext
-
-```typescript
-interface ArbiterContext {
-  sessionId: string;
-  currentState: string;
-  proposals: Proposal[];
-  votes: Vote[];
   history: TransitionRecord[];
 }
 ```
@@ -2546,7 +2458,7 @@ DIAL is not about AI replacing humans. It targets decisions that humans already 
 ## How It Works
 
 1. **Model the task as a state machine**: Define states, transitions, and decision prompts
-2. **Register proposers, voters, and arbiters**: AI and human specialists that propose transitions, vote on them, and define consensus logic
+2. **Register proposers and voters**: AI and human specialists that propose transitions and vote on them
 3. **Run decision cycles**: Propose, Vote, Arbitrate, Execute
 4. **Reach the goal state**: The session completes when it reaches its `defaultState`
 
