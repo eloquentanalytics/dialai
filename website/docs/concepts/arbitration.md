@@ -125,9 +125,8 @@ When specialists vote NEITHER, no weight is added to either proposal. If all vot
 When using `runSession`, the engine handles arbitration automatically:
 
 1. If there's only 1 proposal (e.g., only the built-in proposer), it auto-wins
-2. If there are 2+ proposals, pairwise votes are solicited from all registered voters
-3. `evaluateConsensus` is called
-4. If no consensus, the engine throws an error
+2. If there are 2+ proposals, the engine uses Swiss tournament pairing to select proposal pairs — pairing proposals with similar accumulated support first — and round-robins through registered voters, checking for consensus after each vote. Voting stops as soon as the ahead-by-k threshold is met — the engine does not exhaustively evaluate all possible pairs before checking consensus. The O(N²) full comparison is the worst case, not the typical case.
+3. If no proposal crosses the consensus threshold after all available pairs and voters have been exhausted, the engine throws an error
 
 ## Best Practices
 

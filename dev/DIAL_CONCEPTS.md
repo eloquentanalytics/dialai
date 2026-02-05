@@ -26,7 +26,7 @@ When a session is not in its default state and no Tool specialist is registered 
 
 1. **Proposal Solicitation** — Ask proposers what transition should happen next.
 2. **Proposal Submission** — Proposers submit their recommendations with reasoning.
-3. **Vote Solicitation** — Voters compare pairs of proposals.
+3. **Vote Solicitation** — Voters compare pairs of proposals using Swiss tournament pairing: proposals with similar accumulated support are paired first, and voters are round-robined through the selected pairs. Consensus is checked after each vote, and voting stops as soon as the ahead-by-k threshold is met. The system does not exhaustively compare all possible pairs — it relies on consensus resolving before the full O(N²) comparison space is explored.
 4. **Arbitration** — Arbiters aggregate votes to determine if a proposal has sufficient support.
 5. **Transition Execution** — If consensus is reached, execute the winning proposal's transition.
 

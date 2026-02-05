@@ -21,7 +21,7 @@ Proposers submit their recommendations. Each proposal includes:
 
 ### 3. Vote Solicitation
 
-If there are 2 or more proposals, voters compare them pairwise. All registered voters for the session type are solicited for each pair.
+If there are 2 or more proposals, voters compare them pairwise using Swiss tournament pairing. Rather than exhaustively comparing every possible pair, the system pairs proposals with similar accumulated support first (where the comparison is most informative), round-robins through available voters, and checks for consensus after each vote. Voting stops as soon as a proposal crosses the ahead-by-k consensus threshold — remaining pairs are never evaluated. The full O(N²) pairwise comparison is the theoretical worst case; in practice, consensus typically resolves well before it.
 
 ### 4. Arbitration
 
