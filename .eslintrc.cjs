@@ -19,7 +19,8 @@ module.exports = {
       { argsIgnorePattern: "^_" }
     ],
     "@typescript-eslint/explicit-function-return-type": "off",
-    "@typescript-eslint/no-explicit-any": "warn"
+    "@typescript-eslint/no-explicit-any": "warn",
+    "@typescript-eslint/require-await": "off"
   },
   ignorePatterns: ["dist", "node_modules", "website", "*.config.ts", "*.config.js"]
 };
