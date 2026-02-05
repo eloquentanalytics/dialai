@@ -55,7 +55,7 @@ const principles = [
     title: "Empirical Trust",
     icon: "img/icon-empirical-trust.svg",
     description:
-      "Trust is earned through demonstrated alignment with human decisions, not assumed. LLM specialists start with weight 0.0 and must prove their value through accurate predictions.",
+      "Trust is earned through demonstrated alignment with human decisions, not assumed. Every AI vote counts equally, and human votes always override. Specialists prove their value one decision at a time.",
     accent: "trust",
   },
 ];
@@ -333,16 +333,16 @@ function StartingPessimisticSection() {
             <div className={styles.weightScale}>
               <div className={styles.weightAI}>
                 <span className={styles.weightLabel}>AI Specialist</span>
-                <span className={styles.weightValue}>0.0</span>
-                <span className={styles.weightNote}>Starts with nothing</span>
+                <span className={styles.weightValue}>+1</span>
+                <span className={styles.weightNote}>Equal vote</span>
               </div>
               <div className={styles.weightDivider}>
                 <span>vs</span>
               </div>
               <div className={styles.weightHuman}>
                 <span className={styles.weightLabel}>Human</span>
-                <span className={styles.weightValue}>1.0</span>
-                <span className={styles.weightNote}>Full authority</span>
+                <span className={styles.weightValue}>∞</span>
+                <span className={styles.weightNote}>Always overrides</span>
               </div>
             </div>
           </div>
@@ -350,9 +350,9 @@ function StartingPessimisticSection() {
             <Heading as="h2">AI Starts with Nothing</Heading>
             <p>
               DIAL is opinionated: it assumes AI will have no role in the
-              process. LLM specialists start with weight zero. The assumption is
-              that the task is too difficult for AI and only humans can navigate
-              it.
+              process. Every AI vote counts equally, but a single human vote
+              overrides all of them. The assumption is that the task is too
+              difficult for AI and only humans can navigate it.
             </p>
             <p className={styles.emphasisText}>
               DIAL then provides the mechanism to prove otherwise, one decision
