@@ -36,7 +36,7 @@ import { createSession } from "dialai";
 import type { MachineDefinition } from "dialai";
 
 const machine: MachineDefinition = {
-  sessionTypeName: "document-review",
+  machineName: "document-review",
   initialState: "pending",
   defaultState: "approved",
   states: {
@@ -85,7 +85,7 @@ Each session has a `MachineDefinition` that defines its structure:
 
 ```typescript
 interface MachineDefinition {
-  sessionTypeName: string;
+  machineName: string;
   initialState: string;
   defaultState: string;
   states: Record<string, {
@@ -99,7 +99,7 @@ interface MachineDefinition {
 
 | Field | Description |
 |-------|-------------|
-| `sessionTypeName` | Identifies the type of session (e.g., `"document-review"`) |
+| `machineName` | Identifies the type of session (e.g., `"document-review"`) |
 | `initialState` | The state a session starts in |
 | `defaultState` | The goal state — session is complete when it reaches this |
 | `states` | A record of state names to their configuration |
@@ -134,9 +134,9 @@ const allSessions = getSessions();
 A **session type** identifies which kind of machine is being run:
 
 ```typescript
-sessionTypeName: "document-review"
-sessionTypeName: "code-review"
-sessionTypeName: "support-ticket"
+machineName: "document-review"
+machineName: "code-review"
+machineName: "support-ticket"
 ```
 
 Different session types have:

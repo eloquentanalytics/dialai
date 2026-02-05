@@ -34,7 +34,7 @@ import { registerSpecialist } from "dialai";
 // Register a proposer with an inline strategy
 registerSpecialist({
   specialistId: "ai-proposer-1",
-  sessionTypeName: "my-task",
+  machineName: "my-task",
   role: "proposer",
   weight: 1.0,
   strategy: (currentState, transitions) => {
@@ -50,7 +50,7 @@ registerSpecialist({
 // Register a voter
 registerSpecialist({
   specialistId: "ai-voter-1",
-  sessionTypeName: "my-task",
+  machineName: "my-task",
   role: "voter",
   weight: 1.0,
   strategy: (proposalA, proposalB) => {
@@ -67,7 +67,7 @@ registerSpecialist({
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `specialistId` | `string` | Yes | Unique identifier. Include "human" for human specialists. |
-| `sessionTypeName` | `string` | Yes | Which session type this specialist participates in |
+| `machineName` | `string` | Yes | Which session type this specialist participates in |
 | `role` | `"proposer" \| "voter" \| "arbiter"` | Yes | The specialist's role |
 | `weight` | `number` | No | Voting weight (default: 1.0) |
 | `strategy` | `ProposerStrategy \| VoterStrategy` | Yes | The strategy function |

@@ -121,7 +121,7 @@ import { registerSpecialist, submitVote, evaluateConsensus } from "dialai";
 // Any specialist with "human" in the ID triggers the override
 registerSpecialist({
   specialistId: "human-reviewer",
-  sessionTypeName: "code-review",
+  machineName: "code-review",
   role: "voter",
   strategy: (proposalA, proposalB) => ({
     voteFor: "B",

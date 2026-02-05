@@ -12,7 +12,7 @@ The repository includes a minimal example at `examples/simple-machine.json`:
 
 ```json
 {
-  "sessionTypeName": "simple-task",
+  "machineName": "simple-task",
   "initialState": "pending",
   "defaultState": "done",
   "states": {
@@ -47,7 +47,7 @@ import { runSession } from "dialai";
 import type { MachineDefinition } from "dialai";
 
 const machine: MachineDefinition = {
-  sessionTypeName: "simple-task",
+  machineName: "simple-task",
   initialState: "pending",
   defaultState: "done",
   states: {
@@ -69,7 +69,7 @@ A 3-state machine that requires 2 cycles to reach the goal:
 
 ```typescript
 const pipeline: MachineDefinition = {
-  sessionTypeName: "pipeline",
+  machineName: "pipeline",
   initialState: "queued",
   defaultState: "complete",
   states: {
@@ -106,7 +106,7 @@ import type { MachineDefinition } from "dialai";
 clear(); // Reset state
 
 const machine: MachineDefinition = {
-  sessionTypeName: "review",
+  machineName: "review",
   initialState: "pending",
   defaultState: "approved",
   states: {
@@ -125,7 +125,7 @@ const machine: MachineDefinition = {
 // Two proposers that disagree
 registerSpecialist({
   specialistId: "optimist",
-  sessionTypeName: "review",
+  machineName: "review",
   role: "proposer",
   strategy: () => ({
     transitionName: "approve",
@@ -136,7 +136,7 @@ registerSpecialist({
 
 registerSpecialist({
   specialistId: "pessimist",
-  sessionTypeName: "review",
+  machineName: "review",
   role: "proposer",
   strategy: () => ({
     transitionName: "reject",
@@ -148,7 +148,7 @@ registerSpecialist({
 // A voter that prefers approval
 registerSpecialist({
   specialistId: "tiebreaker",
-  sessionTypeName: "review",
+  machineName: "review",
   role: "voter",
   strategy: (proposalA, proposalB) => {
     if (proposalA.toState === "approved") return { voteFor: "A", reasoning: "Approve" };

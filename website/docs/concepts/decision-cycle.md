@@ -46,7 +46,7 @@ import { runSession } from "dialai";
 import type { MachineDefinition } from "dialai";
 
 const machine: MachineDefinition = {
-  sessionTypeName: "my-task",
+  machineName: "my-task",
   initialState: "pending",
   defaultState: "done",
   states: {

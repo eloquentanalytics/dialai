@@ -24,7 +24,7 @@ Save this as `examples/simple-machine.json`:
 
 ```json
 {
-  "sessionTypeName": "is-two-greater",
+  "machineName": "is-two-greater",
   "initialState": "unsure",
   "defaultState": "sure",
   "states": {
@@ -50,7 +50,7 @@ Or define the same thing in TypeScript:
 import type { MachineDefinition } from "dialai";
 
 const machine: MachineDefinition = {
-  sessionTypeName: "is-two-greater",
+  machineName: "is-two-greater",
   initialState: "unsure",
   defaultState: "sure",
   states: {

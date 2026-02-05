@@ -13,7 +13,7 @@ import { registerSpecialist } from "dialai";
 
 registerSpecialist({
   specialistId: "ai-proposer-1",
-  sessionTypeName: "my-task",
+  machineName: "my-task",
   role: "proposer",
   strategy: (currentState, transitions) => {
     const name = Object.keys(transitions)[0];
@@ -31,7 +31,7 @@ registerSpecialist({
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `specialistId` | `string` | Yes | — | Unique identifier for this specialist |
-| `sessionTypeName` | `string` | Yes | — | Which session type this specialist participates in |
+| `machineName` | `string` | Yes | — | Which session type this specialist participates in |
 | `role` | `"proposer" \| "voter" \| "arbiter"` | Yes | — | The specialist's role |
 | `weight` | `number` | No | `1.0` | Voting weight used in consensus evaluation |
 | `strategy` | `ProposerStrategy \| VoterStrategy` | Yes | — | The strategy function |
@@ -74,7 +74,7 @@ const myProposer: ProposerStrategy = (currentState, transitions) => {
 
 registerSpecialist({
   specialistId: "smart-proposer",
-  sessionTypeName: "document-review",
+  machineName: "document-review",
   role: "proposer",
   strategy: myProposer,
 });
@@ -98,7 +98,7 @@ const myVoter: VoterStrategy = (proposalA, proposalB) => {
 
 registerSpecialist({
   specialistId: "quality-voter",
-  sessionTypeName: "document-review",
+  machineName: "document-review",
   role: "voter",
   strategy: myVoter,
 });
@@ -112,7 +112,7 @@ Human specialists can be registered with strategy functions that encode human pr
 // Register a human specialist with a strategy
 registerSpecialist({
   specialistId: "human-reviewer",
-  sessionTypeName: "document-review",
+  machineName: "document-review",
   role: "voter",
   strategy: (proposalA, proposalB) => ({
     voteFor: "B",
@@ -141,7 +141,7 @@ The `weight` parameter controls how much a specialist's vote counts during conse
 // Default weight is 1.0
 registerSpecialist({
   specialistId: "standard-voter",
-  sessionTypeName: "my-task",
+  machineName: "my-task",
   role: "voter",
   weight: 1.0,
   strategy: myVoter,
@@ -150,7 +150,7 @@ registerSpecialist({
 // Higher weight = more influence
 registerSpecialist({
   specialistId: "senior-voter",
-  sessionTypeName: "my-task",
+  machineName: "my-task",
   role: "voter",
   weight: 2.0,
   strategy: myVoter,

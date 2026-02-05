@@ -10,7 +10,7 @@ State machines define the structure of your sessions. Each session type has its 
 
 A `MachineDefinition` defines:
 
-- `sessionTypeName` — identifies the type
+- `machineName` — identifies the type
 - `initialState` — where sessions start
 - `defaultState` — the goal state (session is complete when it reaches this)
 - `states` — a record of state names to their configuration
@@ -21,7 +21,7 @@ A `MachineDefinition` defines:
 import type { MachineDefinition } from "dialai";
 
 const myMachine: MachineDefinition = {
-  sessionTypeName: "my-task",
+  machineName: "my-task",
   initialState: "idle",
   defaultState: "done",
   states: {
@@ -57,7 +57,7 @@ Machines can also be defined as plain JSON files, useful with the CLI:
 
 ```json
 {
-  "sessionTypeName": "simple-task",
+  "machineName": "simple-task",
   "initialState": "pending",
   "defaultState": "done",
   "states": {
@@ -110,7 +110,7 @@ transitions: {
 
 ```typescript
 const linear: MachineDefinition = {
-  sessionTypeName: "pipeline",
+  machineName: "pipeline",
   initialState: "step1",
   defaultState: "complete",
   states: {
@@ -126,7 +126,7 @@ const linear: MachineDefinition = {
 
 ```typescript
 const reviewLoop: MachineDefinition = {
-  sessionTypeName: "review",
+  machineName: "review",
   initialState: "draft",
   defaultState: "published",
   states: {
@@ -150,7 +150,7 @@ const reviewLoop: MachineDefinition = {
 
 ```typescript
 const branching: MachineDefinition = {
-  sessionTypeName: "triage",
+  machineName: "triage",
   initialState: "incoming",
   defaultState: "resolved",
   states: {
