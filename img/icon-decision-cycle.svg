@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80">
   <defs>
     <linearGradient id="cycleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#1aa3ff"/>
-      <stop offset="100%" stop-color="#0070b3"/>
+      <stop offset="0%" stop-color="#0070b3"/>
+      <stop offset="100%" stop-color="#004d80"/>
     </linearGradient>
   </defs>
 
@@ -22,26 +22,26 @@
   />
 
   <!-- Arrow head -->
-  <polygon points="16,35 16,45 10,40" fill="#1aa3ff"/>
+  <polygon points="16,35 16,45 10,40" fill="#0070b3"/>
 
   <!-- State nodes around the cycle -->
   <g>
     <!-- Propose (top) -->
-    <circle cx="40" cy="16" r="5" fill="#1aa3ff"/>
+    <circle cx="40" cy="16" r="5" fill="#0070b3"/>
 
     <!-- Vote (right) -->
-    <circle cx="64" cy="40" r="5" fill="#1aa3ff"/>
+    <circle cx="64" cy="40" r="5" fill="#0070b3"/>
 
     <!-- Arbitrate (bottom) -->
-    <circle cx="40" cy="64" r="5" fill="#ffc91a"/>
+    <circle cx="40" cy="64" r="5" fill="#c28a00"/>
 
     <!-- Execute (left) -->
-    <circle cx="16" cy="40" r="5" fill="#1aa3ff"/>
+    <circle cx="16" cy="40" r="5" fill="#0070b3"/>
   </g>
 
   <!-- Center indicator -->
   <circle cx="40" cy="40" r="8" fill="none" stroke="#94a3b8" stroke-width="1" opacity="0.3"/>
-  <circle cx="40" cy="40" r="3" fill="#1aa3ff"/>
+  <circle cx="40" cy="40" r="3" fill="#0070b3"/>
 
   <!-- Labels (abbreviated) -->
   <g fill="#94a3b8" font-family="monospace" font-size="6" text-anchor="middle">

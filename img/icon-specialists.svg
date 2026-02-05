@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80">
   <defs>
     <linearGradient id="specAiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#1aa3ff"/>
-      <stop offset="100%" stop-color="#0070b3"/>
+      <stop offset="0%" stop-color="#0070b3"/>
+      <stop offset="100%" stop-color="#004d80"/>
     </linearGradient>
     <linearGradient id="specHumanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ffc91a"/>
-      <stop offset="100%" stop-color="#e6b000"/>
+      <stop offset="0%" stop-color="#c28a00"/>
+      <stop offset="100%" stop-color="#a06f00"/>
     </linearGradient>
   </defs>
 
@@ -25,7 +25,7 @@
   </g>
 
   <!-- Arrows pointing to center -->
-  <g stroke="#1aa3ff" stroke-width="1.5" opacity="0.6">
+  <g stroke="#0070b3" stroke-width="1.5" opacity="0.6">
     <line x1="32" y1="30" x2="38" y2="38"/>
     <line x1="32" y1="50" x2="38" y2="42"/>
   </g>
@@ -34,7 +34,7 @@
   <circle cx="43" cy="40" r="6" fill="none" stroke="#94a3b8" stroke-width="2" opacity="0.6"/>
 
   <!-- Arrow to human -->
-  <line x1="49" y1="40" x2="52" y2="40" stroke="#ffc91a" stroke-width="2"/>
+  <line x1="49" y1="40" x2="52" y2="40" stroke="#c28a00" stroke-width="2"/>
 
   <!-- Human Specialist (right) -->
   <g transform="translate(62, 40)">
