@@ -152,6 +152,15 @@ body {
    ANNOUNCEMENT BAR
    ======================================== */
 
+div[class*="announcementBar"] {
+  background: #f0f2f5;
+  color: #475569;
+}
+
+div[class*="announcementBar"] a {
+  color: var(--dial-accent);
+}
+
 [data-theme='dark'] div[class*="announcementBar"] {
   background: #141b27;
   color: #94a3b8;

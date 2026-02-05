@@ -50,7 +50,7 @@ const config: Config = {
     colorMode: {
       defaultMode: "light",
       disableSwitch: false,
-      respectPrefersColorScheme: true,
+      respectPrefersColorScheme: false,
     },
     // Social card for sharing
     image: "img/social-card.png",
@@ -169,8 +169,6 @@ const config: Config = {
       id: "alpha_notice",
       content:
         'DIAL is in active development. <a href="/dialai/docs/intro">Read the docs</a> or <a href="https://github.com/eloquentanalytics/dialai/issues">open an issue</a>.',
-      backgroundColor: "#f0f2f5",
-      textColor: "#475569",
       isCloseable: true,
     },
   } satisfies Preset.ThemeConfig,
