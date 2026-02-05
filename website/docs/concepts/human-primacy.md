@@ -104,37 +104,32 @@ If an AI specialist has strong reasoning that the human is wrong, it should:
 
 ## When Humans Disagree
 
-If the human is always right, and there's more than one human, then humans can disagree—but even in disagreement, they are both right compared to an AI.
+### The Architecture Prevents Simultaneous Disagreement
 
-**An AI has no standing to break the tie.**
+In DIAL, the first human vote at a decision point advances the state machine immediately. There is no window for a second human to cast a competing vote on the same decision — the machine has already moved forward. A second human could only intervene by going back and restarting the decision, but at that point it is a new decision cycle, not a tie.
 
-Human disagreement is resolved by human mechanisms:
-- Negotiation
-- Authority structures
-- Voting among humans
-- Escalation to decision-makers
+This means the "two humans disagree" scenario is **hypothetical, not operational**. The system never faces a moment where it must choose between two conflicting human answers.
 
-The AI's role is to **predict what the humans would collectively choose**, not to adjudicate between them.
+### Both Humans Are "Right" in a Distributional Sense
 
-### Example: Two Reviewers Disagree
+When we say both humans are right, we mean two things:
+
+1. **Humans exist in a distribution.** If you gave 1,000 competent humans the same state and options, their choices would form a distribution. Human A choosing "approve" and Human B choosing "request changes" are both points in that distribution. Neither is wrong — they reflect the natural variance in human judgment. A human is only "wrong" in the sense of falling outside the distribution their own population would produce.
+
+2. **The LLM must assume any human answer is valid.** From the specialist's perspective, it cannot distinguish between "this human made an error" and "this human has context I lack." Since the specialist is calibrating to the human distribution, any individual human response must be treated as a legitimate sample from that distribution. It is always safer for the specialist to assume the human is right than to assume it knows better.
+
+### What About Multi-Stakeholder Decisions?
+
+When a domain genuinely requires multiple humans to agree (e.g., two reviewers must both approve a PR), this is modeled as **separate states in the machine** — not as competing votes at the same state. Each reviewer's decision is its own decision point, and each advances the machine independently:
 
 ```mermaid
-graph TD
-    P[Proposal: Approve PR]
-    R1[Reviewer A: Approve]
-    R2[Reviewer B: Request Changes]
-    AI[AI Specialist]
-
-    R1 -->|"Good code"| P
-    R2 -->|"Needs tests"| P
-    AI -->|"Cannot break tie"| P
+graph LR
+    S1[PR Submitted] -->|"Reviewer A decides"| S2[First Review Complete]
+    S2 -->|"Reviewer B decides"| S3[Both Reviews Complete]
+    S3 -->|"Merge / Request Changes"| S4[Resolved]
 ```
 
-The AI might have an opinion about whether tests are needed. It doesn't matter. The AI:
-- Reports both human preferences accurately
-- May note the disagreement exists
-- Does NOT cast a deciding vote
-- Defers to whatever human mechanism resolves disputes (e.g., senior reviewer, author decides, etc.)
+Human disagreement between reviewers is resolved by human mechanisms (escalation, authority structures, negotiation) — but this happens at the process design level, not inside the DIAL arbitration. The framework does not pretend to solve organizational disagreement; it correctly identifies it as outside the scope of AI-human calibration.
 
 ## Practical Implementation
 

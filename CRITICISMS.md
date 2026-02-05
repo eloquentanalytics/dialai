@@ -44,6 +44,12 @@ The paper outline invokes mechanism design, repeated games, information theory, 
 
 The framework states: "If the human is always right, and there is more than one human, then humans can disagree — but even in disagreement they are both right." This is logically incoherent. Two contradictory decisions cannot both be "right" in any actionable sense. The resolution — "human disagreement is resolved by human mechanisms" — pushes the hardest problem outside the framework entirely. In real multi-stakeholder environments, human disagreement is the *primary* challenge, not an edge case.
 
+**Counter:** The scenario this criticism assumes — two humans simultaneously casting conflicting votes at the same decision point — cannot occur in the architecture. The first human vote advances the state machine immediately. There is no window for a concurrent second vote; the decision is already resolved and the machine has moved forward. A second human could only intervene by going back and restarting the decision, but at that point it is a new decision cycle.
+
+"Both right" is a distributional claim, not a logical one. Humans exist in a distribution: if 1,000 competent humans faced the same state, their choices would form a spread. Human A choosing X and Human B choosing Y are both valid points in that distribution — neither is wrong, they reflect natural variance in human judgment. From the specialist's perspective, it must treat any human response as a legitimate sample because it cannot distinguish "human error" from "human has context I lack." The specialist calibrates to the distribution, not to a single point.
+
+Where a domain requires multiple humans to agree (e.g., two approvals on a PR), this is modeled as separate states in the machine — each reviewer's decision is its own decision point. Human disagreement between them is resolved by human mechanisms at the process design level, which is correctly outside the scope of AI-human calibration. DIAL does not claim to solve organizational disagreement; it claims the AI has no standing to resolve it.
+
 ## 9. No Empirical Validation
 
 The entire framework is specification and theory. There are no published results demonstrating that:
