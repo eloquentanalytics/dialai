@@ -192,6 +192,18 @@ Define "objectively." From whose perspective? With what information?
 
 The AI operates on a subset of reality. When it seems "objectively right," that assessment is made from within its limited context. The human may have information that changes the entire picture.
 
+### "But what happens when human preferences shift?"
+
+Progressive collapse assumes stationary conditions — that the human distribution stays stable long enough for specialists to converge on it. In practice, human preferences shift constantly: new employees, changing strategies, evolving markets, policy updates. Won't the system spend most of its time in expensive full-deliberation mode, never achieving sustained collapse?
+
+Non-stationarity is not a failure mode — it is what the system is designed to detect. The human who participates periodically is providing ongoing ground truth references. When the population distribution shifts, the agreement rate between specialists and those human references will visibly decline. This decline is the signal, not a bug.
+
+When agreement drops, the system's response is mechanical: specialist weights decrease, the ahead-by-k consensus threshold becomes harder to reach without broader deliberation, and the system naturally re-expands — soliciting more proposals, more votes, more human participation. The collapse reverses. The system then re-converges on the new distribution through the same measurement process that produced the original collapse.
+
+This is the design working as intended. The system is a continuous monitor of alignment between AI behavior and human judgment. If the humans change, the system detects the mismatch and adapts. The cost of re-convergence is real, but it is the cost of staying calibrated — and the alternative (assuming the original calibration still holds) is worse.
+
+Organizations in genuinely non-stationary environments will see shorter periods of collapsed execution and more frequent re-calibration cycles. This is an accurate reflection of their operational reality: if human judgment in a domain is unstable, the cost of delegating that judgment to AI is correspondingly higher. DIAL makes that cost visible rather than hiding it.
+
 ### "This slows down automation"
 
 Yes, initially. But measuring AI alignment with human judgment over time can inform when to reduce human involvement. Human primacy ensures that automation is earned, not assumed.
