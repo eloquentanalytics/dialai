@@ -15,7 +15,7 @@ import {
 import type { MachineDefinition } from "./types.js";
 
 const simpleMachine: MachineDefinition = {
-  sessionTypeName: "simple-task",
+  machineName: "simple-task",
   initialState: "pending",
   defaultState: "done",
   states: {
@@ -33,7 +33,7 @@ describe("createSession", () => {
   it("creates with correct initial state and generates UUID", () => {
     const session = createSession(simpleMachine);
     expect(session.currentState).toBe("pending");
-    expect(session.sessionTypeName).toBe("simple-task");
+    expect(session.machineName).toBe("simple-task");
     expect(session.sessionId).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
     );
@@ -81,7 +81,7 @@ describe("registerSpecialist", () => {
     });
     const spec = registerSpecialist({
       specialistId: "sp-1",
-      sessionTypeName: "simple-task",
+      machineName: "simple-task",
       role: "proposer",
       strategy,
     });
@@ -119,7 +119,7 @@ describe("solicitProposal", () => {
     const session = createSession(simpleMachine);
     registerSpecialist({
       specialistId: "sp-1",
-      sessionTypeName: "simple-task",
+      machineName: "simple-task",
       role: "proposer",
       strategy: (_state: string, transitions: Record<string, string>) => {
         const name = Object.keys(transitions)[0];
@@ -160,7 +160,7 @@ describe("solicitVote", () => {
 
     registerSpecialist({
       specialistId: "voter-1",
-      sessionTypeName: "simple-task",
+      machineName: "simple-task",
       role: "voter",
       strategy: () => ({ voteFor: "A" as const, reasoning: "A is better" }),
     });
@@ -211,7 +211,7 @@ describe("evaluateConsensus", () => {
 
     registerSpecialist({
       specialistId: "voter-1",
-      sessionTypeName: "simple-task",
+      machineName: "simple-task",
       role: "voter",
       strategy: () => ({ voteFor: "A" as const, reasoning: "A" }),
     });
@@ -242,19 +242,19 @@ describe("evaluateConsensus", () => {
 
     registerSpecialist({
       specialistId: "ai-voter-1",
-      sessionTypeName: "simple-task",
+      machineName: "simple-task",
       role: "voter",
       strategy: () => ({ voteFor: "A" as const, reasoning: "A" }),
     });
     registerSpecialist({
       specialistId: "ai-voter-2",
-      sessionTypeName: "simple-task",
+      machineName: "simple-task",
       role: "voter",
       strategy: () => ({ voteFor: "A" as const, reasoning: "A" }),
     });
     registerSpecialist({
       specialistId: "human-reviewer",
-      sessionTypeName: "simple-task",
+      machineName: "simple-task",
       role: "voter",
       strategy: () => ({ voteFor: "B" as const, reasoning: "B" }),
     });

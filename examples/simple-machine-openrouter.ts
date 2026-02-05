@@ -31,7 +31,7 @@ import { getCompletion } from "./get-completion-from-openai-compatible-endpoint.
 const model = process.env.OPENROUTER_MODEL ?? "openai/gpt-4o-mini";
 
 const machine: MachineDefinition = {
-  sessionTypeName: "is-two-greater",
+  machineName: "is-two-greater",
   initialState: "unsure",
   defaultState: "sure",
   states: {
@@ -205,7 +205,7 @@ async function main(): Promise<void> {
 
   const session = createSession(machine);
   console.log(`Session:       ${session.sessionId}`);
-  console.log(`Machine:       ${machine.sessionTypeName}`);
+  console.log(`Machine:       ${machine.machineName}`);
   console.log(`Initial state: ${session.currentState}`);
   console.log(`Goal state:    ${machine.defaultState}`);
   console.log();

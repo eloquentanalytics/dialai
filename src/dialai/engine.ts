@@ -16,7 +16,7 @@ export function runSession(machine: MachineDefinition): Session {
   const builtInProposerId = `__builtin-proposer-${session.sessionId}`;
   registerSpecialist({
     specialistId: builtInProposerId,
-    sessionTypeName: machine.sessionTypeName,
+    machineName: machine.machineName,
     role: "proposer",
     strategy: (_currentState: string, transitions: Record<string, string>) => {
       const name = Object.keys(transitions)[0];
@@ -35,7 +35,7 @@ export function runSession(machine: MachineDefinition): Session {
     // Gather all proposers for this session type
     const proposers = [...specialists.values()].filter(
       (s) =>
-        s.sessionTypeName === machine.sessionTypeName && s.role === "proposer"
+        s.machineName === machine.machineName && s.role === "proposer"
     );
 
     // Solicit proposals
@@ -47,7 +47,7 @@ export function runSession(machine: MachineDefinition): Session {
     if (proposals.length >= 2) {
       const voters = [...specialists.values()].filter(
         (s) =>
-          s.sessionTypeName === machine.sessionTypeName && s.role === "voter"
+          s.machineName === machine.machineName && s.role === "voter"
       );
       for (let i = 0; i < proposals.length; i++) {
         for (let j = i + 1; j < proposals.length; j++) {

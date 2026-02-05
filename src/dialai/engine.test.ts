@@ -8,7 +8,7 @@ describe("runSession", () => {
 
   it("simple 2-state machine → reaches done in 1 cycle", () => {
     const machine: MachineDefinition = {
-      sessionTypeName: "two-state",
+      machineName: "two-state",
       initialState: "pending",
       defaultState: "done",
       states: {
@@ -22,7 +22,7 @@ describe("runSession", () => {
 
   it("3-state machine → reaches done in 2 cycles", () => {
     const machine: MachineDefinition = {
-      sessionTypeName: "three-state",
+      machineName: "three-state",
       initialState: "pending",
       defaultState: "done",
       states: {
@@ -37,7 +37,7 @@ describe("runSession", () => {
 
   it("already at goal → returns immediately", () => {
     const machine: MachineDefinition = {
-      sessionTypeName: "already-done",
+      machineName: "already-done",
       initialState: "done",
       defaultState: "done",
       states: {
@@ -50,7 +50,7 @@ describe("runSession", () => {
 
   it("no transitions from current state → throws", () => {
     const machine: MachineDefinition = {
-      sessionTypeName: "stuck",
+      machineName: "stuck",
       initialState: "stuck",
       defaultState: "done",
       states: {

@@ -24,7 +24,7 @@ function main(): void {
 
   try {
     const session = runSession(machine);
-    console.log(`Session type:  ${session.sessionTypeName}`);
+    console.log(`Machine:       ${session.machineName}`);
     console.log(`Initial state: ${session.machine.initialState}`);
     console.log(`Goal state:    ${session.machine.defaultState}`);
     console.log(`Final state:   ${session.currentState}`);

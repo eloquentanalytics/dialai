@@ -1,5 +1,5 @@
 {
-  "sessionTypeName": "is-two-greater",
+  "machineName": "is-two-greater",
   "initialState": "unsure",
   "defaultState": "sure",
   "states": {

@@ -1,5 +1,5 @@
 export interface MachineDefinition {
-  sessionTypeName: string;
+  machineName: string;
   initialState: string;
   defaultState: string;
   states: Record<
@@ -21,7 +21,7 @@ export interface TransitionRecord {
 
 export interface Session {
   sessionId: string;
-  sessionTypeName: string;
+  machineName: string;
   currentState: string;
   machine: MachineDefinition;
   history: TransitionRecord[];
@@ -40,7 +40,7 @@ export type VoterStrategy = (
 
 export interface Specialist {
   specialistId: string;
-  sessionTypeName: string;
+  machineName: string;
   role: "proposer" | "voter" | "arbiter";
   weight: number;
   strategy: ProposerStrategy | VoterStrategy;
