@@ -33,6 +33,8 @@ When a human's decision looks wrong from the AI's perspective, there are two pos
 
 The machine, trained on human works and operating on a compressed subset of human knowledge, **cannot determine when the human is wrong**—because what looks like an error from the AI's limited vantage point may reflect context the AI simply doesn't have.
 
+Because the AI cannot reliably distinguish human errors from human context it lacks, human decisions are the best available ground truth for calibration — not because they're perfect, but because no better signal is available from the AI's position. Any attempt by the AI to "correct" human judgment requires the AI to be confident it has the full picture, which is precisely the assumption DIAL rejects.
+
 ### The Parent Analogy
 
 It is always safer for the AI to assume the human had reasons, just as it is safer for a child to defer to a parent—not because the parent is infallible, but because the parent has context the child cannot access.
@@ -142,6 +144,12 @@ Result: B wins immediately
 ```
 
 ## Common Objections
+
+### "But this optimizes the AI to reproduce human errors"
+
+The baseline isn't perfection — it's the human already making those decisions. If a specialist reproduces human behavior including human mistakes, the outcome is no worse than the status quo. What's changed is the cost: the decision is now faster and cheaper. The "systematic errors" the AI might reproduce are the same errors the human was already making. DIAL doesn't claim to improve decision quality — it claims to reduce decision cost while preserving decision quality as measured by the only available ground truth.
+
+Furthermore, human primacy does not prevent error correction — it defines *who* corrects. Humans can curate which of their past decisions are used as reference points for future calibration, excluding choices they've since recognized as mistakes. And nothing in DIAL prevents adding a review step where AI surfaces patterns that *may* indicate systematic errors or biases in previous human decisions — the key constraint is that the human decides whether to act on those observations, not the AI. The system defers to humans, but it doesn't have to be silent.
 
 ### "But sometimes the AI is objectively right"
 
