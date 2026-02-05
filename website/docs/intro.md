@@ -8,29 +8,23 @@ sidebar_position: 1
 
 ## Why DIAL?
 
-The promise of AI is efficiency—faster, cheaper execution of narrow tasks. But the question organizations face isn't "Can AI do this?" It's:
+The promise of AI is efficiency: faster, cheaper execution of narrow tasks. But the question organizations face isn't "Can AI do this?" It's:
 
-> **How do you know — in dollars, time, and quality — exactly what it would cost to turn any task over to a minimally competent AI decision-maker? And how involved should humans remain as quality control?**
+> **How do you know, in dollars, time, and quality, exactly what it would cost to turn any task over to a minimally competent AI decision-maker? And how involved should humans remain as quality control?**
 
 DIAL provides the answer through **empirical measurement**, not speculation.
 
 ## The Core Insight
 
-AI models are created by us. Their works are based on our works. They cannot be better than us because they can never have as large a context as we do.
-
-An AI model operates on a bounded context window—thousands or millions of tokens. A human operates on a **lifetime of embodied experience**, tacit knowledge, institutional context, and real-time sensory input that no model has access to.
-
-The human knows things they cannot tell the machine.
+An AI model operates on a bounded context window. A human operates on a **lifetime of embodied experience**, tacit knowledge, institutional context, and real-time sensory input that no model has access to. The human knows things they cannot tell the machine.
 
 ## Three Foundational Principles
 
 ### 1. Human Primacy
 
-The human is always right—not because humans are infallible, but because humans have context that AI cannot access.
+The human is always right, not because humans are infallible, but because humans have context that AI cannot access.
 
-It is always safer for the AI to assume the human had reasons, just as it is safer for a child to defer to a parent—not because the parent is infallible, but because the parent has context the child cannot access.
-
-An AI specialist should choose what the human would choose, even if its own reasoning disagrees. It will be judged on alignment with the human, and that judgment is correct. The standard is distributional: a specialist's output probabilities should match the distribution a population of competent humans would produce for the same decision—including the natural variance in that distribution.
+An AI specialist is judged on alignment with human choices. The standard is distributional: output should match the distribution a population of competent humans would produce for the same decision.
 
 ### 2. Progressive Collapse
 
@@ -42,24 +36,20 @@ This collapse is emergent, not designed. As AI specialists prove their alignment
 
 Trust is earned through demonstrated alignment with human decisions, not assumed.
 
-- **Human specialists** are identified by including "human" in their `specialistId` — their votes override all AI votes immediately
+- **Human specialists** are identified by including "human" in their `specialistId`; their votes override all AI votes immediately
 - **AI specialists** participate through voting
 - Trust is built through alignment with human choices over time
 
 ## What DIAL Is Not
 
-DIAL is not about AI replacing humans. It's about discovering—with precise cost data—which decisions are narrow enough for AI to handle, and what the ongoing human quality-control cost is to maintain that delegation over time.
-
-DIAL targets decisions that humans already make well and measures whether a combination of AI specialists can replicate those decisions cheaply enough to justify delegation. It does not attempt to leverage AI for novel decisions where humans lack answers—that is a different problem with different trade-offs.
-
-The value of AI is not superiority. **It is efficiency.** AI is faster and cheaper at narrow tasks where the required context fits within the model's window.
+DIAL is not about AI replacing humans. It targets decisions that humans already make well and measures whether AI specialists can replicate those decisions cheaply enough to justify delegation, with precise cost data on ongoing human quality-control. The value of AI is not superiority. **It is efficiency.** AI is faster and cheaper at narrow tasks where the required context fits within the model's window.
 
 ## How It Works
 
-1. **Model the task as a state machine** — Define states, transitions, and decision prompts
-2. **Register specialists** — Both AI and humans that can propose transitions and vote
-3. **Run decision cycles** — Propose → Vote → Arbitrate → Execute
-4. **Reach the goal state** — The session completes when it reaches its `defaultState`
+1. **Model the task as a state machine**: Define states, transitions, and decision prompts
+2. **Register specialists**: Both AI and humans that can propose transitions and vote
+3. **Run decision cycles**: Propose → Vote → Arbitrate → Execute
+4. **Reach the goal state**: The session completes when it reaches its `defaultState`
 
 ```mermaid
 graph LR
@@ -104,4 +94,4 @@ graph LR
 | **Specialist** | A pluggable actor (AI or human) that proposes transitions or votes |
 | **Decision Cycle** | The repeating process: Propose → Vote → Arbitrate → Execute |
 | **Arbiter** | The built-in logic that evaluates consensus and determines when a proposal wins |
-| **Default State** | The goal state — the session is complete when it reaches this state |
+| **Default State** | The goal state; the session is complete when it reaches this state |

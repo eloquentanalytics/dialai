@@ -21,15 +21,11 @@ Proposers submit their recommendations. Each proposal includes:
 
 ### 3. Vote Solicitation
 
-If there are 2 or more proposals, voters compare them pairwise using Swiss tournament pairing. Rather than exhaustively comparing every possible pair, the system pairs proposals with similar accumulated support first (where the comparison is most informative), round-robins through available voters, and checks for consensus after each vote. Voting stops as soon as a proposal crosses the ahead-by-k consensus threshold — remaining pairs are never evaluated. The full O(N²) pairwise comparison is the theoretical worst case; in practice, consensus typically resolves well before it.
+If there are 2+ proposals, voters compare them pairwise using Swiss tournament pairing. See [Arbitration](./arbitration.md) for pairing and early-stopping details.
 
 ### 4. Arbitration
 
-The built-in `evaluateConsensus` function aggregates votes to determine if a proposal has sufficient support:
-
-- **0 proposals** — No consensus
-- **1 proposal** — Auto-consensus (single proposal wins immediately)
-- **2+ proposals** — Human votes override; otherwise vote tallying with ahead-by-k threshold (k=1)
+The built-in `evaluateConsensus` function determines the winner. See [Arbitration](./arbitration.md) for the full rules.
 
 ### 5. Transition Execution
 

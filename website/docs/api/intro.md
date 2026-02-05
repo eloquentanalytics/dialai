@@ -126,9 +126,9 @@ const vote = solicitVote(
 ### `evaluateConsensus(sessionId: string): ConsensusResult`
 
 Evaluates consensus for all proposals and votes in the session:
-- **0 proposals** — `{ consensusReached: false }`
-- **1 proposal** — `{ consensusReached: true, winningProposalId: ... }`
-- **2+ proposals** — Human votes override; otherwise ahead-by-k (k=1)
+- **0 proposals**: `{ consensusReached: false }`
+- **1 proposal**: `{ consensusReached: true, winningProposalId: ... }`
+- **2+ proposals**: Human votes override; otherwise ahead-by-k (k=1)
 
 ```typescript
 import { evaluateConsensus } from "dialai";
@@ -193,6 +193,6 @@ The in-memory store is also exported for advanced use and testing:
 ```typescript
 import { sessions, specialists, proposals, votes, clear } from "dialai";
 
-// clear() resets all maps — useful for test isolation
+// clear() resets all maps - useful for test isolation
 clear();
 ```

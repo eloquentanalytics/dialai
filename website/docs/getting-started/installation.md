@@ -118,9 +118,9 @@ See [Quick Start](./quick-start.md) for a full example.
 
 Now that DIAL is installed, you're ready to:
 
-1. **[Quick Start](./quick-start.md)** — Build your first state machine with AI and human specialists
-2. **[Learn Concepts](../concepts/intro.md)** — Understand sessions, specialists, and decision cycles
-3. **[Build State Machines](../guides/state-machines.md)** — Model your tasks as state machines
+1. **[Quick Start](./quick-start.md)**: Build your first state machine with AI and human specialists
+2. **[Learn Concepts](../concepts/intro.md)**: Understand sessions, specialists, and decision cycles
+3. **[Build State Machines](../guides/state-machines.md)**: Model your tasks as state machines
 
 ## Troubleshooting
 

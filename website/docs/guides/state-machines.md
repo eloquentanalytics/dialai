@@ -8,23 +8,23 @@ State machines define the structure of your sessions. Each session type has its 
 
 ## Why State Machines?
 
-Every agentic AI system is a state machine — the agent occupies a state, takes an action, and transitions to a new state. Frameworks like LangGraph make this explicit: agents are graphs of states and edges. Even "open-ended" agent loops (observe → reason → act → observe) follow this structure.
+Every agentic AI system is a state machine: the agent occupies a state, takes an action, and transitions to a new state. Frameworks like LangGraph make this explicit: agents are graphs of states and edges. Even "open-ended" agent loops (observe → reason → act → observe) follow this structure.
 
-DIAL makes the state machine explicit so that each transition becomes a **measurable decision point**. This doesn't limit what you can model — it clarifies *where decisions happen* so they can be calibrated. You don't need a DIAL decision point at every micro-step; you place them at the boundaries where delegation risk matters. An agent's internal tool-call loop can remain opaque. DIAL measures the outcomes at the states you care about.
+DIAL makes the state machine explicit so that each transition becomes a **measurable decision point**. This doesn't limit what you can model; it clarifies *where decisions happen* so they can be calibrated. You don't need a DIAL decision point at every micro-step; you place them at the boundaries where delegation risk matters. An agent's internal tool-call loop can remain opaque. DIAL measures the outcomes at the states you care about.
 
 This means open-ended tasks fit naturally:
-- **Document generation** — Proposals *are* the candidate documents. Specialists propose drafts, voters compare them, the human picks or edits the winner.
-- **Agentic workflows** — The default state is the agent's normal operating mode. It transitions out for decisions that need deliberation (tool selection, plan changes) and back when resolved.
-- **Research and exploration** — Model as a loop: the agent explores, then a decision determines whether findings are sufficient or more exploration is needed.
+- **Document generation**: Proposals *are* the candidate documents. Specialists propose drafts, voters compare them, the human picks or edits the winner.
+- **Agentic workflows**: The default state is the agent's normal operating mode. It transitions out for decisions that need deliberation (tool selection, plan changes) and back when resolved.
+- **Research and exploration**: Model as a loop: the agent explores, then a decision determines whether findings are sufficient or more exploration is needed.
 
 ## Defining a Machine
 
 A `MachineDefinition` defines:
 
-- `machineName` — identifies the type
-- `initialState` — where sessions start
-- `defaultState` — the goal state (session is complete when it reaches this)
-- `states` — a record of state names to their configuration
+- `machineName`: identifies the type
+- `initialState`: where sessions start
+- `defaultState`: the goal state (session is complete when it reaches this)
+- `states`: a record of state names to their configuration
 
 ## Example
 
@@ -186,7 +186,7 @@ const branching: MachineDefinition = {
 
 ### Agentic Workflow
 
-An agent's operating loop modeled as a DIAL machine. The default state is the agent running normally — it transitions out when a decision needs deliberation, and back when resolved.
+An agent's operating loop modeled as a DIAL machine. The default state is the agent running normally: it transitions out when a decision needs deliberation, and back when resolved.
 
 ```typescript
 const agentLoop: MachineDefinition = {
@@ -251,9 +251,9 @@ const docGen: MachineDefinition = {
 
 Each state's `prompt` describes how to decide what to do next. Good prompts are:
 
-- **Specific** — List the available choices and criteria
-- **Actionable** — Tell the specialist what to evaluate
-- **Consistent** — Same instructions for all specialists (AI and human)
+- **Specific**: List the available choices and criteria
+- **Actionable**: Tell the specialist what to evaluate
+- **Consistent**: Same instructions for all specialists (AI and human)
 
 ```
 Good: "Review the code changes. Check for: 1) correctness, 2) test coverage,

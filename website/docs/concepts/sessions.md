@@ -8,12 +8,12 @@ A **session** is an instance of a state machine that specialists navigate throug
 
 ## What Is a Session?
 
-Think of a session as a "live" workflow being processed. It has:
+A session has:
 
-- A **machine definition** — The blueprint defining possible states and transitions
-- A **current state** — Where the session is right now
-- A **session ID** — A unique UUID generated at creation
-- A **creation timestamp** — When the session was started
+- A **machine definition**: the blueprint defining possible states and transitions
+- A **current state**: where the session is right now
+- A **session ID**: a unique UUID generated at creation
+- A **creation timestamp**: when the session was started
 
 ```mermaid
 graph LR
@@ -77,7 +77,7 @@ When a session is **not in its default state**, the decision cycle activates:
 
 ### 3. Completion
 
-A session is "complete" when it reaches its **`defaultState`**. The default state represents the goal — the stable configuration where no further action is needed.
+A session is "complete" when it reaches its **`defaultState`**.
 
 ## Machine Definition
 
@@ -101,14 +101,14 @@ interface MachineDefinition {
 |-------|-------------|
 | `machineName` | Identifies the type of session (e.g., `"document-review"`) |
 | `initialState` | The state a session starts in |
-| `defaultState` | The goal state — session is complete when it reaches this |
+| `defaultState` | The goal state; session is complete when it reaches this |
 | `states` | A record of state names to their configuration |
 
 ### State Configuration
 
 Each state can have:
-- **`prompt`** — A description of the decision to be made in this state. Given to specialists to guide their proposals.
-- **`transitions`** — A map of transition names to target states. If omitted, the state is terminal (no outgoing transitions).
+- **`prompt`**: A description of the decision to be made in this state. Given to specialists to guide their proposals.
+- **`transitions`**: A map of transition names to target states. If omitted, the state is terminal (no outgoing transitions).
 
 ### Decision Prompts
 
@@ -176,5 +176,5 @@ transitions: {
 
 ## Next Steps
 
-- [Specialists](./specialists.md) — Learn about the actors that navigate sessions
-- [Decision Cycle](./decision-cycle.md) — Understand how decisions are made
+- [Specialists](./specialists.md): Learn about the actors that navigate sessions
+- [Decision Cycle](./decision-cycle.md): Understand how decisions are made

@@ -4,7 +4,7 @@ sidebar_position: 6
 
 # Related Work
 
-DIAL solves a different problem than most AI frameworks. Understanding the distinction helps clarify what DIAL is — and what it isn't.
+DIAL solves a different problem than most AI frameworks. Understanding the distinction helps clarify what DIAL is, and what it isn't.
 
 ## What DIAL Is
 
@@ -14,7 +14,7 @@ DIAL is not an agent framework, an alignment technique, or a model architecture.
 
 ## How DIAL Relates to Other Approaches
 
-The key dimension of comparison is **where ground truth comes from** — the signal used to judge whether AI behavior is correct.
+The key dimension of comparison is **where ground truth comes from**: the signal used to judge whether AI behavior is correct.
 
 | Approach | Ground truth source | When trust is established | Can trust change at runtime? |
 |----------|---------------------|---------------------------|------------------------------|
@@ -26,7 +26,7 @@ The key dimension of comparison is **where ground truth comes from** — the sig
 
 ### Agent Frameworks (LangGraph, LangChain, CrewAI)
 
-Agent frameworks define **how** an AI system operates — the graph of states, tools, and control flow. DIAL defines **whether** an AI system should be trusted to operate autonomously at each decision point.
+Agent frameworks define **how** an AI system operates: the graph of states, tools, and control flow. DIAL defines **whether** an AI system should be trusted to operate autonomously at each decision point.
 
 These are complementary. A DIAL specialist can *be* a LangGraph agent. DIAL wraps the agent and measures whether its decisions match human choices. The agent framework handles execution; DIAL handles trust calibration.
 
@@ -36,7 +36,7 @@ Multi-agent debate uses multiple AI models to argue and a human to judge. DIAL's
 
 ### Constitutional AI / RLHF
 
-Constitutional AI and RLHF train models against offline signals — a constitution document or human preference data collected in advance. The trust relationship is fixed at training time. DIAL's ground truth is the human's live, runtime choices in a specific operational context. Trust evolves continuously, per-specialist, per-state. A constitutionally-trained model can serve as a DIAL specialist — DIAL then measures whether the training generalizes to this particular human's preferences.
+Constitutional AI and RLHF train models against offline signals: a constitution document or human preference data collected in advance. The trust relationship is fixed at training time. DIAL's ground truth is the human's live, runtime choices in a specific operational context. Trust evolves continuously, per-specialist, per-state. A constitutionally-trained model can serve as a DIAL specialist; DIAL then measures whether the training generalizes to this particular human's preferences.
 
 ### Mixture of Experts (MoE)
 
@@ -50,4 +50,4 @@ DIAL is designed to be wrapped around existing AI systems, not to replace them:
 - **Your model** handles reasoning, generation, and tool use
 - **DIAL** handles the question: *should this agent/model be trusted to act autonomously here, or does a human need to decide?*
 
-The specialist interface is intentionally minimal — anything that can propose a state transition and compare two proposals can participate in DIAL's decision cycle.
+The specialist interface is intentionally minimal: anything that can propose a state transition and compare two proposals can participate in DIAL's decision cycle.

@@ -30,10 +30,10 @@ registerSpecialist({
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `specialistId` | `string` | Yes | — | Unique identifier for this specialist |
-| `machineName` | `string` | Yes | — | Which session type this specialist participates in |
-| `role` | `"proposer" \| "voter" \| "arbiter"` | Yes | — | The specialist's role |
-| `strategy` | `ProposerStrategy \| VoterStrategy` | Yes | — | The strategy function |
+| `specialistId` | `string` | Yes | - | Unique identifier for this specialist |
+| `machineName` | `string` | Yes | - | Which session type this specialist participates in |
+| `role` | `"proposer" \| "voter" \| "arbiter"` | Yes | - | The specialist's role |
+| `strategy` | `ProposerStrategy \| VoterStrategy` | Yes | - | The strategy function |
 
 ## Specialist ID Conventions
 
@@ -63,7 +63,7 @@ A proposer's strategy receives the current state name and the available transiti
 import type { ProposerStrategy } from "dialai";
 
 const myProposer: ProposerStrategy = (currentState, transitions) => {
-  // transitions is Record<string, string> — maps transition name → target state
+  // transitions is Record<string, string> - maps transition name → target state
   return {
     transitionName: "approve",
     toState: "approved",

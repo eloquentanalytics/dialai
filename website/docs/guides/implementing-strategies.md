@@ -14,8 +14,8 @@ A proposer strategy receives the current state name and available transitions, a
 import type { ProposerStrategy } from "dialai";
 
 const myProposer: ProposerStrategy = (currentState, transitions) => {
-  // currentState: string — the session's current state name
-  // transitions: Record<string, string> — maps transition name → target state
+  // currentState: string - the session's current state name
+  // transitions: Record<string, string> - maps transition name → target state
 
   // Your logic here: call an LLM, apply rules, etc.
 

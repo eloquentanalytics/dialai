@@ -22,7 +22,7 @@ Arbitration is built into the framework via the `evaluateConsensus` function. It
 
 ## Human vs AI Specialists
 
-**Human specialists** are identified by including "human" (case-insensitive) anywhere in their `specialistId` (e.g., `human-reviewer`, `specialist.human.jane`). When a human specialist votes, their choice wins immediately — no further vote tallying is needed.
+**Human specialists** are identified by including "human" (case-insensitive) anywhere in their `specialistId` (e.g., `human-reviewer`, `specialist.human.jane`). When a human specialist votes, their choice wins immediately; no further vote tallying is needed.
 
 **AI specialists** participate through voting. Each vote counts equally.
 

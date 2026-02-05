@@ -24,11 +24,11 @@ DIAL ships with a built-in arbitration strategy that implements **voting with hu
 
 ### Rules
 
-1. **Zero proposals** — No consensus (`consensusReached: false`)
+1. **Zero proposals**: No consensus (`consensusReached: false`)
 
-2. **Single proposal** — Auto-consensus (the lone proposal wins)
+2. **Single proposal**: Auto-consensus (the lone proposal wins)
 
-3. **Two or more proposals** — Evaluate votes:
+3. **Two or more proposals**: Evaluate votes:
    - If any human has voted, their choice wins immediately
    - Otherwise, tally votes per proposal
    - The leading proposal must be ahead by `k = 1` votes
@@ -43,6 +43,8 @@ For each vote comparing proposals A and B:
 | `"B"` | Adds 1 to proposal B's tally |
 | `"BOTH"` | Adds 1 to both proposals' tallies |
 | `"NEITHER"` | Adds nothing to either proposal |
+
+If all voters vote NEITHER, no proposal reaches the threshold and consensus fails.
 
 ### Example
 
@@ -105,28 +107,13 @@ interface ConsensusResult {
 }
 ```
 
-## Vote Types
-
-Specialists can vote in four ways:
-
-| Vote | Meaning | Impact |
-|------|---------|--------|
-| **A** | Prefer proposal A | +1 to A |
-| **B** | Prefer proposal B | +1 to B |
-| **BOTH** | Both acceptable | +1 to both |
-| **NEITHER** | Both unacceptable | No votes added |
-
-### Handling NEITHER Votes
-
-When specialists vote NEITHER, no votes are added to either proposal. If all voters vote NEITHER, no proposal reaches the ahead-by-k threshold and consensus fails.
-
 ## The Engine's Behavior
 
 When using `runSession`, the engine handles arbitration automatically:
 
-1. If there's only 1 proposal (e.g., only the built-in proposer), it auto-wins
-2. If there are 2+ proposals, the engine uses Swiss tournament pairing to select proposal pairs — pairing proposals with similar accumulated support first — and round-robins through registered voters, checking for consensus after each vote. Voting stops as soon as the ahead-by-k threshold is met — the engine does not exhaustively evaluate all possible pairs before checking consensus. The O(N²) full comparison is the worst case, not the typical case.
-3. If no proposal crosses the consensus threshold after all available pairs and voters have been exhausted, the engine throws an error
+1. **Single proposal**: auto-wins (e.g., only the built-in proposer is registered)
+2. **2+ proposals**: the engine uses Swiss tournament pairing, matching proposals with similar accumulated support first. It round-robins through registered voters, checking for consensus after each vote. Voting stops as soon as the ahead-by-k threshold is met. The O(N²) full comparison is the worst case, not the typical case.
+3. **No consensus**: if no proposal crosses the threshold after all available pairs and voters are exhausted, the engine throws an error
 
 ## Best Practices
 
@@ -155,6 +142,6 @@ High NEITHER rates indicate:
 
 ## Related Concepts
 
-- [Decision Cycle](./decision-cycle.md) — Where arbitration fits
-- [Specialists](./specialists.md) — Voting
-- [Human Primacy](./human-primacy.md) — Why humans override
+- [Decision Cycle](./decision-cycle.md): Where arbitration fits
+- [Specialists](./specialists.md): Voting
+- [Human Primacy](./human-primacy.md): Why humans override

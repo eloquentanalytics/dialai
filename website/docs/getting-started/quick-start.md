@@ -37,10 +37,10 @@ Save this as `examples/simple-machine.json`:
 }
 ```
 
-- **`initialState`** — where the session starts (`unsure`)
-- **`defaultState`** — the goal state where the machine comes to rest (`sure`)
-- **`prompt`** — the question specialists answer when the session is in that state
-- **`transitions`** — the available answers and what state each leads to
+- **`initialState`**: where the session starts (`unsure`)
+- **`defaultState`**: the goal state where the machine comes to rest (`sure`)
+- **`prompt`**: the question specialists answer when the session is in that state
+- **`transitions`**: the available answers and what state each leads to
 
 Both `yes` and `no` lead to `sure`, so the machine always resolves in one cycle.
 
@@ -75,7 +75,7 @@ const session = runSession(machine);
 console.log(session.currentState); // "sure"
 ```
 
-That's it — one cycle, done.
+That's it. One cycle, done.
 
 ## Step 3: Add a Human Specialist
 
@@ -90,7 +90,7 @@ import {
   executeTransition,
 } from "dialai";
 
-// Create a session — starts in "unsure"
+// Create a session - starts in "unsure"
 const session = createSession(machine);
 console.log(session.currentState); // "unsure"
 
@@ -121,7 +121,7 @@ submitVote(
   "Yes, 2 is greater than 1"
 );
 
-// Evaluate consensus — human votes win immediately
+// Evaluate consensus - human votes win immediately
 const consensus = evaluateConsensus(session.sessionId);
 console.log(consensus.consensusReached); // true
 console.log(consensus.reasoning);        // "The human preferred: sure"
@@ -132,7 +132,7 @@ console.log(session.currentState); // "sure"
 console.log(session.history);      // [{ fromState: "unsure", toState: "sure", reasoning: "The human preferred: sure", ... }]
 ```
 
-Because the specialist ID `"human-reviewer"` contains "human", `evaluateConsensus` gives their vote priority. This is **human primacy** — humans always get the final say.
+Because the specialist ID `"human-reviewer"` contains "human", `evaluateConsensus` gives their vote priority. This is **human primacy**: humans always get the final say.
 
 ## Step 4: Use the CLI
 
@@ -154,15 +154,15 @@ Session ID:    a1b2c3d4-...
 ## What's Happening Under the Hood
 
 1. **Session created** in `initialState` (`unsure`)
-2. **Proposers solicited** — each returns a proposed transition (`yes` or `no`)
-3. **Votes solicited** (if 2+ proposals) — pairwise comparisons
-4. **Consensus evaluated** — human votes override; otherwise ahead-by-k
-5. **Transition executed** — `currentState` moves to `sure`, proposals/votes cleared
-6. **Cycle repeats** until `currentState === defaultState` (already there — done)
+2. **Proposers solicited**: each returns a proposed transition (`yes` or `no`)
+3. **Votes solicited** (if 2+ proposals): pairwise comparisons
+4. **Consensus evaluated**: human votes override; otherwise ahead-by-k
+5. **Transition executed**: `currentState` moves to `sure`, proposals/votes cleared
+6. **Cycle repeats** until `currentState === defaultState` (already there, done)
 
 ## Next Steps
 
-- **[State Machines](../guides/state-machines.md)** — Design more complex workflows
-- **[Registering Specialists](../guides/registering-specialists.md)** — Configure specialists with strategies
-- **[Implementing Strategies](../guides/implementing-strategies.md)** — Customize strategy functions
-- **[Concepts](../concepts/intro.md)** — Deep dive into DIAL's architecture
+- **[State Machines](../guides/state-machines.md)**: Design more complex workflows
+- **[Registering Specialists](../guides/registering-specialists.md)**: Configure specialists with strategies
+- **[Implementing Strategies](../guides/implementing-strategies.md)**: Customize strategy functions
+- **[Concepts](../concepts/intro.md)**: Deep dive into DIAL's architecture
