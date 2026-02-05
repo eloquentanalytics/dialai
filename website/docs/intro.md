@@ -50,6 +50,8 @@ Trust is earned through demonstrated alignment with human decisions, not assumed
 
 DIAL is not about AI replacing humans. It's about discovering—with precise cost data—which decisions are narrow enough for AI to handle, and what the ongoing human quality-control cost is to maintain that delegation over time.
 
+DIAL targets decisions that humans already make well and measures whether a combination of AI specialists can replicate those decisions cheaply enough to justify delegation. It does not attempt to leverage AI for novel decisions where humans lack answers—that is a different problem with different trade-offs.
+
 The value of AI is not superiority. **It is efficiency.** AI is faster and cheaper at narrow tasks where the required context fits within the model's window.
 
 ## How It Works
