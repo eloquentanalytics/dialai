@@ -111,14 +111,14 @@
 
 /* Hero button overrides — theme-aware */
 .heroButtonPrimary {
-  background: var(--dial-accent);
+  background: var(--dial-accent) !important;
   border: none;
-  color: white;
+  color: #ffffff !important;
 }
 
 .heroButtonPrimary:hover {
-  background: #004d80;
-  color: white;
+  background: #004d80 !important;
+  color: #ffffff !important;
 }
 
 [data-theme='dark'] .heroButtonPrimary:hover {

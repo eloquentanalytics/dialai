@@ -240,14 +240,16 @@ body {
   border: none;
 }
 
+a.button--secondary,
 .button--secondary {
   background: var(--dial-accent);
-  color: white;
+  color: #ffffff;
 }
 
+a.button--secondary:hover,
 .button--secondary:hover {
   background: var(--dial-accent-light);
-  color: white;
+  color: #ffffff;
 }
 
 .button--outline {
