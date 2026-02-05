@@ -34,11 +34,7 @@ This collapse is emergent, not designed. As AI specialists prove their alignment
 
 ### 3. Empirical Trust
 
-Trust is earned through demonstrated alignment with human decisions, not assumed.
-
-- **Human specialists** are identified by including "human" in their `specialistId`; their votes override all AI votes immediately
-- **AI specialists** participate through voting
-- Trust is built through alignment with human choices over time
+Trust is earned through demonstrated alignment with human decisions and through continued sampling of human preferences. Specialists prove their value one decision at a time.
 
 ## What DIAL Is Not
 
