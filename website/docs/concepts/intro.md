@@ -73,7 +73,7 @@ When a session needs to progress, DIAL runs a repeating cycle:
 
 1. **Propose** — Solicit proposals from registered proposers
 2. **Vote** — If 2+ proposals, compare pairs via registered voters
-3. **Arbitrate** — Evaluate consensus using weighted voting
+3. **Arbitrate** — Evaluate consensus via voting
 4. **Execute** — Apply the winning proposal's transition
 
 ```mermaid
@@ -92,11 +92,11 @@ stateDiagram-v2
 
 ### Arbitration & Consensus
 
-**Arbitration** is how DIAL decides when a proposal has won. The built-in strategy uses weighted voting:
+**Arbitration** is how DIAL decides when a proposal has won. The built-in strategy uses voting:
 
 - **0 proposals** — No consensus
 - **1 proposal** — Auto-consensus (single proposal wins)
-- **2+ proposals** — Human votes win immediately; otherwise tally weighted votes per proposal, leading proposal must be ahead by k=1.0 weighted votes
+- **2+ proposals** — Human votes win immediately; otherwise tally votes per proposal, leading proposal must be ahead by k=1 votes
 
 [Learn more about Arbitration →](./arbitration.md)
 
@@ -117,8 +117,8 @@ AI specialists are judged on their ability to predict what humans would choose. 
 When comparing proposals A and B, specialists vote:
 - **A** — Prefer proposal A
 - **B** — Prefer proposal B
-- **BOTH** — Both are acceptable (adds weight to both)
-- **NEITHER** — Both are unacceptable (adds weight to neither)
+- **BOTH** — Both are acceptable (counts for both)
+- **NEITHER** — Both are unacceptable (counts for neither)
 
 ## Next Steps
 

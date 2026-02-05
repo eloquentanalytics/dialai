@@ -156,7 +156,7 @@ Session ID:    a1b2c3d4-...
 1. **Session created** in `initialState` (`unsure`)
 2. **Proposers solicited** — each returns a proposed transition (`yes` or `no`)
 3. **Votes solicited** (if 2+ proposals) — pairwise comparisons
-4. **Consensus evaluated** — human votes override; otherwise weighted ahead-by-k
+4. **Consensus evaluated** — human votes override; otherwise ahead-by-k
 5. **Transition executed** — `currentState` moves to `sure`, proposals/votes cleared
 6. **Cycle repeats** until `currentState === defaultState` (already there — done)
 

@@ -42,7 +42,7 @@ const all = getSessions();
 
 ### `registerSpecialist(opts): Specialist`
 
-Registers a specialist for a session type. Default weight is 1.0.
+Registers a specialist for a session type.
 
 ```typescript
 import { registerSpecialist } from "dialai";
@@ -51,7 +51,6 @@ const specialist = registerSpecialist({
   specialistId: "ai-proposer-1",
   machineName: "my-task",
   role: "proposer",
-  weight: 1.0, // optional, defaults to 1.0
   strategy: (currentState, transitions) => ({
     transitionName: Object.keys(transitions)[0],
     toState: Object.values(transitions)[0],
@@ -129,7 +128,7 @@ const vote = solicitVote(
 Evaluates consensus for all proposals and votes in the session:
 - **0 proposals** — `{ consensusReached: false }`
 - **1 proposal** — `{ consensusReached: true, winningProposalId: ... }`
-- **2+ proposals** — Human votes override; otherwise weighted ahead-by-k (k=1.0)
+- **2+ proposals** — Human votes override; otherwise ahead-by-k (k=1)
 
 ```typescript
 import { evaluateConsensus } from "dialai";

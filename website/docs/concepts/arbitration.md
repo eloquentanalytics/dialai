@@ -18,9 +18,9 @@ graph LR
     A --> |No Consensus| F[Error]
 ```
 
-## The Built-in Arbiter: Weighted Ahead-by-K
+## The Built-in Arbiter: Ahead-by-K
 
-DIAL ships with a built-in arbitration strategy that implements **weighted voting with human override**.
+DIAL ships with a built-in arbitration strategy that implements **voting with human override**.
 
 ### Rules
 
@@ -30,8 +30,8 @@ DIAL ships with a built-in arbitration strategy that implements **weighted votin
 
 3. **Two or more proposals** — Evaluate votes:
    - If any human has voted, their choice wins immediately
-   - Otherwise, tally weighted votes per proposal
-   - The leading proposal must be ahead by `k = 1.0` weighted votes
+   - Otherwise, tally votes per proposal
+   - The leading proposal must be ahead by `k = 1` votes
 
 ### Vote Tallying
 
@@ -39,26 +39,26 @@ For each vote comparing proposals A and B:
 
 | Vote | Effect |
 |------|--------|
-| `"A"` | Adds specialist's weight to proposal A |
-| `"B"` | Adds specialist's weight to proposal B |
-| `"BOTH"` | Adds specialist's weight to both proposals |
+| `"A"` | Adds 1 to proposal A's tally |
+| `"B"` | Adds 1 to proposal B's tally |
+| `"BOTH"` | Adds 1 to both proposals' tallies |
 | `"NEITHER"` | Adds nothing to either proposal |
 
 ### Example
 
 ```
 Proposal A: "approve"
-  - Voter 1 votes A (weight 1.0)
-  - Voter 2 votes A (weight 1.0)
-  Total for A: 2.0
+  - Voter 1 votes A
+  - Voter 2 votes A
+  Total for A: 2
 
 Proposal B: "request_changes"
-  - Voter 3 votes B (weight 1.0)
-  Total for B: 1.0
+  - Voter 3 votes B
+  Total for B: 1
 
-Ahead by: 2.0 - 1.0 = 1.0
+Ahead by: 2 - 1 = 1
 
-k = 1.0: Consensus reached (1.0 >= 1.0)
+k = 1: Consensus reached (1 >= 1)
 ```
 
 ### Human Override
@@ -67,11 +67,11 @@ When a human votes, the calculation short-circuits:
 
 ```
 Proposal A: "approve"
-  - AI Voter 1 votes A (weight 1.0)
-  - AI Voter 2 votes A (weight 1.0)
+  - AI Voter 1 votes A
+  - AI Voter 2 votes A
 
 Proposal B: "request_changes"
-  - Human Voter votes B (weight 1.0)
+  - Human Voter votes B
 
 Result: B wins immediately
 
@@ -111,14 +111,14 @@ Specialists can vote in four ways:
 
 | Vote | Meaning | Impact |
 |------|---------|--------|
-| **A** | Prefer proposal A | +weight to A |
-| **B** | Prefer proposal B | +weight to B |
-| **BOTH** | Both acceptable | +weight to both |
-| **NEITHER** | Both unacceptable | No weight added |
+| **A** | Prefer proposal A | +1 to A |
+| **B** | Prefer proposal B | +1 to B |
+| **BOTH** | Both acceptable | +1 to both |
+| **NEITHER** | Both unacceptable | No votes added |
 
 ### Handling NEITHER Votes
 
-When specialists vote NEITHER, no weight is added to either proposal. If all voters vote NEITHER, no proposal reaches the ahead-by-k threshold and consensus fails.
+When specialists vote NEITHER, no votes are added to either proposal. If all voters vote NEITHER, no proposal reaches the ahead-by-k threshold and consensus fails.
 
 ## The Engine's Behavior
 
@@ -156,5 +156,5 @@ High NEITHER rates indicate:
 ## Related Concepts
 
 - [Decision Cycle](./decision-cycle.md) — Where arbitration fits
-- [Specialists](./specialists.md) — Voting weights
+- [Specialists](./specialists.md) — Voting
 - [Human Primacy](./human-primacy.md) — Why humans override

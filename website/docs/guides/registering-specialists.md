@@ -33,7 +33,6 @@ registerSpecialist({
 | `specialistId` | `string` | Yes | — | Unique identifier for this specialist |
 | `machineName` | `string` | Yes | — | Which session type this specialist participates in |
 | `role` | `"proposer" \| "voter" \| "arbiter"` | Yes | — | The specialist's role |
-| `weight` | `number` | No | `1.0` | Voting weight used in consensus evaluation |
 | `strategy` | `ProposerStrategy \| VoterStrategy` | Yes | — | The strategy function |
 
 ## Specialist ID Conventions
@@ -133,28 +132,3 @@ submitVote(
 );
 ```
 
-## Weight Configuration
-
-The `weight` parameter controls how much a specialist's vote counts during consensus evaluation:
-
-```typescript
-// Default weight is 1.0
-registerSpecialist({
-  specialistId: "standard-voter",
-  machineName: "my-task",
-  role: "voter",
-  weight: 1.0,
-  strategy: myVoter,
-});
-
-// Higher weight = more influence
-registerSpecialist({
-  specialistId: "senior-voter",
-  machineName: "my-task",
-  role: "voter",
-  weight: 2.0,
-  strategy: myVoter,
-});
-```
-
-Note: Human vote override ignores weights entirely — if a specialist's ID contains "human", their vote wins immediately regardless of weight.

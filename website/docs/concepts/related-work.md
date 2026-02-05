@@ -19,7 +19,7 @@ The key dimension of comparison is **where ground truth comes from** — the sig
 | Approach | Ground truth source | When trust is established | Can trust change at runtime? |
 |----------|---------------------|---------------------------|------------------------------|
 | LangGraph / LangChain | Designer's predefined graph | Before deployment | No |
-| Multi-agent debate | Human judges per decision | Each decision | No (static weights) |
+| Multi-agent debate | Human judges per decision | Each decision | No (static) |
 | Constitutional AI / RLHF | Offline training signal | Training time | No |
 | Mixture of Experts | Gating network | Training time | No |
 | **DIAL** | **Human's actual runtime choices** | **Empirically, per decision cycle** | **Yes (progressive collapse + trip line)** |
@@ -40,7 +40,7 @@ Constitutional AI and RLHF train models against offline signals — a constituti
 
 ### Mixture of Experts (MoE)
 
-MoE architectures route inputs to specialized sub-networks via a learned gating function. The analogy to DIAL's specialist selection is real but shallow: MoE routing is learned at training time and frozen; DIAL's specialist weights update at runtime based on human feedback. MoE optimizes for task performance; DIAL optimizes for human prediction.
+MoE architectures route inputs to specialized sub-networks via a learned gating function. The analogy to DIAL's specialist selection is real but shallow: MoE routing is learned at training time and frozen; DIAL's trust in specialists updates at runtime based on human feedback. MoE optimizes for task performance; DIAL optimizes for human prediction.
 
 ## Using DIAL with Other Systems
 

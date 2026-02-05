@@ -43,7 +43,7 @@ This collapse is emergent, not designed. As AI specialists prove their alignment
 Trust is earned through demonstrated alignment with human decisions, not assumed.
 
 - **Human specialists** are identified by including "human" in their `specialistId` — their votes override all AI votes immediately
-- **AI specialists** participate through weighted voting
+- **AI specialists** participate through voting
 - Trust is built through alignment with human choices over time
 
 ## What DIAL Is Not
@@ -102,5 +102,4 @@ graph LR
 | **Specialist** | A pluggable actor (AI or human) that proposes transitions or votes |
 | **Decision Cycle** | The repeating process: Propose → Vote → Arbitrate → Execute |
 | **Arbiter** | The built-in logic that evaluates consensus and determines when a proposal wins |
-| **Weight** | A specialist's voting authority (default 1.0) |
 | **Default State** | The goal state — the session is complete when it reaches this state |

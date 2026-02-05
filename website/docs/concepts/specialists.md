@@ -18,13 +18,13 @@ Voters evaluate proposals and express preferences between them. They compare pai
 
 ### Arbiters
 
-Arbitration is built into the framework via the `evaluateConsensus` function. It uses weighted voting with human override.
+Arbitration is built into the framework via the `evaluateConsensus` function. It uses voting with human override.
 
 ## Human vs AI Specialists
 
 **Human specialists** are identified by including "human" (case-insensitive) anywhere in their `specialistId` (e.g., `human-reviewer`, `specialist.human.jane`). When a human specialist votes, their choice wins immediately — no further vote tallying is needed.
 
-**AI specialists** participate through weighted voting. The default weight is 1.0, set via the `weight` option during registration.
+**AI specialists** participate through voting. Each vote counts equally.
 
 ## Registering a Specialist
 
@@ -36,7 +36,6 @@ registerSpecialist({
   specialistId: "ai-proposer-1",
   machineName: "my-task",
   role: "proposer",
-  weight: 1.0,
   strategy: (currentState, transitions) => {
     const name = Object.keys(transitions)[0];
     return {
@@ -52,7 +51,6 @@ registerSpecialist({
   specialistId: "ai-voter-1",
   machineName: "my-task",
   role: "voter",
-  weight: 1.0,
   strategy: (proposalA, proposalB) => {
     return {
       voteFor: "A",
@@ -69,5 +67,4 @@ registerSpecialist({
 | `specialistId` | `string` | Yes | Unique identifier. Include "human" for human specialists. |
 | `machineName` | `string` | Yes | Which session type this specialist participates in |
 | `role` | `"proposer" \| "voter" \| "arbiter"` | Yes | The specialist's role |
-| `weight` | `number` | No | Voting weight (default: 1.0) |
 | `strategy` | `ProposerStrategy \| VoterStrategy` | Yes | The strategy function |

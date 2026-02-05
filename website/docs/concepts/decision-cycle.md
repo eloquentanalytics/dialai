@@ -29,7 +29,7 @@ The built-in `evaluateConsensus` function aggregates votes to determine if a pro
 
 - **0 proposals** — No consensus
 - **1 proposal** — Auto-consensus (single proposal wins immediately)
-- **2+ proposals** — Human votes override; otherwise weighted vote tallying with ahead-by-k threshold (k=1.0)
+- **2+ proposals** — Human votes override; otherwise vote tallying with ahead-by-k threshold (k=1)
 
 ### 5. Transition Execution
 

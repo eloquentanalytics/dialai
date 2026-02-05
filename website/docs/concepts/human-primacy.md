@@ -155,10 +155,10 @@ registerSpecialist({
 When `evaluateConsensus` runs, it checks every vote — if any vote's `specialistId` contains "human" (case-insensitive), that vote's choice wins immediately, regardless of all other votes:
 
 ```
-AI Voter 1: votes A (weight 1.0)
-AI Voter 2: votes A (weight 1.0)
-AI Voter 3: votes A (weight 1.0)
-Human:      votes B (weight 1.0)
+AI Voter 1: votes A
+AI Voter 2: votes A
+AI Voter 3: votes A
+Human:      votes B
 
 Result: B wins immediately
 ```
@@ -193,7 +193,7 @@ Progressive collapse assumes stationary conditions — that the human distributi
 
 Non-stationarity is not a failure mode — it is what the system is designed to detect. The human who participates periodically is providing ongoing ground truth references. When the population distribution shifts, the agreement rate between specialists and those human references will visibly decline. This decline is the signal, not a bug.
 
-When agreement drops, the system's response is mechanical: specialist weights decrease, the ahead-by-k consensus threshold becomes harder to reach without broader deliberation, and the system naturally re-expands — soliciting more proposals, more votes, more human participation. The collapse reverses. The system then re-converges on the new distribution through the same measurement process that produced the original collapse.
+When agreement drops, the system's response is mechanical: specialist agreement rates decline, the ahead-by-k consensus threshold becomes harder to reach without broader deliberation, and the system naturally re-expands — soliciting more proposals, more votes, more human participation. The collapse reverses. The system then re-converges on the new distribution through the same measurement process that produced the original collapse.
 
 This is the design working as intended. The system is a continuous monitor of alignment between AI behavior and human judgment. If the humans change, the system detects the mismatch and adapts. The cost of re-convergence is real, but it is the cost of staying calibrated — and the alternative (assuming the original calibration still holds) is worse.
 
