@@ -95,8 +95,8 @@ describe("openrouter example: mock LLM full deliberation cycle", () => {
     )!;
     expect(winner.transitionName).toBe("approve");
 
-    // Phase 4: Simulate arbiter synthesis (mock LLM)
-    const arbiterReasoning =
+    // Phase 4: Simulate reasoning synthesis (mock LLM)
+    const synthesizedReasoning =
       "All participants agree that the task should be approved.";
 
     // Phase 5: Execute transition
@@ -104,12 +104,12 @@ describe("openrouter example: mock LLM full deliberation cycle", () => {
       session.sessionId,
       winner.transitionName,
       winner.toState,
-      arbiterReasoning
+      synthesizedReasoning
     );
 
     expect(session.currentState).toBe("done");
     expect(session.history).toHaveLength(1);
-    expect(session.history[0].reasoning).toBe(arbiterReasoning);
+    expect(session.history[0].reasoning).toBe(synthesizedReasoning);
   });
 
   it("proposers disagree, voters pick the correct answer", async () => {

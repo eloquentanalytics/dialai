@@ -82,15 +82,6 @@ All specialist roles are implemented as pluggable strategies loaded from `./stra
 
 **Output:** `SubmitVoteCommand`. The framework adds `sessionId`, `specialistId`, `proposalIdA`, `proposalIdB`.
 
-### Arbiter Strategy Interface
-
-**Input (`ArbiterDecisionInput`):**
-- `proposals` (Proposal[]) - All proposals for this round
-- `votes` (Vote[]) - All votes cast
-- `riskDial` (number) - State-level risk configuration
-
-**Output:** `{ consensusReached: boolean, winningProposalId?: string, reasoning: string }`
-
 ### Tool Strategy Interface
 
 **Input (`ToolInvocationInput`):**
@@ -265,7 +256,7 @@ Materializations:
 
 ### command.evaluate_consensus -> event.consensus_evaluated
 
-Evaluate consensus using the registered Arbiter strategy. The framework invokes the arbiter directly (not via solicitation).
+Evaluate consensus using the built-in consensus logic. The framework invokes this directly (not via solicitation).
 
 **Default Arbiter: weighted ahead-by-k**
 
@@ -302,7 +293,7 @@ API Input:
 - `specialistId` (string) - Unique identifier for this specialist
 - `machineName` (string) - Session type this specialist is registered for
 - `fromStateName` (string, optional) - If set, specialist is only available in this state. If null/omitted, available in all states.
-- `specialistRole` (string, enum, ['proposer'|'voter'|'arbiter'|'tool'])
+- `specialistRole` (string, enum, ['proposer'|'voter'|'tool'])
 - `strategyFunctionKey` (string) - Strategy function identifier (e.g., "proposer" loads `./strategies/{machineName}/proposer.ts`)
 - `modelId` (string) - Model identifier passed to the strategy
 - `displayName` (string) - Human-readable name for UI display
@@ -457,7 +448,7 @@ Query registered specialists for a session type.
 Query Parameters:
 - `storeId` (string, default: 'sheep') - Session type to query
 - `fromStateName` (string, optional) - Filter specialists available in this state (includes specialists with `fromStateName: null` which are available in all states)
-- `specialistRole` (string, enum, optional) - Filter by role: 'proposer', 'voter', 'arbiter', or 'tool'
+- `specialistRole` (string, enum, optional) - Filter by role: 'proposer', 'voter', or 'tool'
 
 Response:
 - Array of `SpecialistSummary` objects from the materialized `specialists` table

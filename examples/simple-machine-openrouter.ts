@@ -3,7 +3,7 @@
  * simple-machine-openrouter.ts
  *
  * Runs the "simple-task" state machine using OpenRouter LLMs for proposing
- * transitions, voting, and synthesizing arbiter reasoning.
+ * transitions, voting, and synthesizing consensus reasoning.
  *
  * Usage:
  *   OPENROUTER_API_TOKEN=sk-... npx tsx examples/simple-machine-openrouter.ts
@@ -155,7 +155,7 @@ interface VoteRecord {
   reasoning: string;
 }
 
-async function synthesizeArbiterReasoning(
+async function synthesizeReasoning(
   winningProposal: Proposal,
   voteRecords: VoteRecord[]
 ): Promise<string> {
@@ -176,7 +176,7 @@ async function synthesizeArbiterReasoning(
       {
         role: "system",
         content:
-          "You are an arbiter synthesizing a final reasoning for a state machine transition. " +
+          "You are synthesizing a final reasoning for a state machine transition. " +
           "Based on the proposal reasoning and supporting voter reasoning, " +
           "provide a concise synthesis explaining why this transition should occur. " +
           "Respond with plain text, no JSON.",
@@ -330,21 +330,21 @@ async function main(): Promise<void> {
     );
     console.log();
 
-    // Phase 4: Arbiter synthesizes reasoning from proposal + supporting votes
-    console.log("Phase 4: Arbiter synthesizing reasoning...");
-    const arbiterReasoning = await synthesizeArbiterReasoning(
+    // Phase 4: Synthesize reasoning from proposal + supporting votes
+    console.log("Phase 4: Synthesizing reasoning...");
+    const synthesizedReasoning = await synthesizeReasoning(
       winningProposal,
       allVoteRecords
     );
-    console.log(`  Arbiter: ${arbiterReasoning}`);
+    console.log(`  Reasoning: ${synthesizedReasoning}`);
     console.log();
 
-    // Phase 5: Execute transition with arbiter reasoning
+    // Phase 5: Execute transition with synthesized reasoning
     executeTransition(
       session.sessionId,
       winningProposal.transitionName,
       winningProposal.toState,
-      arbiterReasoning
+      synthesizedReasoning
     );
     console.log(
       `Transitioned: "${winningProposal.transitionName}" -> "${winningProposal.toState}"`

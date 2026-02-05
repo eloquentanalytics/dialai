@@ -4,7 +4,7 @@ sidebar_position: 2
 
 # Registering Specialists
 
-Specialists are registered using one of three functions: `registerProposer`, `registerVoter`, or `registerArbiter`. Each function accepts configuration for how the specialist produces its output.
+Specialists are registered using one of two functions: `registerProposer` or `registerVoter`. Each function accepts configuration for how the specialist produces its output.
 
 ## Proposer Registration
 
@@ -44,31 +44,9 @@ registerVoter({
 });
 ```
 
-## Arbiter Registration
-
-An arbiter defines custom consensus logic. It receives all proposals and votes and returns a `ConsensusResult`. Arbiters support the same four execution modes as proposers and voters.
-
-```typescript
-import { registerArbiter } from "dialai";
-
-registerArbiter({
-  specialistId: "custom-arbiter",
-  machineName: "my-task",
-  strategyFn: async (ctx) => {
-    // ctx contains proposals, votes, history
-    const topProposal = ctx.proposals[0];
-    return {
-      consensusReached: true,
-      winningProposalId: topProposal?.proposalId,
-      reasoning: "Custom logic selected the first proposal",
-    };
-  },
-});
-```
-
 ## Execution Modes
 
-All three registration functions support four execution modes. They are mutually exclusive.
+Both registration functions support four execution modes. They are mutually exclusive.
 
 ### 1. `strategyFn` -- Local Function
 
@@ -221,18 +199,6 @@ interface VoterContext {
   prompt: string;
   proposalA: Proposal;
   proposalB: Proposal;
-  history: TransitionRecord[];
-}
-```
-
-### ArbiterContext
-
-```typescript
-interface ArbiterContext {
-  sessionId: string;
-  currentState: string;
-  proposals: Proposal[];
-  votes: Vote[];
   history: TransitionRecord[];
 }
 ```

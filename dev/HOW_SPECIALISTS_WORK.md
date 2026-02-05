@@ -27,7 +27,7 @@ Voters evaluate proposals and express preferences between them. When two or more
 
 ### Arbiter
 
-Arbitration is built into the framework via the `evaluateConsensus` function. There is no arbiter strategy to implement. The arbiter role exists on the `Specialist` type for future use, but the current consensus mechanism is automatic.
+Arbitration is built into the framework via the `evaluateConsensus` function. There is no arbiter strategy to implement. The consensus mechanism is automatic.
 
 ---
 
@@ -455,7 +455,7 @@ Any other combination is an error. Examples of invalid configurations and their 
 |-------|------|----------|---------|-------------|
 | `specialistId` | `string` | Yes | — | Unique identifier. Include "human" for human specialists. |
 | `machineName` | `string` | Yes | — | Which session type this specialist participates in |
-| `role` | `"proposer" \| "voter" \| "arbiter"` | Yes | — | The specialist's role |
+| `role` | `"proposer" \| "voter"` | Yes | — | The specialist's role |
 | `weight` | `number` | No | `1.0` | Voting weight used in consensus evaluation |
 | `strategyFn` | `async (context) => result` | Mode 1 | — | Local function that returns a proposal or vote |
 | `strategyWebhookUrl` | `string` | Mode 2 | — | URL to POST context to; expects proposal/vote response |

@@ -125,7 +125,7 @@ const consensus = evaluateConsensus(session.sessionId);
 console.log(consensus.consensusReached); // true
 console.log(consensus.reasoning);        // "The human preferred: done"
 
-// Execute the winning transition, recording the arbiter's reasoning
+// Execute the winning transition, recording the consensus reasoning
 executeTransition(session.sessionId, "complete", "done", consensus.reasoning);
 console.log(session.currentState); // "done"
 console.log(session.history);      // [{ fromState: "pending", toState: "done", reasoning: "The human preferred: done", ... }]

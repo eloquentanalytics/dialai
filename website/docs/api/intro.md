@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # API Reference
 
-The DialAI API provides 12 functions for creating sessions, registering specialists, and managing the decision cycle. Functions that invoke strategy functions (`solicitProposal`, `solicitVote`, `runSession`) are async and return Promises. All other functions are synchronous.
+The DialAI API provides 11 functions for creating sessions, registering specialists, and managing the decision cycle. Functions that invoke strategy functions (`solicitProposal`, `solicitVote`, `runSession`) are async and return Promises. All other functions are synchronous.
 
 ## Session Functions
 
@@ -71,24 +71,6 @@ const voter = registerVoter({
   strategyFn: async (ctx) => ({
     voteFor: "A",
     reasoning: "Proposal A is better aligned",
-  }),
-});
-```
-
-### `registerArbiter(opts): Arbiter`
-
-Registers a custom arbiter for a session type. Supports the same four execution modes as `registerProposer` and `registerVoter`. See the [registering specialists guide](../guides/registering-specialists.md) for details.
-
-```typescript
-import { registerArbiter } from "dialai";
-
-const arbiter = registerArbiter({
-  specialistId: "custom-arbiter",
-  machineName: "my-task",
-  strategyFn: async (ctx) => ({
-    consensusReached: true,
-    winningProposalId: ctx.proposals[0]?.proposalId,
-    reasoning: "First proposal wins",
   }),
 });
 ```
@@ -212,13 +194,11 @@ import type {
   Session,
   Proposer,
   Voter,
-  Arbiter,
   Proposal,
   Vote,
   ConsensusResult,
   ProposerContext,
   VoterContext,
-  ArbiterContext,
   VoteChoice,
 } from "dialai";
 ```

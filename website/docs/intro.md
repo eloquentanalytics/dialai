@@ -43,7 +43,7 @@ DIAL is not about AI replacing humans. It targets decisions that humans already 
 ## How It Works
 
 1. **Model the task as a state machine**: Define states, transitions, and decision prompts
-2. **Register proposers, voters, and arbiters**: AI and human specialists that propose transitions, vote on them, and define consensus logic
+2. **Register proposers and voters**: AI and human specialists that propose transitions and vote on them
 3. **Run decision cycles**: Propose, Vote, Arbitrate, Execute
 4. **Reach the goal state**: The session completes when it reaches its `defaultState`
 

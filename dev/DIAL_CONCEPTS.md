@@ -13,7 +13,7 @@ Specialists are the "pluggable" actors that participate in sessions. They can be
 **Roles:**
 - **Proposers** any number of LLM or Human proposers can analyze the current state and suggest what transition should happen next
 - **Voters** any number of LLM or Human voters can evaluate proposals and express preferences between them
-- **Arbiters** one deterministic strategy evaluates consensus and determine when sufficient agreement has been reached
+- **Arbiters** consensus is evaluated by the built-in `evaluateConsensus` function, which determines when sufficient agreement has been reached
 - **Tools** one designated deterministic strategy performs synchronous function-like transitions when requested
 
 Specialists can be solicited by the system when input is needed (llms), but can also act autonomously (humans) or be invoked directly by the system (tools).

@@ -45,14 +45,6 @@ export interface VoterContext {
   history: TransitionRecord[];
 }
 
-export interface ArbiterContext {
-  sessionId: string;
-  currentState: string;
-  proposals: Proposal[];
-  votes: Vote[];
-  history: TransitionRecord[];
-}
-
 export interface Proposer {
   role: "proposer";
   specialistId: string;
@@ -77,19 +69,7 @@ export interface Voter {
   webhookTokenName?: string;
 }
 
-export interface Arbiter {
-  role: "arbiter";
-  specialistId: string;
-  machineName: string;
-  strategyFn?: (ctx: ArbiterContext) => Promise<ConsensusResult>;
-  strategyWebhookUrl?: string;
-  contextFn?: (ctx: ArbiterContext) => Promise<string>;
-  contextWebhookUrl?: string;
-  modelId?: string;
-  webhookTokenName?: string;
-}
-
-export type Specialist = Proposer | Voter | Arbiter;
+export type Specialist = Proposer | Voter;
 
 export interface Proposal {
   proposalId: string;

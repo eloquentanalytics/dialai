@@ -27,7 +27,7 @@
 
 - Sessions as finite state machines with a default state.
 - Drift: the system is not in its default state and must act.
-- Specialists: proposers, voters, arbiters — human or AI.
+- Specialists: proposers and voters — human or AI. Arbitration is built-in via `evaluateConsensus`.
 - Weights: human w=1.0 (always authoritative), AI w=0.0 (no authority until earned) at initialization.
 - The risk dial r in [0,1]: a state-level parameter that scales AI weight contributions.
 - Weight measures demonstrated ability to predict the human's choice. It is not a measure of task competence — it is a measure of human-alignment under the axiom that the human's choice is the correct one.
@@ -51,7 +51,7 @@
 
 - Five phases: proposal solicitation, proposal submission, pairwise voting, arbitration, execution.
 - **Adaptive pairwise voting via Swiss tournament pairing.** The system does not exhaustively enumerate all O(N²) proposal pairs before evaluating consensus. Instead, it uses a Swiss tournament pairing algorithm to distribute votes: proposals with similar accumulated support are paired first (where the outcome is most uncertain and informative), voters are round-robined through the selected pairs, and the consensus condition is checked after each vote. If the ahead-by-k threshold is met, voting stops immediately — remaining pairs are never evaluated. The O(N²) exhaustive comparison is the theoretical worst case; the system is designed expecting consensus to resolve well before reaching it. In practice, a small number of votes from high-weight specialists is often sufficient to cross the threshold, and the cost of voting scales with the difficulty of reaching agreement, not with the number of proposals.
-- The ahead-by-k arbiter: how weighted votes accumulate, how the risk dial modulates AI evidence.
+- The ahead-by-k consensus: how weighted votes accumulate, how the risk dial modulates AI evidence.
 - Human votes as immediate consensus triggers — because the human is always right.
 - The cycle as a repeated process that generates observable data about how well each AI specialist predicts the human.
 

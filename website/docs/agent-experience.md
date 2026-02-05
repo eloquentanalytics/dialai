@@ -8,7 +8,7 @@ DIAL is designed for LLM-driven agents as first-class participants. Every design
 
 ## Agents as Participants
 
-The specialist abstraction exists so that LLM agents can register themselves as proposers, voters, and arbiters in a decision cycle. An agent reading a state machine definition can determine what state the session is in, what transitions are available, and what the prompt is asking. It can then submit a proposal or cast a vote using the same API a human would use.
+The specialist abstraction exists so that LLM agents can register themselves as proposers and voters in a decision cycle. An agent reading a state machine definition can determine what state the session is in, what transitions are available, and what the prompt is asking. It can then submit a proposal or cast a vote using the same API a human would use.
 
 This is the point. DIAL does not treat agents as a backend detail or an orchestration layer. Agents sit alongside humans in the decision cycle and are evaluated by the same arbiter under the same rules. The difference is that human votes override, because [human primacy](./concepts/human-primacy.md) is a safety constraint on the system.
 
@@ -70,7 +70,7 @@ A resource-oriented API exposes data: "here is a session, here are its proposals
 
 A tool-oriented API exposes actions: `submitProposal`, `submitVote`, `evaluateConsensus`, `executeTransition`. Each function is a discrete action with a clear purpose. An agent with tool-use capabilities can map these directly to its tool-calling interface.
 
-The 12 functions in the DIAL API are designed to be the 12 tools an agent needs:
+The 11 functions in the DIAL API are designed to be the 11 tools an agent needs:
 
 | Function | Action |
 |---|---|
@@ -79,7 +79,6 @@ The 12 functions in the DIAL API are designed to be the 12 tools an agent needs:
 | `getSessions` | List all active processes |
 | `registerProposer` | Join a decision process as a proposer |
 | `registerVoter` | Join a decision process as a voter |
-| `registerArbiter` | Define custom consensus logic |
 | `submitProposal` | Propose a transition |
 | `solicitProposal` | Ask a specialist's strategy to propose |
 | `submitVote` | Cast a vote between two proposals |

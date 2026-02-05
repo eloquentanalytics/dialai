@@ -124,39 +124,12 @@ const goalVoter = async (ctx: VoterContext) => {
 };
 ```
 
-## Arbiter Strategy
-
-An arbiter `strategyFn` receives an `ArbiterContext` and returns a `ConsensusResult`:
-
-```typescript
-const myArbiter = async (ctx: ArbiterContext) => {
-  // ctx.proposals: Proposal[] - all proposals in the session
-  // ctx.votes: Vote[] - all votes in the session
-  // ctx.currentState: string
-  // ctx.history: TransitionRecord[]
-
-  // Custom consensus logic
-  const topProposal = ctx.proposals[0];
-  return {
-    consensusReached: true,
-    winningProposalId: topProposal?.proposalId,
-    reasoning: "Custom arbiter selected the first proposal",
-  };
-};
-```
-
-### Arbiter strategyFn Signature
-
-```typescript
-strategyFn: async (ctx: ArbiterContext) => ConsensusResult
-```
-
 ## Using Strategies with Specialists
 
 Register strategies when creating specialists:
 
 ```typescript
-import { registerProposer, registerVoter, registerArbiter } from "dialai";
+import { registerProposer, registerVoter } from "dialai";
 
 registerProposer({
   specialistId: "goal-proposer",
@@ -168,12 +141,6 @@ registerVoter({
   specialistId: "goal-voter",
   machineName: "my-task",
   strategyFn: goalVoter,
-});
-
-registerArbiter({
-  specialistId: "custom-arbiter",
-  machineName: "my-task",
-  strategyFn: myArbiter,
 });
 ```
 

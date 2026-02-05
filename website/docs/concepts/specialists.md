@@ -18,7 +18,7 @@ Voters evaluate proposals and express preferences between them. They compare pai
 
 ### Arbiters
 
-Arbitration is built into the framework via the `evaluateConsensus` function. For custom consensus logic, register an arbiter with `registerArbiter` and a `strategyFn` that receives an `ArbiterContext` and returns a `ConsensusResult`.
+Arbitration is built into the framework via the `evaluateConsensus` function, which tallies votes and applies human primacy rules automatically.
 
 ## Human vs AI Specialists
 
@@ -58,17 +58,17 @@ registerVoter({
 
 ### Registration Options
 
-Each registration function (`registerProposer`, `registerVoter`, `registerArbiter`) accepts:
+Each registration function (`registerProposer`, `registerVoter`) accepts:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `specialistId` | `string` | Yes | Unique identifier. Include "human" for human specialists. |
 | `machineName` | `string` | Yes | Which session type this specialist participates in |
-| `strategyFn` | `async (context) => result` | Mode 1 | Local function that returns a proposal, vote, or ConsensusResult |
+| `strategyFn` | `async (context) => result` | Mode 1 | Local function that returns a proposal or vote |
 | `strategyWebhookUrl` | `string` | Mode 2 | URL to POST context to; expects result response |
 | `contextFn` | `async (context) => string` | Mode 3 | Local function returning context for the LLM |
 | `contextWebhookUrl` | `string` | Mode 4 | URL to POST context request to; expects context response |
 | `modelId` | `string` | Modes 3, 4 | LLM model identifier |
 | `webhookTokenName` | `string` | Modes 2, 4 | Env var name holding the webhook auth token |
 
-All three registration functions support the same four execution modes. See the [registering specialists guide](../guides/registering-specialists.md) for full details.
+Both registration functions support the same four execution modes. See the [registering specialists guide](../guides/registering-specialists.md) for full details.

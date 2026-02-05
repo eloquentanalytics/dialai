@@ -3,7 +3,6 @@ import type {
   Session,
   Proposer,
   Voter,
-  Arbiter,
   Proposal,
   Vote,
   ConsensusResult,
@@ -112,32 +111,6 @@ export function registerVoter(opts: {
   };
   specialists.set(voter.specialistId, voter);
   return voter;
-}
-
-export function registerArbiter(opts: {
-  specialistId: string;
-  machineName: string;
-  strategyFn?: Arbiter["strategyFn"];
-  strategyWebhookUrl?: string;
-  contextFn?: Arbiter["contextFn"];
-  contextWebhookUrl?: string;
-  modelId?: string;
-  webhookTokenName?: string;
-}): Arbiter {
-  validateExecutionMode(opts);
-  const arbiter: Arbiter = {
-    role: "arbiter",
-    specialistId: opts.specialistId,
-    machineName: opts.machineName,
-    strategyFn: opts.strategyFn,
-    strategyWebhookUrl: opts.strategyWebhookUrl,
-    contextFn: opts.contextFn,
-    contextWebhookUrl: opts.contextWebhookUrl,
-    modelId: opts.modelId,
-    webhookTokenName: opts.webhookTokenName,
-  };
-  specialists.set(arbiter.specialistId, arbiter);
-  return arbiter;
 }
 
 export function submitProposal(

@@ -28,7 +28,7 @@ dialai/
 ├── src/
 │   └── dialai/                 # Core framework implementation
 │       ├── core/               # State machine, session management
-│       ├── specialists/        # Proposer, voter, arbiter, tool interfaces
+│       ├── specialists/        # Proposer, voter, tool interfaces
 │       ├── strategies/         # Pluggable strategy implementations
 │       ├── arbitration/        # Consensus evaluation logic
 │       ├── types/              # TypeScript type definitions
