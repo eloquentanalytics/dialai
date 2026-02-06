@@ -1884,6 +1884,153 @@ Session ID:    a1b2c3d4-...
 
 ---
 
+## DIAL Skills Reference
+
+
+This is a consolidated reference for AI agents learning to use DIAL. For modular, downloadable skills, see the [skills directory](./skills/index.md).
+
+## Quick Reference
+
+```bash
+# Install DIAL
+npm install dialai
+
+# Run a state machine
+npx dialai machine.json
+
+# Run with human interaction enabled
+npx dialai machine.json --human
+
+# Run with verbose output
+npx dialai machine.json --verbose
+
+# Run as MCP server
+npx dialai --mcp
+```
+
+## Modular Skills
+
+Each skill below is available as a standalone file that agents can download:
+
+| Skill | File | Description |
+|-------|------|-------------|
+| Run Machine | [SKILL.md](./skills/run-machine/SKILL.md) | Execute state machines from CLI |
+| Create Machine | [SKILL.md](./skills/create-machine/SKILL.md) | Define state machine JSON |
+| Add Specialists | [SKILL.md](./skills/add-specialists/SKILL.md) | Configure AI and human participants |
+| Decision Cycles | [SKILL.md](./skills/decision-cycles/SKILL.md) | Understand Propose, Vote, Arbitrate, Execute |
+| Programmatic Usage | [SKILL.md](./skills/programmatic-usage/SKILL.md) | TypeScript/JavaScript integration |
+| MCP Server | [SKILL.md](./skills/mcp-server/SKILL.md) | Run as MCP server for AI assistants |
+| Troubleshooting | [SKILL.md](./skills/troubleshooting/SKILL.md) | Debug common issues |
+
+## Core Concepts
+
+### The Decision Cycle
+
+```
+Propose -> Vote -> Arbitrate -> Execute -> (repeat until goal state)
+```
+
+1. **Propose**: Proposers submit transition proposals
+2. **Vote**: Voters compare proposals pairwise
+3. **Arbitrate**: Arbiter evaluates consensus
+4. **Execute**: Winning transition is applied
+
+### Specialist Types
+
+| Strategy | Description |
+|----------|-------------|
+| `llm` | AI specialist using a language model |
+| `human` | Human specialist with CLI prompts |
+| `deterministic` | Always takes the same action |
+
+### Human Primacy
+
+Human votes override AI votes. A single human vote for proposal A beats any number of AI votes for proposal B.
+
+## Machine Definition Template
+
+```json
+{
+  "machine": {
+    "id": "machine-id",
+    "description": "What this machine does",
+    "defaultState": "goal-state",
+    "states": {
+      "initial": {
+        "type": "initial",
+        "transitions": {
+          "action": { "target": "next", "prompt": "Decision prompt?" }
+        }
+      },
+      "goal-state": { "type": "default" }
+    }
+  },
+  "specialists": {
+    "proposers": [
+      { "id": "ai", "strategy": "llm", "config": { "model": "claude-sonnet-4-20250514" } }
+    ],
+    "voters": [
+      { "id": "human", "strategy": "human" }
+    ]
+  }
+}
+```
+
+## API Functions
+
+| Function | Purpose |
+|----------|---------|
+| `createSession` | Start a new decision process |
+| `getSession` | Check session state |
+| `registerProposer` | Add a proposer |
+| `registerVoter` | Add a voter |
+| `submitProposal` | Submit a transition proposal |
+| `submitVote` | Cast a vote |
+| `evaluateConsensus` | Check for agreement |
+| `executeTransition` | Apply the winning proposal |
+
+## Common Patterns
+
+### Human Override
+```json
+{
+  "proposers": [{ "id": "ai", "strategy": "llm", "config": {...} }],
+  "voters": [{ "id": "human", "strategy": "human" }]
+}
+```
+
+### AI Consensus
+```json
+{
+  "proposers": [{ "id": "ai", "strategy": "llm", "config": {...} }],
+  "voters": [
+    { "id": "ai-1", "strategy": "llm", "config": {...} },
+    { "id": "ai-2", "strategy": "llm", "config": {...} },
+    { "id": "ai-3", "strategy": "llm", "config": {...} }
+  ],
+  "arbiter": { "strategy": "supermajority", "threshold": 0.66 }
+}
+```
+
+## Quick Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| Invalid machine | `cat machine.json \| jq .` |
+| Stuck in state | Run with `--verbose` |
+| No human prompts | Add `--human` flag |
+| API key error | `export ANTHROPIC_API_KEY=sk-...` |
+
+## Further Reading
+
+- [Modular Skills](./skills/index.md) - Individual downloadable skills
+- [State Machines](./state-machines.md) - Deep dive into definitions
+- [Registering Specialists](./registering-specialists.md) - All specialist types
+- [Implementing Strategies](./implementing-strategies.md) - Custom strategies
+- [API Reference](/docs/api/createSession) - Complete documentation
+
+---
+
 ## Implementing Strategies
 
 
@@ -2318,6 +2465,1069 @@ submitVote(
 | `contextWebhookUrl` | `string` | Mode 4 | -- | URL to POST context request to; expects context response |
 | `modelId` | `string` | Modes 3, 4 | -- | LLM model identifier (e.g., `"openai/gpt-4o-mini"`) |
 | `webhookTokenName` | `string` | Modes 2, 4 | -- | Env var name holding the webhook auth token |
+
+---
+
+## Add Specialists
+
+
+Configure AI and human participants in a decision process.
+
+## Specialist Types
+
+| Strategy | Description |
+|----------|-------------|
+| `llm` | AI specialist using a language model |
+| `human` | Human specialist with CLI prompts |
+| `deterministic` | Always takes the same action |
+
+## AI Proposer
+
+```json
+{
+  "id": "ai-proposer",
+  "strategy": "llm",
+  "config": {
+    "model": "claude-sonnet-4-20250514",
+    "systemPrompt": "You are a code review specialist. Propose transitions based on code quality."
+  }
+}
+```
+
+### Config Options
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `model` | Yes | Model identifier (e.g., `claude-sonnet-4-20250514`) |
+| `systemPrompt` | No | Custom instructions for the specialist |
+| `temperature` | No | Sampling temperature (default: 0.7) |
+
+## AI Voter
+
+```json
+{
+  "id": "ai-voter",
+  "strategy": "llm",
+  "config": {
+    "model": "claude-sonnet-4-20250514",
+    "systemPrompt": "Vote for the proposal that best serves the project goals."
+  }
+}
+```
+
+## Human Specialist
+
+```json
+{
+  "id": "human-reviewer",
+  "strategy": "human"
+}
+```
+
+Requires `--human` flag when running:
+```bash
+npx dialai machine.json --human
+```
+
+## Deterministic Specialist
+
+Always proposes or votes for a specific action:
+
+```json
+{
+  "id": "always-approve",
+  "strategy": "deterministic",
+  "config": {
+    "action": "approve"
+  }
+}
+```
+
+Useful for testing or default behaviors.
+
+## Patterns
+
+### Human Override
+
+AI proposes, human decides:
+
+```json
+{
+  "specialists": {
+    "proposers": [
+      { "id": "ai", "strategy": "llm", "config": {"model": "claude-sonnet-4-20250514"} }
+    ],
+    "voters": [
+      { "id": "human", "strategy": "human" }
+    ]
+  }
+}
+```
+
+### AI Consensus
+
+Multiple AI voters must agree:
+
+```json
+{
+  "specialists": {
+    "proposers": [
+      { "id": "ai-proposer", "strategy": "llm", "config": {"model": "claude-sonnet-4-20250514"} }
+    ],
+    "voters": [
+      { "id": "ai-voter-1", "strategy": "llm", "config": {"model": "claude-sonnet-4-20250514"} },
+      { "id": "ai-voter-2", "strategy": "llm", "config": {"model": "claude-sonnet-4-20250514"} },
+      { "id": "ai-voter-3", "strategy": "llm", "config": {"model": "claude-sonnet-4-20250514"} }
+    ]
+  },
+  "arbiter": {
+    "strategy": "supermajority",
+    "threshold": 0.66
+  }
+}
+```
+
+### Mixed Panel
+
+AI and human voters together:
+
+```json
+{
+  "specialists": {
+    "proposers": [
+      { "id": "ai-proposer", "strategy": "llm", "config": {"model": "claude-sonnet-4-20250514"} }
+    ],
+    "voters": [
+      { "id": "ai-voter", "strategy": "llm", "config": {"model": "claude-sonnet-4-20250514"} },
+      { "id": "human-voter", "strategy": "human" }
+    ]
+  }
+}
+```
+
+Human votes override AI votes due to human primacy.
+
+---
+
+## Create a Machine Definition
+
+
+Define a state machine for a decision process.
+
+## Structure
+
+```json
+{
+  "machine": {
+    "id": "unique-machine-id",
+    "description": "What this machine does",
+    "defaultState": "goal-state",
+    "states": { ... }
+  },
+  "specialists": {
+    "proposers": [...],
+    "voters": [...]
+  }
+}
+```
+
+## Required Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `machine.id` | string | Unique identifier for the machine |
+| `machine.defaultState` | string | The goal state that ends the session |
+| `machine.states` | object | State definitions with transitions |
+
+## State Types
+
+| Type | Meaning |
+|------|---------|
+| `initial` | Starting state of the session |
+| `intermediate` | Normal state with outgoing transitions |
+| `default` | Goal state; session completes when reached |
+
+## Transition Definition
+
+```json
+{
+  "action-name": {
+    "target": "next-state",
+    "prompt": "Question that guides the decision"
+  }
+}
+```
+
+## Complete Example
+
+```json
+{
+  "machine": {
+    "id": "document-approval",
+    "description": "Route documents through review and approval",
+    "defaultState": "approved",
+    "states": {
+      "draft": {
+        "type": "initial",
+        "transitions": {
+          "submit": {
+            "target": "review",
+            "prompt": "Submit this document for review?"
+          }
+        }
+      },
+      "review": {
+        "type": "intermediate",
+        "transitions": {
+          "approve": {
+            "target": "approved",
+            "prompt": "Document meets quality standards?"
+          },
+          "reject": {
+            "target": "draft",
+            "prompt": "Document needs revision?"
+          }
+        }
+      },
+      "approved": {
+        "type": "default"
+      }
+    }
+  },
+  "specialists": {
+    "proposers": [
+      {
+        "id": "ai-reviewer",
+        "strategy": "llm",
+        "config": {
+          "model": "claude-sonnet-4-20250514"
+        }
+      }
+    ],
+    "voters": [
+      {
+        "id": "human-approver",
+        "strategy": "human"
+      }
+    ]
+  }
+}
+```
+
+## Validation
+
+Check your machine definition:
+```bash
+cat machine.json | jq .
+```
+
+Test with verbose output:
+```bash
+npx dialai machine.json --verbose
+```
+
+---
+
+## Decision Cycles
+
+
+The repeating process that drives state transitions.
+
+## The Cycle
+
+```
+Propose -> Vote -> Arbitrate -> Execute -> (repeat)
+```
+
+Each cycle attempts to move the session from one state to another.
+
+## Phases
+
+### 1. Propose
+
+Each registered proposer submits a transition proposal.
+
+**What proposers receive**:
+- Current state
+- Available transitions
+- Transition prompts
+- Session history
+
+**What proposers return**:
+- Action name (e.g., `approve`, `reject`)
+- Target state
+- Reasoning
+
+### 2. Vote
+
+Each registered voter compares proposals pairwise and votes.
+
+**What voters receive**:
+- The two proposals being compared
+- Current state context
+- Session history
+
+**What voters return**:
+- Which proposal they prefer (A or B)
+- NEITHER if both are bad
+- Confidence level
+
+### 3. Arbitrate
+
+The arbiter evaluates consensus using the configured strategy.
+
+**Strategies**:
+| Strategy | Behavior |
+|----------|----------|
+| `majority` | >50% of votes wins |
+| `supermajority` | Configurable threshold (e.g., 66%) |
+| `unanimous` | All voters must agree |
+
+**Human primacy**: Human votes override AI votes. A single human vote for proposal A beats any number of AI votes for proposal B.
+
+### 4. Execute
+
+If consensus is reached, the winning transition is applied.
+
+**What happens**:
+- Session state updates to the target state
+- TransitionRecord added to session.history
+- Next cycle begins (or session completes if goal reached)
+
+## Watching the Cycle
+
+```bash
+npx dialai machine.json --verbose
+```
+
+Verbose output shows:
+```
+[PROPOSE] ai-proposer: approve -> approved
+[PROPOSE] ai-proposer-2: reject -> draft
+[VOTE] ai-voter: A (approve) - confidence: 0.8
+[VOTE] human-voter: A (approve) - confidence: 1.0
+[ARBITRATE] consensus reached: approve
+[EXECUTE] draft -> approved
+```
+
+## No Consensus
+
+If voting doesn't produce a winner:
+- The cycle repeats
+- New proposals are solicited
+- Different proposals may emerge
+
+Configure max cycles to prevent infinite loops:
+```json
+{
+  "arbiter": {
+    "strategy": "majority",
+    "maxCycles": 5
+  }
+}
+```
+
+## Session Completion
+
+The session ends when:
+- Current state equals `defaultState` (success)
+- Max cycles exceeded (failure)
+- No valid transitions available (stuck)
+
+---
+
+## Agent Skills
+
+# Agent Skills for DIAL
+
+This directory contains modular skills that AI agents can download and use to interact with DIAL. Each skill is a self-contained instruction set following the [Agent Skills](https://agentskills.io) open standard.
+
+## Available Skills
+
+| Skill | Description |
+|-------|-------------|
+| [run-machine](./run-machine/SKILL.md) | Execute a DIAL state machine from the CLI |
+| [create-machine](./create-machine/SKILL.md) | Create a state machine definition JSON |
+| [add-specialists](./add-specialists/SKILL.md) | Configure AI and human specialists |
+| [decision-cycles](./decision-cycles/SKILL.md) | Understand Propose, Vote, Arbitrate, Execute |
+| [programmatic-usage](./programmatic-usage/SKILL.md) | Use DIAL in TypeScript/JavaScript code |
+| [mcp-server](./mcp-server/SKILL.md) | Run DIAL as an MCP server |
+| [troubleshooting](./troubleshooting/SKILL.md) | Debug common issues |
+
+## For AI Agents
+
+Each skill directory contains a `SKILL.md` file with:
+
+- **Frontmatter**: Name, description, and invocation hints
+- **Instructions**: Step-by-step guidance for the task
+- **Examples**: Concrete code and command examples
+- **Patterns**: Common usage patterns and best practices
+
+### Importing Skills
+
+**Option 1: Fetch from docs site**
+
+Point your AI agent at the skills index or individual skills:
+
+```bash
+# Fetch the skills index to discover available skills
+curl https://dialai.dev/docs/guides/skills/
+
+# Fetch a specific skill
+curl https://dialai.dev/docs/guides/skills/run-machine/SKILL.md
+```
+
+**Option 2: Install as Claude Code skills**
+
+Copy skills to your personal or project skills directory:
+
+```bash
+# Personal skills (available in all projects)
+mkdir -p ~/.claude/skills/dial-run-machine
+curl -o ~/.claude/skills/dial-run-machine/SKILL.md \
+  https://dialai.dev/docs/guides/skills/run-machine/SKILL.md
+
+# Project skills (available in this project only)
+mkdir -p .claude/skills/dial-run-machine
+curl -o .claude/skills/dial-run-machine/SKILL.md \
+  https://dialai.dev/docs/guides/skills/run-machine/SKILL.md
+```
+
+**Option 3: Clone the repository**
+
+```bash
+git clone https://github.com/your-org/dialai.git
+# Skills are in website/docs/guides/skills/
+```
+
+**Option 4: Use in agent system prompt**
+
+Include the skill content directly in your agent's context:
+
+```
+You have access to the following DIAL skills:
+
+[Paste SKILL.md content here]
+```
+
+### Telling Your Agent About Skills
+
+When configuring an AI agent to use DIAL, include this in your system prompt or context:
+
+```
+DIAL skills are available at: https://dialai.dev/docs/guides/skills/
+
+To learn how to perform a DIAL task, fetch the relevant SKILL.md file:
+- Run machines: /skills/run-machine/SKILL.md
+- Create machines: /skills/create-machine/SKILL.md
+- Add specialists: /skills/add-specialists/SKILL.md
+- Use programmatically: /skills/programmatic-usage/SKILL.md
+- Run MCP server: /skills/mcp-server/SKILL.md
+- Debug issues: /skills/troubleshooting/SKILL.md
+```
+
+### Skill Format
+
+Skills use YAML frontmatter:
+
+```yaml
+---
+name: dial-run-machine
+description: Run a DIAL state machine from the CLI
+argument-hint: [machine.json] [--verbose] [--human]
+---
+```
+
+| Field | Purpose |
+|-------|---------|
+| `name` | Unique identifier for the skill |
+| `description` | When to use this skill |
+| `argument-hint` | Expected arguments |
+| `user-invocable` | Whether users can invoke directly (default: true) |
+
+## Quick Start
+
+1. **Run a machine**: Use [run-machine](./run-machine/SKILL.md)
+2. **Create your own**: Use [create-machine](./create-machine/SKILL.md)
+3. **Add participants**: Use [add-specialists](./add-specialists/SKILL.md)
+4. **Integrate in code**: Use [programmatic-usage](./programmatic-usage/SKILL.md)
+
+## Skill Compatibility
+
+These skills are designed for:
+
+- **Claude Code** - Load as project or personal skills
+- **Gemini CLI** - Compatible with Agent Skills standard
+- **GitHub Copilot** - Works with Copilot's skill system
+- **Other AI agents** - Any agent that can parse markdown instructions
+
+---
+
+## MCP Server Mode
+
+
+Expose DIAL as tools via the Model Context Protocol (MCP).
+
+## Start the Server
+
+```bash
+npx dialai --mcp
+```
+
+## Configure Claude Desktop
+
+Add to `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "dialai": {
+      "command": "npx",
+      "args": ["dialai", "--mcp"]
+    }
+  }
+}
+```
+
+### Config File Location
+
+| Platform | Path |
+|----------|------|
+| macOS | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+| Windows | `%APPDATA%\Claude\claude_desktop_config.json` |
+| Linux | `~/.config/Claude/claude_desktop_config.json` |
+
+## Available Tools
+
+Once connected, Claude has access to these tools:
+
+| Tool | Description |
+|------|-------------|
+| `dialai_create_session` | Start a new decision process from a machine definition |
+| `dialai_get_session` | Get current state and history of a session |
+| `dialai_get_sessions` | List all active sessions |
+| `dialai_submit_proposal` | Submit a transition proposal |
+| `dialai_submit_vote` | Cast a vote between proposals |
+| `dialai_evaluate_consensus` | Check if consensus has been reached |
+| `dialai_execute_transition` | Apply the winning proposal |
+
+## Example Conversation
+
+**User**: Create a code review session for my PR.
+
+**Claude** (using tools):
+```
+1. dialai_create_session({ machine: "code-review", context: { pr: 123 } })
+2. dialai_submit_proposal({ sessionId: "...", action: "approve", reasoning: "Tests pass, code is clean" })
+3. dialai_evaluate_consensus({ sessionId: "..." })
+4. dialai_execute_transition({ sessionId: "...", action: "approve" })
+```
+
+## Tool Schemas
+
+### dialai_create_session
+
+```json
+{
+  "machine": "machine-id or inline definition",
+  "context": { "optional": "metadata" }
+}
+```
+
+### dialai_submit_proposal
+
+```json
+{
+  "sessionId": "session-uuid",
+  "specialistId": "proposer-id",
+  "action": "transition-name",
+  "target": "target-state",
+  "reasoning": "Why this transition"
+}
+```
+
+### dialai_submit_vote
+
+```json
+{
+  "sessionId": "session-uuid",
+  "specialistId": "voter-id",
+  "proposalA": "proposal-id-1",
+  "proposalB": "proposal-id-2",
+  "choice": "A" | "B" | "NEITHER",
+  "reasoning": "Why this choice"
+}
+```
+
+## Server Options
+
+```bash
+# Default port (stdio)
+npx dialai --mcp
+
+# Custom transport
+npx dialai --mcp --transport sse --port 3000
+```
+
+## Debugging
+
+Check server logs:
+```bash
+npx dialai --mcp --verbose
+```
+
+Test with MCP Inspector:
+```bash
+npx @modelcontextprotocol/inspector npx dialai --mcp
+```
+
+---
+
+## Programmatic Usage
+
+
+Integrate DIAL into your TypeScript or JavaScript code.
+
+## Installation
+
+```bash
+npm install dialai
+```
+
+## Quick Start
+
+```typescript
+import { createSession, runToCompletion } from 'dialai';
+import machineDefinition from './machine.json';
+
+const session = await createSession(machineDefinition);
+const result = await runToCompletion(session.id);
+
+console.log('Final state:', result.currentState);
+```
+
+## Core Functions
+
+| Function | Purpose |
+|----------|---------|
+| `createSession` | Start a new decision process |
+| `getSession` | Check session state |
+| `getSessions` | List all active sessions |
+| `registerProposer` | Add a proposer to a session |
+| `registerVoter` | Add a voter to a session |
+| `submitProposal` | Submit a transition proposal |
+| `solicitProposal` | Ask a specialist to propose |
+| `submitVote` | Cast a vote |
+| `solicitVote` | Ask a specialist to vote |
+| `evaluateConsensus` | Check for agreement |
+| `executeTransition` | Apply the winning proposal |
+
+## Full Example
+
+```typescript
+import {
+  createSession,
+  registerProposer,
+  registerVoter,
+  solicitProposals,
+  solicitVotes,
+  evaluateConsensus,
+  executeTransition,
+  getSession
+} from 'dialai';
+
+async function runMachine(machineDefinition: MachineDefinition) {
+  // 1. Create a session
+  const session = await createSession(machineDefinition);
+  console.log('Session created:', session.id);
+
+  // 2. Register specialists
+  await registerProposer(session.id, 'ai-proposer', {
+    strategy: 'llm',
+    config: { model: 'claude-sonnet-4-20250514' }
+  });
+
+  await registerVoter(session.id, 'human-voter', {
+    strategy: 'human'
+  });
+
+  // 3. Run decision cycles until goal
+  let current = await getSession(session.id);
+
+  while (current.status === 'active') {
+    // Solicit proposals from all proposers
+    const proposals = await solicitProposals(session.id);
+    console.log('Proposals:', proposals);
+
+    // Collect votes from all voters
+    const votes = await solicitVotes(session.id, proposals);
+    console.log('Votes:', votes);
+
+    // Check consensus
+    const result = await evaluateConsensus(session.id);
+
+    if (result.consensus) {
+      await executeTransition(session.id, result.winner);
+      console.log('Transitioned to:', result.winner.target);
+    }
+
+    current = await getSession(session.id);
+  }
+
+  return current;
+}
+```
+
+## Inspecting Sessions
+
+```typescript
+import { getSession } from 'dialai';
+
+const session = await getSession(sessionId);
+
+// Session structure
+{
+  id: string;
+  machineId: string;
+  currentState: string;
+  status: 'active' | 'completed' | 'failed';
+  history: TransitionRecord[];
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+## Accessing History
+
+```typescript
+const session = await getSession(sessionId);
+
+for (const record of session.history) {
+  console.log(`${record.fromState} -> ${record.toState}`);
+  console.log(`  Action: ${record.action}`);
+  console.log(`  Reasoning: ${record.reasoning}`);
+  console.log(`  Timestamp: ${record.timestamp}`);
+}
+```
+
+## Custom Strategies
+
+```typescript
+import { registerProposer } from 'dialai';
+
+// Custom strategy function
+const customStrategy = async (context) => {
+  const { currentState, availableTransitions, history } = context;
+
+  // Your logic here
+  const action = decideAction(availableTransitions);
+
+  return {
+    action: action.name,
+    target: action.target,
+    reasoning: 'Custom reasoning...'
+  };
+};
+
+await registerProposer(sessionId, 'custom-proposer', {
+  strategy: 'custom',
+  config: { handler: customStrategy }
+});
+```
+
+## Error Handling
+
+```typescript
+import { createSession, DIALError } from 'dialai';
+
+try {
+  const session = await createSession(machineDefinition);
+} catch (error) {
+  if (error instanceof DIALError) {
+    console.error('DIAL error:', error.code, error.message);
+  } else {
+    throw error;
+  }
+}
+```
+
+## TypeScript Types
+
+```typescript
+import type {
+  MachineDefinition,
+  Session,
+  Proposal,
+  Vote,
+  TransitionRecord,
+  ConsensusResult
+} from 'dialai';
+```
+
+---
+
+## Run a DIAL State Machine
+
+
+Execute a state machine definition and run it to completion.
+
+## Command
+
+```bash
+npx dialai <path-to-machine.json> [options]
+```
+
+## Options
+
+| Flag | Description |
+|------|-------------|
+| `--verbose` | Show each step of the decision cycle |
+| `--human` | Enable human input prompts |
+
+## Examples
+
+**Basic execution**:
+```bash
+npx dialai examples/code-review.json
+```
+
+**With verbose output**:
+```bash
+npx dialai examples/code-review.json --verbose
+```
+
+**With human interaction**:
+```bash
+npx dialai examples/approval-workflow.json --human
+```
+
+## Expected Output
+
+```
+Machine:       code-review
+Initial state: draft
+Goal state:    approved
+Final state:   approved
+Session ID:    a1b2c3d4-...
+```
+
+## What Happens
+
+1. DIAL creates a session from the machine definition
+2. Registers all specialists defined in the machine
+3. Runs decision cycles (Propose, Vote, Arbitrate, Execute)
+4. Terminates when the goal state is reached
+
+## Verbose Output Shows
+
+- Each proposal submitted by proposers
+- Each vote cast by voters
+- Consensus evaluation results
+- Transition execution details
+
+## Common Issues
+
+| Problem | Solution |
+|---------|----------|
+| `Machine definition invalid` | Validate JSON with `cat machine.json \| jq .` |
+| `ANTHROPIC_API_KEY not set` | Export your API key: `export ANTHROPIC_API_KEY=sk-...` |
+| Machine exits immediately | Check for deterministic specialists auto-approving |
+
+---
+
+## Troubleshooting
+
+
+Diagnose and fix common DIAL issues.
+
+## Quick Diagnostics
+
+```bash
+# Validate machine JSON
+cat machine.json | jq .
+
+# Run with verbose output
+npx dialai machine.json --verbose
+
+# Check environment
+echo $ANTHROPIC_API_KEY
+```
+
+## Common Errors
+
+### Machine Definition Invalid
+
+**Error**: `Machine definition invalid: missing required field`
+
+**Causes**:
+- Malformed JSON syntax
+- Missing required fields (`id`, `defaultState`, `states`)
+- State references non-existent target
+
+**Fix**:
+```bash
+# Check JSON syntax
+cat machine.json | jq .
+
+# Verify structure
+cat machine.json | jq '.machine.states | keys'
+```
+
+### No Proposers Registered
+
+**Error**: `No proposers registered for session`
+
+**Cause**: Machine definition has empty `specialists.proposers` array.
+
+**Fix**: Add at least one proposer:
+```json
+{
+  "specialists": {
+    "proposers": [
+      { "id": "default", "strategy": "llm", "config": { "model": "claude-sonnet-4-20250514" } }
+    ]
+  }
+}
+```
+
+### Transition Not Available
+
+**Error**: `Transition 'approve' not available from state 'draft'`
+
+**Cause**: Proposed action doesn't exist on current state.
+
+**Fix**: Check available transitions:
+```bash
+cat machine.json | jq '.machine.states.draft.transitions | keys'
+```
+
+### Consensus Not Reached
+
+**Symptom**: Cycle repeats without progress.
+
+**Causes**:
+- Voters disagree and no majority forms
+- Threshold too high for voter count
+- All voters returning NEITHER
+
+**Fix**:
+- Lower threshold: `"threshold": 0.5`
+- Add more voters
+- Check voter prompts for clarity
+
+### API Key Errors
+
+**Error**: `ANTHROPIC_API_KEY not set` or `Invalid API key`
+
+**Fix**:
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+```
+
+Or in `.env`:
+```
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+### Session Completes Immediately
+
+**Symptom**: Machine runs but exits in one cycle.
+
+**Causes**:
+- Deterministic specialist auto-approves
+- Initial state has transition directly to goal
+
+**Fix**:
+- Remove deterministic specialists for real runs
+- Add intermediate states
+
+### Human Prompts Not Appearing
+
+**Symptom**: Human specialist configured but no prompts shown.
+
+**Cause**: Missing `--human` flag.
+
+**Fix**:
+```bash
+npx dialai machine.json --human
+```
+
+## Debugging Strategies
+
+### Verbose Mode
+
+```bash
+npx dialai machine.json --verbose
+```
+
+Shows:
+- Each proposal submitted
+- Each vote cast
+- Consensus evaluation
+- Transition execution
+
+### Inspect Session History
+
+```typescript
+import { getSession } from 'dialai';
+
+const session = await getSession(sessionId);
+console.log(JSON.stringify(session.history, null, 2));
+```
+
+### Test with Deterministic Specialists
+
+Replace LLM specialists with deterministic ones for predictable behavior:
+
+```json
+{
+  "specialists": {
+    "proposers": [
+      { "id": "test", "strategy": "deterministic", "config": { "action": "approve" } }
+    ],
+    "voters": [
+      { "id": "test-voter", "strategy": "deterministic", "config": { "choice": "A" } }
+    ]
+  }
+}
+```
+
+### Check State Machine Graph
+
+Visualize your machine:
+```bash
+cat machine.json | jq '.machine.states | to_entries | .[] | "\(.key) -> \(.value.transitions // {} | keys)"'
+```
+
+## Performance Issues
+
+### Slow Execution
+
+**Causes**:
+- Large number of voters (pairwise voting is O(n^2))
+- Slow API responses
+
+**Fixes**:
+- Reduce voter count
+- Use faster models for non-critical votes
+- Add timeout configuration
+
+### High API Costs
+
+**Causes**:
+- Using expensive models for all specialists
+- Too many decision cycles
+
+**Fixes**:
+- Use cheaper models for routine decisions
+- Add `maxCycles` limit
+- Tune consensus threshold
+
+## Getting Help
+
+1. Check the [API Reference](/docs/api/createSession)
+2. Review [example machines](/docs/examples/intro)
+3. Open an issue on GitHub
 
 ---
 

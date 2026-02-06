@@ -27,7 +27,16 @@ This file contains links to documentation sections following the llmstxt.org sta
 - [Examples](https://eloquentanalytics.github.io/dialai/docs/examples/intro): This section contains example implementations demonstrating DialAI usage.
 - [Installation](https://eloquentanalytics.github.io/dialai/docs/getting-started/installation): Get DIAL up and running in your project.
 - [Quick Start](https://eloquentanalytics.github.io/dialai/docs/getting-started/quick-start): Build your first DIAL state machine with specialists.
+- [DIAL Skills Reference](https://eloquentanalytics.github.io/dialai/docs/guides/SKILLS): Complete skill reference for AI agents using DIAL
 - [Implementing Strategies](https://eloquentanalytics.github.io/dialai/docs/guides/implementing-strategies): Strategies are async functions that define how specialists make decisions. Each specialist is registered with a `strategyFn` that gets called durin...
 - [Registering Specialists](https://eloquentanalytics.github.io/dialai/docs/guides/registering-specialists): Specialists are registered using one of two functions: `registerProposer` or `registerVoter`. Each function accepts configuration for how the speci...
+- [Add Specialists](https://eloquentanalytics.github.io/dialai/docs/guides/skills/add-specialists/SKILL): Add AI or human specialists to a DIAL machine. Use when configuring proposers and voters.
+- [Create a Machine Definition](https://eloquentanalytics.github.io/dialai/docs/guides/skills/create-machine/SKILL): Create a DIAL state machine definition. Use when defining a new decision process as JSON.
+- [Decision Cycles](https://eloquentanalytics.github.io/dialai/docs/guides/skills/decision-cycles/SKILL): Understand DIAL decision cycles. Use when learning how Propose, Vote, Arbitrate, Execute works.
+- [Agent Skills](https://eloquentanalytics.github.io/dialai/docs/guides/SKILLS): Modular skills for AI agents using DIAL
+- [MCP Server Mode](https://eloquentanalytics.github.io/dialai/docs/guides/skills/mcp-server/SKILL): Run DIAL as an MCP server for AI assistants. Use when integrating with Claude Desktop or other MCP clients.
+- [Programmatic Usage](https://eloquentanalytics.github.io/dialai/docs/guides/skills/programmatic-usage/SKILL): Use DIAL programmatically in TypeScript/JavaScript. Use when integrating DIAL into your own code.
+- [Run a DIAL State Machine](https://eloquentanalytics.github.io/dialai/docs/guides/skills/run-machine/SKILL): Run a DIAL state machine from the CLI. Use when executing a machine definition JSON file.
+- [Troubleshooting](https://eloquentanalytics.github.io/dialai/docs/guides/skills/troubleshooting/SKILL): Debug common DIAL issues. Use when something goes wrong during execution.
 - [State Machines](https://eloquentanalytics.github.io/dialai/docs/guides/state-machines): State machines define the structure of your sessions. Each session type has its own machine definition.
 - [Introduction to DIAL](https://eloquentanalytics.github.io/dialai/docs/intro): **DIAL** (Dynamic Integration between AI and Labor) is a coordination framework for AI and human specialists making decisions together within state...
