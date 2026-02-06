@@ -1,2 +1,2 @@
 # Quick checks before commit (faster feedback)
-npm run typecheck && npm run lint -- --run
+npm run typecheck && npm run lint

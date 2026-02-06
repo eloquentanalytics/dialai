@@ -1,7 +1,7 @@
 ---
 name: dial-run-machine
 description: Run a DIAL state machine from the CLI. Use when executing a machine definition JSON file.
-argument-hint: [machine.json] [--verbose] [--human]
+argument-hint: "<machine.json> [--verbose] [--human]"
 ---
 
 # Run a DIAL State Machine
