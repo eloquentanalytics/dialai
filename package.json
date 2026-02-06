@@ -27,7 +27,10 @@
     "lint:fix": "eslint . --ext .ts --fix",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,md,json}\"",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "ci": "npm run typecheck && npm run lint && npm test && npm run build",
+    "pre-push": "npm run ci",
+    "prepare": "husky"
   },
   "keywords": [
     "ai",
@@ -54,6 +57,7 @@
     "@vitest/coverage-v8": "^1.0.0",
     "eslint": "^8.54.0",
     "eslint-config-prettier": "^9.0.0",
+    "husky": "^9.1.7",
     "prettier": "^3.1.0",
     "typescript": "^5.3.2",
     "vitest": "^1.0.0"
