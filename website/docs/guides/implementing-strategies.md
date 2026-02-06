@@ -146,13 +146,13 @@ registerVoter({
 
 ## Direct Submission
 
-You can also bypass strategies and submit proposals or votes directly:
+You can also bypass strategies and submit proposals or votes directly by providing all parameters:
 
 ```typescript
 import { submitProposal, submitVote } from "dialai";
 
-// Submit a proposal without a registered strategy
-const proposal = submitProposal(
+// Submit a proposal directly (providing transitionName and toState bypasses strategy)
+const proposal = await submitProposal(
   sessionId,
   "manual-proposer",
   "approve",
@@ -160,13 +160,32 @@ const proposal = submitProposal(
   "Manually approved after review"
 );
 
-// Submit a vote directly
-const vote = submitVote(
+// Submit a vote directly (providing voteFor bypasses strategy)
+const vote = await submitVote(
   sessionId,
   "manual-voter",
   proposalA.proposalId,
   proposalB.proposalId,
   "A",
   "Prefer proposal A"
+);
+```
+
+## Strategy Invocation
+
+To invoke a specialist's registered strategy, simply omit the proposal/vote data:
+
+```typescript
+import { submitProposal, submitVote } from "dialai";
+
+// Invoke proposer's strategy (omit transitionName and toState)
+const proposal = await submitProposal(sessionId, "ai-proposer-1");
+
+// Invoke voter's strategy (omit voteFor)
+const vote = await submitVote(
+  sessionId,
+  "ai-voter-1",
+  proposalA.proposalId,
+  proposalB.proposalId
 );
 ```

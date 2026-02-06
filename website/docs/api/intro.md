@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # API Reference
 
-The DialAI API provides 11 functions for creating sessions, registering specialists, and managing the decision cycle. All functions are async and return Promises.
+The DialAI API provides 9 functions for creating sessions, registering specialists, and managing the decision cycle. All functions are async and return Promises.
 
 ## Session Functions
 
@@ -19,9 +19,11 @@ The DialAI API provides 11 functions for creating sessions, registering speciali
 
 ## Proposal Functions
 
-### `submitProposal(sessionId, specialistId, transitionName, toState, reasoning?): Promise<Proposal>`
+### `submitProposal(sessionId, specialistId, transitionName?, toState?, reasoning?): Promise<Proposal>`
 
-Creates and stores a proposal with a generated UUID.
+Creates and stores a proposal with a generated UUID. If `transitionName` and `toState` are omitted, invokes the specialist's registered strategy to generate the proposal.
+
+**Direct Submission** (provide proposal data):
 
 ```typescript
 import { submitProposal } from "dialai";
@@ -35,21 +37,22 @@ const proposal = await submitProposal(
 );
 ```
 
-### `solicitProposal(sessionId, specialistId): Promise<Proposal>`
-
-Calls the specialist's strategy function with the session's current state and transitions, then submits the resulting proposal.
+**Strategy Invocation** (omit proposal data):
 
 ```typescript
-import { solicitProposal } from "dialai";
+import { submitProposal } from "dialai";
 
-const proposal = await solicitProposal(session.sessionId, "ai-proposer-1");
+// Calls specialist's registered strategy, then submits result
+const proposal = await submitProposal(session.sessionId, "ai-proposer-1");
 ```
 
 ## Vote Functions
 
-### `submitVote(sessionId, specialistId, proposalIdA, proposalIdB, voteFor, reasoning?): Promise<Vote>`
+### `submitVote(sessionId, specialistId, proposalIdA, proposalIdB, voteFor?, reasoning?): Promise<Vote>`
 
-Creates and stores a vote with a generated UUID.
+Creates and stores a vote with a generated UUID. If `voteFor` is omitted, invokes the specialist's registered strategy to determine the vote.
+
+**Direct Submission** (provide vote choice):
 
 ```typescript
 import { submitVote } from "dialai";
@@ -64,14 +67,13 @@ const vote = await submitVote(
 );
 ```
 
-### `solicitVote(sessionId, specialistId, proposalIdA, proposalIdB): Promise<Vote>`
-
-Calls the specialist's strategy function with the two proposals, then submits the resulting vote.
+**Strategy Invocation** (omit vote choice):
 
 ```typescript
-import { solicitVote } from "dialai";
+import { submitVote } from "dialai";
 
-const vote = await solicitVote(
+// Calls specialist's registered strategy, then submits result
+const vote = await submitVote(
   session.sessionId,
   "ai-voter-1",
   proposalA.proposalId,

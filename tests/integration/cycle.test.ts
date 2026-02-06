@@ -5,7 +5,7 @@ import * as store from "../../src/dialai/store.js";
 import {
   registerVoter,
   submitProposal,
-  solicitVote,
+  submitVote,
   evaluateConsensus,
   executeTransition,
   createSession,
@@ -54,7 +54,8 @@ describe("integration: full cycle with 2 proposers + 1 voter", () => {
       strategyFn: async () => ({ voteFor: "A" as const, reasoning: "prefer A" }),
     });
 
-    await solicitVote(
+    // Omit voteFor to invoke voter's strategy
+    await submitVote(
       session.sessionId,
       "voter-1",
       pComplete.proposalId,

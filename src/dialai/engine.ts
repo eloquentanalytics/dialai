@@ -3,8 +3,8 @@ import { specialists } from "./store.js";
 import {
   createSession,
   registerProposer,
-  solicitProposal,
-  solicitVote,
+  submitProposal,
+  submitVote,
   evaluateConsensus,
   executeTransition,
 } from "./api.js";
@@ -37,10 +37,10 @@ export async function runSession(machine: MachineDefinition): Promise<Session> {
         s.machineName === machine.machineName && s.role === "proposer"
     );
 
-    // Solicit proposals
+    // Solicit proposals (omit proposal data to invoke strategy)
     const proposals = await Promise.all(
       proposers.map((p) =>
-        solicitProposal(session.sessionId, p.specialistId)
+        submitProposal(session.sessionId, p.specialistId)
       )
     );
 
@@ -53,7 +53,8 @@ export async function runSession(machine: MachineDefinition): Promise<Session> {
       for (let i = 0; i < proposals.length; i++) {
         for (let j = i + 1; j < proposals.length; j++) {
           for (const voter of voters) {
-            await solicitVote(
+            // Omit voteFor to invoke voter's strategy
+            await submitVote(
               session.sessionId,
               voter.specialistId,
               proposals[i].proposalId,

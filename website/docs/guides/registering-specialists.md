@@ -225,7 +225,7 @@ registerVoter({ specialistId: "HUMAN_APPROVER", ... });
 
 ## Human Specialists
 
-Human specialists can be registered with strategy functions that encode human preferences, or proposals/votes can be submitted directly via `submitProposal` and `submitVote`:
+Human specialists can be registered with strategy functions that encode human preferences, or proposals/votes can be submitted directly by providing all parameters to `submitProposal` and `submitVote`:
 
 ```typescript
 // Register a human specialist with a strategy
@@ -238,15 +238,15 @@ registerVoter({
   }),
 });
 
-// Or submit votes directly without a strategy
+// Or submit votes directly by providing all parameters
 import { submitVote } from "dialai";
 
-submitVote(
+await submitVote(
   session.sessionId,
   "human-reviewer",
   proposalA.proposalId,
   proposalB.proposalId,
-  "B",
+  "B",  // Providing voteFor bypasses strategy invocation
   "I prefer the more conservative approach"
 );
 ```

@@ -5,8 +5,7 @@ import {
   registerVoter,
   registerProposer,
   submitProposal,
-  solicitProposal,
-  solicitVote,
+  submitVote,
   evaluateConsensus,
   executeTransition,
 } from "../../src/dialai/index.js";
@@ -76,7 +75,8 @@ describe("openrouter example: mock LLM full deliberation cycle", () => {
     for (let i = 0; i < proposals.length; i++) {
       for (let j = i + 1; j < proposals.length; j++) {
         for (let v = 0; v < mockVotes.length; v++) {
-          await solicitVote(
+          // Omit voteFor to invoke voter's strategy
+          await submitVote(
             session.sessionId,
             `openrouter-voter-${v + 1}`,
             proposals[i].proposalId,
@@ -144,7 +144,8 @@ describe("openrouter example: mock LLM full deliberation cycle", () => {
         }),
       });
 
-      await solicitVote(
+      // Omit voteFor to invoke voter's strategy
+      await submitVote(
         session.sessionId,
         `voter-${v + 1}`,
         pApprove.proposalId,
@@ -176,13 +177,14 @@ describe("openrouter example: mock LLM full deliberation cycle", () => {
       }),
     });
 
-    await solicitVote(session.sessionId, "voter-1", pApprove.proposalId, pReject.proposalId);
+    // Omit voteFor to invoke voter's strategy
+    await submitVote(session.sessionId, "voter-1", pApprove.proposalId, pReject.proposalId);
 
     const consensus = await evaluateConsensus(session.sessionId);
     expect(consensus.consensusReached).toBe(false);
   });
 
-  it("registered proposer strategies via solicitProposal", async () => {
+  it("registered proposer strategies via submitProposal", async () => {
     const session = await createSession(machine);
 
     // Register mock LLM proposers as actual specialists
@@ -206,9 +208,9 @@ describe("openrouter example: mock LLM full deliberation cycle", () => {
       }),
     });
 
-    // Solicit proposals through the strategy interface
-    const p1 = await solicitProposal(session.sessionId, "mock-llm-proposer-1");
-    const p2 = await solicitProposal(session.sessionId, "mock-llm-proposer-2");
+    // Invoke proposer strategies (omit transitionName/toState to use strategy)
+    const p1 = await submitProposal(session.sessionId, "mock-llm-proposer-1");
+    const p2 = await submitProposal(session.sessionId, "mock-llm-proposer-2");
 
     expect(p1.transitionName).toBe("approve");
     expect(p1.reasoning).toBe("Mock LLM: task is ready");
@@ -225,7 +227,8 @@ describe("openrouter example: mock LLM full deliberation cycle", () => {
       }),
     });
 
-    await solicitVote(session.sessionId, "mock-llm-voter", p1.proposalId, p2.proposalId);
+    // Omit voteFor to invoke voter's strategy
+    await submitVote(session.sessionId, "mock-llm-voter", p1.proposalId, p2.proposalId);
 
     const consensus = await evaluateConsensus(session.sessionId);
     expect(consensus.consensusReached).toBe(true);

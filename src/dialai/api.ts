@@ -113,29 +113,10 @@ export async function registerVoter(opts: {
   return voter;
 }
 
-export async function submitProposal(
-  sessionId: string,
-  specialistId: string,
-  transitionName: string,
-  toState: string,
-  reasoning?: string
-): Promise<Proposal> {
-  const proposal: Proposal = {
-    proposalId: crypto.randomUUID(),
-    sessionId,
-    specialistId,
-    transitionName,
-    toState,
-    reasoning: reasoning ?? "",
-  };
-  proposals.set(proposal.proposalId, proposal);
-  return proposal;
-}
-
-export async function solicitProposal(
+async function invokeProposerStrategy(
   sessionId: string,
   specialistId: string
-): Promise<Proposal> {
+): Promise<{ transitionName: string; toState: string; reasoning: string }> {
   const session = await getSession(sessionId);
   const specialist = specialists.get(specialistId);
   if (!specialist) {
@@ -158,14 +139,7 @@ export async function solicitProposal(
   };
 
   if (specialist.strategyFn) {
-    const result = await specialist.strategyFn(ctx);
-    return await submitProposal(
-      sessionId,
-      specialistId,
-      result.transitionName,
-      result.toState,
-      result.reasoning
-    );
+    return await specialist.strategyFn(ctx);
   }
 
   if (specialist.strategyWebhookUrl) {
@@ -181,33 +155,39 @@ export async function solicitProposal(
   );
 }
 
-export async function submitVote(
+export async function submitProposal(
   sessionId: string,
   specialistId: string,
-  proposalIdA: string,
-  proposalIdB: string,
-  voteFor: "A" | "B" | "BOTH" | "NEITHER",
+  transitionName?: string,
+  toState?: string,
   reasoning?: string
-): Promise<Vote> {
-  const vote: Vote = {
-    voteId: crypto.randomUUID(),
+): Promise<Proposal> {
+  // If proposal data missing, invoke strategy
+  if (transitionName === undefined || toState === undefined) {
+    const result = await invokeProposerStrategy(sessionId, specialistId);
+    transitionName = result.transitionName;
+    toState = result.toState;
+    reasoning = result.reasoning;
+  }
+
+  const proposal: Proposal = {
+    proposalId: crypto.randomUUID(),
     sessionId,
     specialistId,
-    proposalIdA,
-    proposalIdB,
-    voteFor,
+    transitionName,
+    toState,
     reasoning: reasoning ?? "",
   };
-  votes.set(vote.voteId, vote);
-  return vote;
+  proposals.set(proposal.proposalId, proposal);
+  return proposal;
 }
 
-export async function solicitVote(
+async function invokeVoterStrategy(
   sessionId: string,
   specialistId: string,
   proposalIdA: string,
   proposalIdB: string
-): Promise<Vote> {
+): Promise<{ voteFor: "A" | "B" | "BOTH" | "NEITHER"; reasoning: string }> {
   const session = await getSession(sessionId);
   const specialist = specialists.get(specialistId);
   if (!specialist) {
@@ -236,15 +216,7 @@ export async function solicitVote(
   };
 
   if (specialist.strategyFn) {
-    const result = await specialist.strategyFn(ctx);
-    return await submitVote(
-      sessionId,
-      specialistId,
-      proposalIdA,
-      proposalIdB,
-      result.voteFor,
-      result.reasoning
-    );
+    return await specialist.strategyFn(ctx);
   }
 
   if (specialist.strategyWebhookUrl) {
@@ -258,6 +230,34 @@ export async function solicitVote(
   throw new Error(
     `Voter ${specialistId} has no execution mode configured (strategyFn, strategyWebhookUrl, or modelId)`
   );
+}
+
+export async function submitVote(
+  sessionId: string,
+  specialistId: string,
+  proposalIdA: string,
+  proposalIdB: string,
+  voteFor?: "A" | "B" | "BOTH" | "NEITHER",
+  reasoning?: string
+): Promise<Vote> {
+  // If vote choice missing, invoke strategy
+  if (voteFor === undefined) {
+    const result = await invokeVoterStrategy(sessionId, specialistId, proposalIdA, proposalIdB);
+    voteFor = result.voteFor;
+    reasoning = result.reasoning;
+  }
+
+  const vote: Vote = {
+    voteId: crypto.randomUUID(),
+    sessionId,
+    specialistId,
+    proposalIdA,
+    proposalIdB,
+    voteFor,
+    reasoning: reasoning ?? "",
+  };
+  votes.set(vote.voteId, vote);
+  return vote;
 }
 
 export async function evaluateConsensus(sessionId: string): Promise<ConsensusResult> {

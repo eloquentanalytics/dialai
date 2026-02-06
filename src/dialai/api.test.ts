@@ -7,9 +7,7 @@ import {
   registerProposer,
   registerVoter,
   submitProposal,
-  solicitProposal,
   submitVote,
-  solicitVote,
   evaluateConsensus,
   executeTransition,
 } from "./api.js";
@@ -131,10 +129,10 @@ describe("submitProposal", () => {
   });
 });
 
-describe("solicitProposal", () => {
+describe("submitProposal (strategy invocation)", () => {
   beforeEach(() => store.clear());
 
-  it("calls proposer strategy and stores resulting proposal", async () => {
+  it("calls proposer strategy when proposal data omitted", async () => {
     const session = await createSession(simpleMachine);
     await registerProposer({
       specialistId: "sp-1",
@@ -148,7 +146,8 @@ describe("solicitProposal", () => {
         };
       },
     });
-    const proposal = await solicitProposal(session.sessionId, "sp-1");
+    // Omit transitionName and toState to invoke strategy
+    const proposal = await submitProposal(session.sessionId, "sp-1");
     expect(proposal.transitionName).toBe("complete");
     expect(proposal.toState).toBe("done");
     expect(store.proposals.get(proposal.proposalId)).toBe(proposal);
@@ -168,10 +167,10 @@ describe("submitVote", () => {
   });
 });
 
-describe("solicitVote", () => {
+describe("submitVote (strategy invocation)", () => {
   beforeEach(() => store.clear());
 
-  it("calls voter strategy and stores resulting vote", async () => {
+  it("calls voter strategy when voteFor omitted", async () => {
     const session = await createSession(simpleMachine);
     const pA = await submitProposal(session.sessionId, "sp-1", "complete", "done");
     const pB = await submitProposal(session.sessionId, "sp-2", "complete", "done");
@@ -182,7 +181,8 @@ describe("solicitVote", () => {
       strategyFn: async () => ({ voteFor: "A" as const, reasoning: "A is better" }),
     });
 
-    const vote = await solicitVote(
+    // Omit voteFor to invoke strategy
+    const vote = await submitVote(
       session.sessionId,
       "voter-1",
       pA.proposalId,

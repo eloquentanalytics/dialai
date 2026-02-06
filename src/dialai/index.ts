@@ -20,9 +20,7 @@ export {
   registerProposer,
   registerVoter,
   submitProposal,
-  solicitProposal,
   submitVote,
-  solicitVote,
   evaluateConsensus,
   executeTransition,
 } from "./api.js";

@@ -6,7 +6,7 @@ import {
   createSession,
   registerVoter,
   submitProposal,
-  solicitVote,
+  submitVote,
   evaluateConsensus,
   executeTransition,
   runSession,
@@ -86,7 +86,8 @@ describe("simple-machine: mock AI proposers + voters", () => {
       }),
     });
 
-    await solicitVote(
+    // Omit voteFor to invoke voter's strategy
+    await submitVote(
       session.sessionId,
       "ai-voter-1",
       p1.proposalId,
@@ -140,7 +141,8 @@ describe("simple-machine: mock AI proposers + voters", () => {
     });
 
     for (const voterId of ["ai-voter-1", "ai-voter-2", "ai-voter-3"]) {
-      await solicitVote(
+      // Omit voteFor to invoke voter's strategy
+      await submitVote(
         session.sessionId,
         voterId,
         pApprove.proposalId,
@@ -194,7 +196,8 @@ describe("simple-machine: mock AI proposers + voters", () => {
     });
 
     for (const voterId of ["ai-voter-1", "ai-voter-2", "human-reviewer"]) {
-      await solicitVote(
+      // Omit voteFor to invoke voter's strategy
+      await submitVote(
         session.sessionId,
         voterId,
         pApprove.proposalId,
