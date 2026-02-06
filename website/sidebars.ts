@@ -29,6 +29,7 @@ const sidebars: SidebarsConfig = {
         "guides/state-machines",
         "guides/registering-specialists",
         "guides/implementing-strategies",
+        "guides/proxy-mode",
       ],
     },
     {
