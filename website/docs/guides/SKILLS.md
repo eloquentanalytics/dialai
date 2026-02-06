@@ -146,4 +146,4 @@ Human votes override AI votes. A single human vote for proposal A beats any numb
 - [State Machines](./state-machines.md) - Deep dive into definitions
 - [Registering Specialists](./registering-specialists.md) - All specialist types
 - [Implementing Strategies](./implementing-strategies.md) - Custom strategies
-- [API Reference](/docs/api/create-session) - Complete documentation
+- [API Reference](/docs/api/createSession) - Complete documentation

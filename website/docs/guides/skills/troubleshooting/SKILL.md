@@ -192,6 +192,6 @@ cat machine.json | jq '.machine.states | to_entries | .[] | "\(.key) -> \(.value
 
 ## Getting Help
 
-1. Check the [API Reference](/docs/api/create-session)
-2. Review [example machines](/docs/examples)
+1. Check the [API Reference](/docs/api/createSession)
+2. Review [example machines](/docs/examples/intro)
 3. Open an issue on GitHub
