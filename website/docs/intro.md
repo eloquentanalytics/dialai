@@ -47,6 +47,15 @@ DIAL is not about AI replacing humans. It targets decisions that humans already 
 3. **Run decision cycles**: Propose, Vote, Arbitrate, Execute
 4. **Reach the goal state**: The session completes when it reaches its `defaultState`
 
+## Using DIAL
+
+DIAL can be used in two ways:
+
+- **CLI Mode**: Run state machines from the command line with `dialai <machine.json>`
+- **MCP Server Mode**: Expose DIAL functionality as tools via the Model Context Protocol (MCP) for integration with AI assistants like Claude Desktop
+
+Both modes share the same core engine and API. See [Installation](./getting-started/installation.md) for setup instructions.
+
 ```mermaid
 graph LR
     A[Propose] --> B[Vote]

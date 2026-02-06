@@ -1,8 +1,6 @@
 #!/usr/bin/env node
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { runSession } from "./engine.js";
-import type { MachineDefinition } from "./types.js";
+import { loadMachineFromFile } from "./utils.js";
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
@@ -11,13 +9,10 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const filePath = resolve(args[0]);
-  let machine: MachineDefinition;
+  let machine;
   try {
-    const raw = readFileSync(filePath, "utf-8");
-    machine = JSON.parse(raw) as MachineDefinition;
+    machine = loadMachineFromFile(args[0]);
   } catch (err) {
-    console.error(`Failed to read machine file: ${filePath}`);
     console.error(err instanceof Error ? err.message : err);
     process.exit(1);
   }

@@ -12,7 +12,8 @@
     }
   },
   "bin": {
-    "dialai": "./dist/dialai/cli.js"
+    "dialai": "./dist/dialai/cli.js",
+    "dialai-mcp": "./dist/dialai/mcp.js"
   },
   "files": [
     "dist"
@@ -42,6 +43,9 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/eloquentanalytics/dialai.git"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",

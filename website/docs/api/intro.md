@@ -8,72 +8,14 @@ The DialAI API provides 11 functions for creating sessions, registering speciali
 
 ## Session Functions
 
-### `createSession(machine: MachineDefinition): Promise<Session>`
-
-Creates a new session instance. Generates a UUID, sets `currentState` to `machine.initialState`, and stores the session.
-
-```typescript
-import { createSession } from "dialai";
-
-const session = await createSession(machine);
-```
-
-### `getSession(sessionId: string): Promise<Session>`
-
-Retrieves a session by ID. Throws if not found.
-
-```typescript
-import { getSession } from "dialai";
-
-const session = await getSession("a1b2c3d4-...");
-```
-
-### `getSessions(): Promise<Session[]>`
-
-Returns all stored sessions.
-
-```typescript
-import { getSessions } from "dialai";
-
-const all = await getSessions();
-```
+- [`createSession`](./createSession.md) - Creates a new session instance
+- [`getSession`](./getSession.md) - Retrieves a session by ID
+- [`getSessions`](./getSessions.md) - Returns all stored sessions
 
 ## Specialist Functions
 
-### `registerProposer(opts): Promise<Proposer>`
-
-Registers a proposer for a session type. Supports four execution modes: `strategyFn`, `strategyWebhookUrl`, `contextFn + modelId`, or `contextWebhookUrl + modelId`. See the [registering specialists guide](../guides/registering-specialists.md) for details on all modes.
-
-```typescript
-import { registerProposer } from "dialai";
-
-const proposer = await registerProposer({
-  specialistId: "ai-proposer-1",
-  machineName: "my-task",
-  strategyFn: async (ctx) => ({
-    transitionName: Object.keys(ctx.transitions)[0],
-    toState: Object.values(ctx.transitions)[0],
-    reasoning: "First available",
-  }),
-});
-```
-
-### `registerVoter(opts): Promise<Voter>`
-
-Registers a voter for a session type. Supports the same four execution modes as `registerProposer`. See the [registering specialists guide](../guides/registering-specialists.md) for details.
-
-```typescript
-import { registerVoter } from "dialai";
-
-const voter = await registerVoter({
-  specialistId: "ai-voter-1",
-  machineName: "my-task",
-  strategyFn: async (ctx) => ({
-    voteFor: "A",
-    reasoning: "Proposal A is better aligned",
-  }),
-});
-```
+- [`registerProposer`](./registerProposer.md) - Registers a proposer specialist
+- [`registerVoter`](./registerVoter.md) - Registers a voter specialist
 
 ## Proposal Functions
 
@@ -139,50 +81,12 @@ const vote = await solicitVote(
 
 ## Consensus & Execution
 
-### `evaluateConsensus(sessionId: string): Promise<ConsensusResult>`
-
-Evaluates consensus for all proposals and votes in the session:
-- **0 proposals**: `{ consensusReached: false }`
-- **1 proposal**: `{ consensusReached: true, winningProposalId: ... }`
-- **2+ proposals**: Human votes override; otherwise ahead-by-k (k=1)
-
-```typescript
-import { evaluateConsensus } from "dialai";
-
-const result = await evaluateConsensus(session.sessionId);
-if (result.consensusReached) {
-  console.log("Winner:", result.winningProposalId);
-}
-```
-
-### `executeTransition(sessionId, transitionName, toState, reasoning?): Promise<Session>`
-
-Validates the transition from the current state, records it in `session.history` with the given `reasoning`, updates `currentState`, and clears all proposals and votes for the session.
-
-```typescript
-import { executeTransition } from "dialai";
-
-const updated = await executeTransition(
-  session.sessionId,
-  "approve",
-  "approved",
-  consensus.reasoning
-);
-console.log(updated.currentState); // "approved"
-console.log(updated.history);      // [{ fromState: "review", toState: "approved", reasoning: "...", ... }]
-```
+- [`evaluateConsensus`](./evaluateConsensus.md) - Evaluates consensus for proposals
+- [`executeTransition`](./executeTransition.md) - Executes a state transition
 
 ## Engine
 
-### `runSession(machine: MachineDefinition): Promise<Session>`
-
-Runs a machine to completion. Creates a session, registers a built-in deterministic proposer, and loops through the decision cycle until `currentState === defaultState`.
-
-```typescript
-import { runSession } from "dialai";
-
-const session = await runSession(machine);
-```
+- [`runSession`](./runSession.md) - Runs a machine to completion
 
 ## Types
 

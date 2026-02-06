@@ -104,15 +104,53 @@ DIAL installed successfully!
 Session reached: end
 ```
 
-## CLI Usage
+## Usage Modes
 
-DIAL includes a CLI that runs a machine JSON file to completion:
+DIAL supports two usage modes:
+
+### CLI Mode
+
+Run state machines from the command line:
 
 ```bash
 npx dialai machine.json
 ```
 
+Or after installation:
+
+```bash
+dialai machine.json
+```
+
 See [Quick Start](./quick-start.md) for a full example.
+
+### MCP Server Mode
+
+DIAL can also run as an MCP (Model Context Protocol) server, exposing its functionality as tools for AI assistants:
+
+```bash
+dialai-mcp
+```
+
+The MCP server provides tools for:
+- Running sessions from machine definitions
+- Creating and managing sessions
+- Registering specialists
+- Executing transitions and evaluating consensus
+
+To use with Claude Desktop, add to your MCP configuration:
+
+```json
+{
+  "mcpServers": {
+    "dialai": {
+      "command": "dialai-mcp"
+    }
+  }
+}
+```
+
+Both modes use the same core engine and provide identical functionality.
 
 ## What's Next?
 
