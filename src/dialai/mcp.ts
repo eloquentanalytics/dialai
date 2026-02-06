@@ -221,6 +221,18 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest) => {
   const { name, arguments: args } = request.params;
 
+  if (!args) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: "Error: Missing arguments",
+        },
+      ],
+      isError: true,
+    };
+  }
+
   try {
     switch (name) {
       case "run_session": {
