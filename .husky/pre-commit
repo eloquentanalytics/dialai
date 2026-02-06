@@ -1,1 +1,2 @@
-npm test -- --run
+# Quick checks before commit (faster feedback)
+npm run typecheck && npm run lint -- --run

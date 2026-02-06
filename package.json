@@ -28,7 +28,7 @@
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,md,json}\"",
     "typecheck": "tsc --noEmit",
-    "ci": "npm run typecheck && npm run lint && vitest --run && npm run build",
+    "ci": "npm run typecheck && npm run lint && CI=true npm test && npm run build",
     "pre-push": "npm run ci",
     "prepare": "husky"
   },
