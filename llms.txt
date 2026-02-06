@@ -7,7 +7,15 @@ This file contains links to documentation sections following the llmstxt.org sta
 ## Table of Contents
 
 - [Agent Experience Development](https://eloquentanalytics.github.io/dialai/docs/agent-experience): DIAL is designed for LLM-driven agents as first-class participants. Every design decision optimizes for agents that need to understand, integrate w...
+- [`createSession(machine: MachineDefinition): Promise<Session>`](https://eloquentanalytics.github.io/dialai/docs/api/createSession): Creates a new session instance. Generates a UUID, sets `currentState` to `machine.initialState`, and stores the session.
+- [`evaluateConsensus(sessionId: string): Promise<ConsensusResult>`](https://eloquentanalytics.github.io/dialai/docs/api/evaluateConsensus): Evaluates consensus for all proposals and votes in the session:
+- [`executeTransition(sessionId, transitionName, toState, reasoning?): Promise<Session>`](https://eloquentanalytics.github.io/dialai/docs/api/executeTransition): Validates the transition from the current state, records it in `session.history` with the given `reasoning`, updates `currentState`, and clears all...
+- [`getSession(sessionId: string): Promise<Session>`](https://eloquentanalytics.github.io/dialai/docs/api/getSession): Retrieves a session by ID. Throws if not found.
+- [`getSessions(): Promise<Session[]>`](https://eloquentanalytics.github.io/dialai/docs/api/getSessions): Returns all stored sessions.
 - [API Reference](https://eloquentanalytics.github.io/dialai/docs/api/intro): The DialAI API provides 11 functions for creating sessions, registering specialists, and managing the decision cycle. All functions are async and r...
+- [`registerProposer(opts): Promise<Proposer>`](https://eloquentanalytics.github.io/dialai/docs/api/registerProposer): Registers a proposer for a session type. Supports four execution modes: `strategyFn`, `strategyWebhookUrl`, `contextFn + modelId`, or `contextWebho...
+- [`registerVoter(opts): Promise<Voter>`](https://eloquentanalytics.github.io/dialai/docs/api/registerVoter): Registers a voter for a session type. Supports the same four execution modes as `registerProposer`. See the [registering specialists guide](../guid...
+- [`runSession(machine: MachineDefinition): Promise<Session>`](https://eloquentanalytics.github.io/dialai/docs/api/runSession): Runs a machine to completion. Creates a session, registers a built-in deterministic proposer, and loops through the decision cycle until `currentSt...
 - [Arbitration](https://eloquentanalytics.github.io/dialai/docs/concepts/arbitration): **Arbitration** is the process of evaluating consensus and determining when a proposal has sufficient support to execute.
 - [Decision Cycle](https://eloquentanalytics.github.io/dialai/docs/concepts/decision-cycle): When a session is not in its default state, the system progresses through a repeating cycle until it reaches the goal.
 - [Human Primacy](https://eloquentanalytics.github.io/dialai/docs/concepts/human-primacy): **The human is always right**, not because humans are infallible, but because humans have context that AI cannot access.
@@ -15,6 +23,7 @@ This file contains links to documentation sections following the llmstxt.org sta
 - [Related Work](https://eloquentanalytics.github.io/dialai/docs/concepts/related-work): DIAL solves a different problem than most AI frameworks. Understanding the distinction helps clarify what DIAL is, and what it isn't.
 - [Sessions](https://eloquentanalytics.github.io/dialai/docs/concepts/sessions): A **session** is an instance of a state machine that specialists navigate through decision cycles.
 - [Specialists](https://eloquentanalytics.github.io/dialai/docs/concepts/specialists): Specialists are the "pluggable" actors that participate in sessions. They can be AI models or humans.
+- [Ecosystem](https://eloquentanalytics.github.io/dialai/docs/ecosystem): DIAL measures whether AI specialists can reliably replicate human decisions, then progressively delegates when alignment is demonstrated. Several o...
 - [Examples](https://eloquentanalytics.github.io/dialai/docs/examples/intro): This section contains example implementations demonstrating DialAI usage.
 - [Installation](https://eloquentanalytics.github.io/dialai/docs/getting-started/installation): Get DIAL up and running in your project.
 - [Quick Start](https://eloquentanalytics.github.io/dialai/docs/getting-started/quick-start): Build your first DIAL state machine with specialists.

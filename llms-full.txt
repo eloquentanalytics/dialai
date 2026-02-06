@@ -143,14 +143,8 @@ The version in `VERSION.md` is the version. There is no `package.json` version t
 
 ---
 
-## API Reference
+## `createSession(machine: MachineDefinition): Promise<Session>`
 
-
-The DialAI API provides 11 functions for creating sessions, registering specialists, and managing the decision cycle. All functions are async and return Promises.
-
-## Session Functions
-
-### `createSession(machine: MachineDefinition): Promise<Session>`
 
 Creates a new session instance. Generates a UUID, sets `currentState` to `machine.initialState`, and stores the session.
 
@@ -160,7 +154,49 @@ import { createSession } from "dialai";
 const session = await createSession(machine);
 ```
 
-### `getSession(sessionId: string): Promise<Session>`
+---
+
+## `evaluateConsensus(sessionId: string): Promise<ConsensusResult>`
+
+
+Evaluates consensus for all proposals and votes in the session:
+- **0 proposals**: `{ consensusReached: false }`
+- **1 proposal**: `{ consensusReached: true, winningProposalId: ... }`
+- **2+ proposals**: Human votes override; otherwise ahead-by-k (k=1)
+
+```typescript
+import { evaluateConsensus } from "dialai";
+
+const result = await evaluateConsensus(session.sessionId);
+if (result.consensusReached) {
+  console.log("Winner:", result.winningProposalId);
+}
+```
+
+---
+
+## `executeTransition(sessionId, transitionName, toState, reasoning?): Promise<Session>`
+
+
+Validates the transition from the current state, records it in `session.history` with the given `reasoning`, updates `currentState`, and clears all proposals and votes for the session.
+
+```typescript
+import { executeTransition } from "dialai";
+
+const updated = await executeTransition(
+  session.sessionId,
+  "approve",
+  "approved",
+  consensus.reasoning
+);
+console.log(updated.currentState); // "approved"
+console.log(updated.history);      // [{ fromState: "review", toState: "approved", reasoning: "...", ... }]
+```
+
+---
+
+## `getSession(sessionId: string): Promise<Session>`
+
 
 Retrieves a session by ID. Throws if not found.
 
@@ -170,7 +206,10 @@ import { getSession } from "dialai";
 const session = await getSession("a1b2c3d4-...");
 ```
 
-### `getSessions(): Promise<Session[]>`
+---
+
+## `getSessions(): Promise<Session[]>`
+
 
 Returns all stored sessions.
 
@@ -180,42 +219,23 @@ import { getSessions } from "dialai";
 const all = await getSessions();
 ```
 
+---
+
+## API Reference
+
+
+The DialAI API provides 11 functions for creating sessions, registering specialists, and managing the decision cycle. All functions are async and return Promises.
+
+## Session Functions
+
+- [`createSession`](./createSession.md) - Creates a new session instance
+- [`getSession`](./getSession.md) - Retrieves a session by ID
+- [`getSessions`](./getSessions.md) - Returns all stored sessions
+
 ## Specialist Functions
 
-### `registerProposer(opts): Promise<Proposer>`
-
-Registers a proposer for a session type. Supports four execution modes: `strategyFn`, `strategyWebhookUrl`, `contextFn + modelId`, or `contextWebhookUrl + modelId`. See the [registering specialists guide](../guides/registering-specialists.md) for details on all modes.
-
-```typescript
-import { registerProposer } from "dialai";
-
-const proposer = await registerProposer({
-  specialistId: "ai-proposer-1",
-  machineName: "my-task",
-  strategyFn: async (ctx) => ({
-    transitionName: Object.keys(ctx.transitions)[0],
-    toState: Object.values(ctx.transitions)[0],
-    reasoning: "First available",
-  }),
-});
-```
-
-### `registerVoter(opts): Promise<Voter>`
-
-Registers a voter for a session type. Supports the same four execution modes as `registerProposer`. See the [registering specialists guide](../guides/registering-specialists.md) for details.
-
-```typescript
-import { registerVoter } from "dialai";
-
-const voter = await registerVoter({
-  specialistId: "ai-voter-1",
-  machineName: "my-task",
-  strategyFn: async (ctx) => ({
-    voteFor: "A",
-    reasoning: "Proposal A is better aligned",
-  }),
-});
-```
+- [`registerProposer`](./registerProposer.md) - Registers a proposer specialist
+- [`registerVoter`](./registerVoter.md) - Registers a voter specialist
 
 ## Proposal Functions
 
@@ -281,50 +301,12 @@ const vote = await solicitVote(
 
 ## Consensus & Execution
 
-### `evaluateConsensus(sessionId: string): Promise<ConsensusResult>`
-
-Evaluates consensus for all proposals and votes in the session:
-- **0 proposals**: `{ consensusReached: false }`
-- **1 proposal**: `{ consensusReached: true, winningProposalId: ... }`
-- **2+ proposals**: Human votes override; otherwise ahead-by-k (k=1)
-
-```typescript
-import { evaluateConsensus } from "dialai";
-
-const result = await evaluateConsensus(session.sessionId);
-if (result.consensusReached) {
-  console.log("Winner:", result.winningProposalId);
-}
-```
-
-### `executeTransition(sessionId, transitionName, toState, reasoning?): Promise<Session>`
-
-Validates the transition from the current state, records it in `session.history` with the given `reasoning`, updates `currentState`, and clears all proposals and votes for the session.
-
-```typescript
-import { executeTransition } from "dialai";
-
-const updated = await executeTransition(
-  session.sessionId,
-  "approve",
-  "approved",
-  consensus.reasoning
-);
-console.log(updated.currentState); // "approved"
-console.log(updated.history);      // [{ fromState: "review", toState: "approved", reasoning: "...", ... }]
-```
+- [`evaluateConsensus`](./evaluateConsensus.md) - Evaluates consensus for proposals
+- [`executeTransition`](./executeTransition.md) - Executes a state transition
 
 ## Engine
 
-### `runSession(machine: MachineDefinition): Promise<Session>`
-
-Runs a machine to completion. Creates a session, registers a built-in deterministic proposer, and loops through the decision cycle until `currentState === defaultState`.
-
-```typescript
-import { runSession } from "dialai";
-
-const session = await runSession(machine);
-```
+- [`runSession`](./runSession.md) - Runs a machine to completion
 
 ## Types
 
@@ -354,6 +336,60 @@ import { sessions, specialists, proposals, votes, clear } from "dialai";
 
 // clear() resets all maps - useful for test isolation
 clear();
+```
+
+---
+
+## `registerProposer(opts): Promise<Proposer>`
+
+
+Registers a proposer for a session type. Supports four execution modes: `strategyFn`, `strategyWebhookUrl`, `contextFn + modelId`, or `contextWebhookUrl + modelId`. See the [registering specialists guide](../guides/registering-specialists.md) for details on all modes.
+
+```typescript
+import { registerProposer } from "dialai";
+
+const proposer = await registerProposer({
+  specialistId: "ai-proposer-1",
+  machineName: "my-task",
+  strategyFn: async (ctx) => ({
+    transitionName: Object.keys(ctx.transitions)[0],
+    toState: Object.values(ctx.transitions)[0],
+    reasoning: "First available",
+  }),
+});
+```
+
+---
+
+## `registerVoter(opts): Promise<Voter>`
+
+
+Registers a voter for a session type. Supports the same four execution modes as `registerProposer`. See the [registering specialists guide](../guides/registering-specialists.md) for details.
+
+```typescript
+import { registerVoter } from "dialai";
+
+const voter = await registerVoter({
+  specialistId: "ai-voter-1",
+  machineName: "my-task",
+  strategyFn: async (ctx) => ({
+    voteFor: "A",
+    reasoning: "Proposal A is better aligned",
+  }),
+});
+```
+
+---
+
+## `runSession(machine: MachineDefinition): Promise<Session>`
+
+
+Runs a machine to completion. Creates a session, registers a built-in deterministic proposer, and loops through the decision cycle until `currentState === defaultState`.
+
+```typescript
+import { runSession } from "dialai";
+
+const session = await runSession(machine);
 ```
 
 ---
@@ -1211,6 +1247,100 @@ Both registration functions support the same four execution modes. See the [regi
 
 ---
 
+## Ecosystem
+
+
+DIAL measures whether AI specialists can reliably replicate human decisions, then progressively delegates when alignment is demonstrated. Several open-source projects share overlapping goals. This page lists the 10 closest.
+
+For conceptual comparisons (agent frameworks, RLHF, MoE), see [Related Work](./concepts/related-work.md).
+
+## Optimization
+
+### DSPy
+
+**[github.com/stanfordnlp/dspy](https://github.com/stanfordnlp/dspy)** · Stanford NLP · MIT
+
+A framework for *programming*, not prompting, language models. Optimizers like MIPROv2 automatically search over instructions, demonstrations, and weights to maximize a metric. The closest philosophical match to DIAL: both treat LLM behavior as tunable against measurable objectives, with DSPy optimizing at the prompt level and DIAL at the decision level.
+
+### TensorZero
+
+**[github.com/tensorzero/tensorzero](https://github.com/tensorzero/tensorzero)** · Apache 2.0
+
+Unifies an LLM gateway, observability, and optimization. Collects human feedback in production to optimize prompts and models with built-in A/B testing. Its optimization loop (inference, feedback, optimize) mirrors DIAL's cycle (propose, vote, consensus, refine).
+
+### TextGrad
+
+**[github.com/zou-group/textgrad](https://github.com/zou-group/textgrad)** · Stanford / Zou Group
+
+Backpropagates textual feedback from LLMs to improve components of compound AI systems, using PyTorch-like abstractions on natural language. Like DIAL, it iteratively improves outputs using feedback signals: TextGrad via "textual gradients," DIAL via vote results and alignment scores.
+
+## Evaluation
+
+### Inspect AI
+
+**[github.com/UKGovernmentBEIS/inspect_ai](https://github.com/UKGovernmentBEIS/inspect_ai)** · UK AI Safety Institute
+
+Structured, reproducible LLM evaluations with opinionated primitives (Dataset, Task, Solver, Scorer) and 100+ built-in evals. Its Solver/Scorer pattern parallels DIAL's Specialist/Vote pattern, and both support multi-turn agent workflows with customizable scoring.
+
+### promptfoo
+
+**[github.com/promptfoo/promptfoo](https://github.com/promptfoo/promptfoo)** · MIT
+
+Test-driven LLM evaluation with declarative YAML config, assertions from string matching to LLM-as-judge, and comparison across 50+ providers. Like DIAL, it compares multiple configurations against expected outputs with structured scoring, with a focus on CI/CD integration.
+
+### DeepEval
+
+**[github.com/confident-ai/deepeval](https://github.com/confident-ai/deepeval)** · Confident AI
+
+14+ built-in metrics including hallucination, faithfulness, and conversational metrics like knowledge retention. DIAL's consensus mechanism can use these kinds of alignment metrics to drive delegation decisions.
+
+## Multi-Agent
+
+### AutoGen
+
+**[github.com/microsoft/autogen](https://github.com/microsoft/autogen)** · Microsoft · MIT
+
+Multi-agent cooperation via automated chat, with AgentOptimizer for iteratively improving agent behavior from historical performance. The strongest multi-agent overlap with DIAL: both use multi-specialist architectures and historical performance to guide optimization toward trust-calibrated delegation.
+
+### CrewAI
+
+**[github.com/crewAIInc/crewAI](https://github.com/crewAIInc/crewAI)**
+
+Role-based multi-agent orchestration with "Crews" and "Flows." Its role-based design parallels DIAL's proposer/voter roles, and a CrewAI agent can serve as a DIAL specialist.
+
+## Agent Training
+
+### Agent Lightning
+
+**[github.com/microsoft/agent-lightning](https://github.com/microsoft/agent-lightning)** · Microsoft · MIT
+
+Makes agents trainable via reinforcement learning with hierarchical credit assignment, determining how much each LLM call contributed to the outcome. Like DIAL, it decomposes multi-step behavior into individually evaluable decisions, using RL rewards where DIAL uses human-alignment votes.
+
+### ADAS
+
+**[github.com/ShengranHu/ADAS](https://github.com/ShengranHu/ADAS)** · ICLR 2025
+
+A meta-agent iteratively programs new agents, tests them, and archives successful designs to inform future iterations. Both ADAS and DIAL use iterative optimization over agent configurations guided by empirical performance, with ADAS searching over architectures and DIAL optimizing specialist strategy, prompts, and model mix.
+
+## Summary
+
+| Tool | Focus | Overlap with DIAL |
+|------|-------|-------------------|
+| **DSPy** | Prompt/weight optimization | Iterative optimization against measurable objectives |
+| **TensorZero** | Production LLM optimization | Human feedback-driven improvement loop |
+| **TextGrad** | Textual backpropagation | Feedback-driven component optimization |
+| **Inspect AI** | Safety/capability evaluation | Structured scoring, multi-turn workflows |
+| **promptfoo** | Test-driven LLM evaluation | Comparing configurations against expected outputs |
+| **DeepEval** | LLM metrics | Customizable scoring with conversational metrics |
+| **AutoGen** | Multi-agent collaboration | Multi-agent architecture + iterative optimization |
+| **CrewAI** | Multi-agent orchestration | Role-based specialist coordination |
+| **Agent Lightning** | RL-based agent training | Per-decision credit assignment |
+| **ADAS** | Automated agent design | Meta-optimization of agent configurations |
+
+These tools are complementary. Many can serve as DIAL specialists or provide the underlying infrastructure that DIAL wraps. DIAL's unique contribution is combining **runtime human-alignment measurement** with **progressive delegation**, continuously deciding *who should decide* based on empirical evidence.
+
+---
+
 ## Examples
 
 
@@ -1489,15 +1619,53 @@ DIAL installed successfully!
 Session reached: end
 ```
 
-## CLI Usage
+## Usage Modes
 
-DIAL includes a CLI that runs a machine JSON file to completion:
+DIAL supports two usage modes:
+
+### CLI Mode
+
+Run state machines from the command line:
 
 ```bash
 npx dialai machine.json
 ```
 
+Or after installation:
+
+```bash
+dialai machine.json
+```
+
 See [Quick Start](./quick-start.md) for a full example.
+
+### MCP Server Mode
+
+DIAL can also run as an MCP (Model Context Protocol) server, exposing its functionality as tools for AI assistants:
+
+```bash
+dialai-mcp
+```
+
+The MCP server provides tools for:
+- Running sessions from machine definitions
+- Creating and managing sessions
+- Registering specialists
+- Executing transitions and evaluating consensus
+
+To use with Claude Desktop, add to your MCP configuration:
+
+```json
+{
+  "mcpServers": {
+    "dialai": {
+      "command": "dialai-mcp"
+    }
+  }
+}
+```
+
+Both modes use the same core engine and provide identical functionality.
 
 ## What's Next?
 
@@ -2461,6 +2629,15 @@ DIAL is not about AI replacing humans. It targets decisions that humans already 
 2. **Register proposers and voters**: AI and human specialists that propose transitions and vote on them
 3. **Run decision cycles**: Propose, Vote, Arbitrate, Execute
 4. **Reach the goal state**: The session completes when it reaches its `defaultState`
+
+## Using DIAL
+
+DIAL can be used in two ways:
+
+- **CLI Mode**: Run state machines from the command line with `dialai <machine.json>`
+- **MCP Server Mode**: Expose DIAL functionality as tools via the Model Context Protocol (MCP) for integration with AI assistants like Claude Desktop
+
+Both modes share the same core engine and API. See [Installation](./getting-started/installation.md) for setup instructions.
 
 ```mermaid
 graph LR
