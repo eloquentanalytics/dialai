@@ -7,7 +7,6 @@ import {
   type CallToolRequest,
 } from "@modelcontextprotocol/sdk/types.js";
 import {
-  runSession,
   createSession,
   getSession,
   getSessions,
@@ -16,6 +15,7 @@ import {
   executeTransition,
   evaluateConsensus,
 } from "./api.js";
+import { runSession } from "./engine.js";
 import { loadMachineFromFile } from "./utils.js";
 import { getToolDescription } from "./docs-loader.js";
 import type { MachineDefinition } from "./types.js";
