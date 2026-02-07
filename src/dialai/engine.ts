@@ -31,7 +31,7 @@ export async function runSession(machine: MachineDefinition): Promise<Session> {
   });
 
   while (session.currentState !== machine.defaultState) {
-    // Gather all proposers for this session type
+    // Gather all proposers for this machine
     const proposers = [...specialists.values()].filter(
       (s) =>
         s.machineName === machine.machineName && s.role === "proposer"

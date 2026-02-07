@@ -4,7 +4,7 @@ sidebar_position: 7
 
 # `registerVoter(opts): Promise<Voter>`
 
-Registers a voter for a session type. Supports the same four execution modes as `registerProposer`. See the [registering specialists guide](../guides/registering-specialists.md) for details.
+Registers a voter for a machine. Supports the same four execution modes as `registerProposer`. See the [registering specialists guide](../guides/registering-specialists.md) for details.
 
 ```typescript
 import { registerVoter } from "dialai";

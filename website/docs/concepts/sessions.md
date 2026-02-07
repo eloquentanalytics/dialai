@@ -129,9 +129,9 @@ const session = getSession("a1b2c3d4-...");
 const allSessions = getSessions();
 ```
 
-## Session Types
+## Machine Names
 
-A **session type** identifies which kind of machine is being run:
+The **machine name** identifies which kind of machine a session is running:
 
 ```typescript
 machineName: "document-review"
@@ -139,8 +139,8 @@ machineName: "code-review"
 machineName: "support-ticket"
 ```
 
-Different session types have:
-- Different machine definitions
+Different machines have:
+- Different machine definitions (states, transitions, prompts)
 - Different registered specialists
 
 ## Best Practices

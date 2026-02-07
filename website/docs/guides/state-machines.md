@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # State Machines
 
-State machines define the structure of your sessions. Each session type has its own machine definition.
+State machines define the structure of your sessions. Each machine has its own definition.
 
 ## Why State Machines?
 

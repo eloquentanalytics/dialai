@@ -4,7 +4,7 @@ sidebar_position: 6
 
 # `registerProposer(opts): Promise<Proposer>`
 
-Registers a proposer for a session type. Supports four execution modes: `strategyFn`, `strategyWebhookUrl`, `contextFn + modelId`, or `contextWebhookUrl + modelId`. See the [registering specialists guide](../guides/registering-specialists.md) for details on all modes.
+Registers a proposer for a machine. Supports four execution modes: `strategyFn`, `strategyWebhookUrl`, `contextFn + modelId`, or `contextWebhookUrl + modelId`. See the [registering specialists guide](../guides/registering-specialists.md) for details on all modes.
 
 ```typescript
 import { registerProposer } from "dialai";

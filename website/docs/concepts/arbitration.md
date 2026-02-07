@@ -8,7 +8,7 @@ sidebar_position: 5
 
 ## Overview
 
-Consensus evaluation is not a one-time event—it runs continuously as the decision cycle progresses. After each proposal submission and each vote cast, `evaluateConsensus` re-evaluates whether any proposal has crossed the threshold:
+Consensus evaluation is **asynchronous and continuous**. Proposals and votes arrive in an uncontrolled, unbound manner—there is no defined order or timing. After each proposal submission and each vote cast, `evaluateConsensus` re-evaluates whether any proposal has crossed the threshold:
 
 ```mermaid
 graph LR

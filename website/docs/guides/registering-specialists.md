@@ -256,7 +256,7 @@ await submitVote(
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `specialistId` | `string` | Yes | -- | Unique identifier. Include "human" for human specialists. |
-| `machineName` | `string` | Yes | -- | Which session type this specialist participates in |
+| `machineName` | `string` | Yes | -- | Which machine this specialist participates in |
 | `strategyFn` | `async (context) => result` | Mode 1 | -- | Local function that returns a proposal, vote, or ConsensusResult |
 | `strategyWebhookUrl` | `string` | Mode 2 | -- | URL to POST context to; expects proposal/vote response |
 | `contextFn` | `async (context) => string` | Mode 3 | -- | Local function that returns context for the LLM |

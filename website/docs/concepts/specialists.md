@@ -63,7 +63,7 @@ Each registration function (`registerProposer`, `registerVoter`) accepts:
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `specialistId` | `string` | Yes | Unique identifier. Include "human" for human specialists. |
-| `machineName` | `string` | Yes | Which session type this specialist participates in |
+| `machineName` | `string` | Yes | Which machine this specialist participates in |
 | `strategyFn` | `async (context) => result` | Mode 1 | Local function that returns a proposal or vote |
 | `strategyWebhookUrl` | `string` | Mode 2 | URL to POST context to; expects result response |
 | `contextFn` | `async (context) => string` | Mode 3 | Local function returning context for the LLM |
