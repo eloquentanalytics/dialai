@@ -17,11 +17,11 @@ The engine collects proposals from all registered proposers for the session's ty
 
 ### 2. Vote Collection
 
-If there are 2+ proposals, voters compare them pairwise using Swiss tournament pairing. Each voter's strategy function is called, and the resulting vote is submitted. See [Arbitration](./arbitration.md) for pairing and early-stopping details.
+Voters evaluate proposals and cast votes. With multiple proposals, they compare pairwise using Swiss tournament pairing. Each voter's strategy function is called, and the resulting vote is submitted. See [Arbitration](./arbitration.md) for pairing and early-stopping details.
 
-### 3. Arbitration
+### 3. Arbitration (Continuous)
 
-The built-in `evaluateConsensus` function determines the winner. See [Arbitration](./arbitration.md) for the full rules.
+After each proposal and vote, `evaluateConsensus` checks whether any proposal has sufficient support. This is not a one-time evaluation—it runs continuously. Consensus requires demonstrated support through voting; a single proposal does not automatically win. See [Arbitration](./arbitration.md) for the full rules.
 
 ### 4. Transition Execution
 
@@ -63,5 +63,5 @@ const session = await runSession(machine);
 ## Error Handling
 
 - If no transitions are available from the current state, the built-in proposer throws
-- If consensus cannot be reached (e.g., tied votes with insufficient margin), the engine throws
+- If consensus cannot be reached (e.g., tied votes with insufficient margin), human input is required—this signals that the decision needs human judgment or that specialists need additional training
 - If the winning proposal's transition is invalid, `executeTransition` throws

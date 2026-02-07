@@ -4,19 +4,23 @@ sidebar_position: 5
 
 # Arbitration
 
-**Arbitration** is the process of evaluating consensus and determining when a proposal has sufficient support to execute.
+**Arbitration** is the continuous process of evaluating consensus after every proposal and vote to determine when sufficient support exists to execute a transition.
 
 ## Overview
 
-After specialists submit proposals and cast votes, the `evaluateConsensus` function analyzes the results:
+Consensus evaluation is not a one-time event—it runs continuously as the decision cycle progresses. After each proposal submission and each vote cast, `evaluateConsensus` re-evaluates whether any proposal has crossed the threshold:
 
 ```mermaid
 graph LR
-    V[Votes] --> A[evaluateConsensus]
-    P[Proposals] --> A
+    P[New Proposal] --> A[evaluateConsensus]
+    V[New Vote] --> A
     A --> |Consensus| E[Execute]
-    A --> |No Consensus| F[Error]
+    A --> |Not Yet| W[Wait for more input]
+    W --> P
+    W --> V
 ```
+
+The key insight is that it's not a specific point in time that decides consensus—it's the mathematics of the algorithm applied to the current state of proposals and votes.
 
 ## The Built-in Arbiter: Ahead-by-K
 
@@ -26,12 +30,13 @@ DIAL ships with a built-in arbitration strategy that implements **voting with hu
 
 1. **Zero proposals**: No consensus (`consensusReached: false`)
 
-2. **Single proposal**: Auto-consensus (the lone proposal wins)
-
-3. **Two or more proposals**: Evaluate votes:
+2. **One or more proposals**: Evaluate votes:
    - If any human has voted, their choice wins immediately
    - Otherwise, tally votes per proposal
    - The leading proposal must be ahead by `k = 1` votes
+   - A single proposal with no votes has no consensus—votes are still required
+
+The number of proposals (1 vs. N) doesn't change the fundamental requirement: sufficient support must be demonstrated through voting. A lone proposal doesn't automatically win.
 
 ### Vote Tallying
 
@@ -109,11 +114,24 @@ interface ConsensusResult {
 
 ## The Engine's Behavior
 
-When using `runSession`, the engine handles arbitration automatically:
+When using `runSession`, the engine handles arbitration automatically with continuous evaluation:
 
-1. **Single proposal**: auto-wins (e.g., only the built-in proposer is registered)
-2. **2+ proposals**: the engine uses Swiss tournament pairing, matching proposals with similar accumulated support first. It round-robins through registered voters, checking for consensus after each vote. Voting stops as soon as the ahead-by-k threshold is met. The O(N²) full comparison is the worst case, not the typical case.
-3. **No consensus**: if no proposal crosses the threshold after all available pairs and voters are exhausted, the engine throws an error
+1. **After each proposal**: `evaluateConsensus` checks if any proposal has sufficient support
+2. **After each vote**: `evaluateConsensus` re-evaluates; voting stops as soon as the ahead-by-k threshold is met
+3. **Swiss tournament pairing**: For multiple proposals, the engine matches proposals with similar accumulated support first. It round-robins through registered voters. The O(N²) full comparison is the worst case, not the typical case.
+4. **No consensus**: If no proposal crosses the threshold after all available voters are exhausted, the engine signals that human input is required
+
+### When AIs Cannot Reach Consensus
+
+It is entirely possible—and expected in complex scenarios—that AI specialists will **not** reach consensus on their own. This is not a failure; it's a feature.
+
+When AI voters are split or vote NEITHER, the system naturally surfaces the decision to a human. The inability to reach consensus is an indicator that:
+
+- The decision requires human judgment
+- The specialists may need additional training or clearer instructions
+- The problem space has genuine ambiguity that humans should resolve
+
+This is how DIAL implements [Human Primacy](./human-primacy.md) in practice: humans don't need to monitor every decision, only the ones where AI specialists genuinely disagree.
 
 ## Best Practices
 
@@ -133,12 +151,14 @@ Always include clear reasoning in proposals and votes:
 { voteFor: "A", reasoning: "A" }
 ```
 
-### 3. Monitor NEITHER Votes
+### 3. Monitor NEITHER Votes and Consensus Failures
 
-High NEITHER rates indicate:
+High NEITHER rates or frequent consensus failures indicate:
+- Decisions that genuinely require human judgment
 - Poor proposal quality
 - Unclear decision prompts
-- Specialists that don't understand the task
+- Specialists that need additional training
+- The need to refine specialist instructions based on patterns of disagreement
 
 ## Related Concepts
 
