@@ -89,6 +89,17 @@ const machine: MachineDefinition = {
 | `modelId` | `string` | — | LLM for reasoning synthesis |
 | `contextFn` | `(ctx) => string` | — | Function to generate context for the LLM |
 
+### Arbiter contextFn vs Specialist contextFn
+
+Both arbiters and specialists can have a `contextFn`, but they serve different purposes:
+
+| Component | contextFn Purpose | Input | Output |
+|-----------|------------------|-------|--------|
+| **Specialist** | Provides context to the LLM for making proposals/votes | `ProposerContext` or `VoterContext` | String context passed to the LLM |
+| **Arbiter** | Generates reasoning to explain the consensus decision | `ArbitrationContext` with winning proposal | String reasoning recorded in transition history |
+
+The arbiter's `contextFn` is called *after* consensus is reached, to synthesize an explanation. The specialist's `contextFn` is called *before* the LLM generates a proposal or vote, to provide decision context.
+
 ## The Built-in Arbiter: Ahead-by-K
 
 DIAL ships with a built-in arbitration strategy that implements **ahead-by-k voting**.

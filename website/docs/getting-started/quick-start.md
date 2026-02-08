@@ -37,7 +37,7 @@ Save this as `examples/simple-machine.json`:
 ```
 
 - **`initialState`**: where the session starts (`pending`)
-- **`defaultState`**: the goal state where the machine comes to rest (`done`)
+- **`defaultState`**: the state where the machine comes to rest (`done`); the session is complete when it reaches this state
 - **`prompt`**: the question specialists answer when the session is in that state
 - **`transitions`**: the available answers and what state each leads to
 
@@ -139,16 +139,16 @@ Human votes count like any other vote during consensus evaluation. **Human prima
 Run a machine definition from the command line:
 
 ```bash
-node dist/dialai/cli.js examples/simple-machine.json
+npx dialai examples/simple-machine.json
 ```
 
 Output:
 ```
-Machine:       simple-task
-Initial state: pending
-Goal state:    done
-Final state:   done
-Session ID:    a1b2c3d4-...
+Machine:        simple-task
+Initial state:  pending
+Default state:  done
+Final state:    done
+Session ID:     a1b2c3d4-...
 ```
 
 ## What's Happening Under the Hood

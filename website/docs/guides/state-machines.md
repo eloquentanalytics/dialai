@@ -23,8 +23,10 @@ A `MachineDefinition` defines:
 
 - `machineName`: identifies the type
 - `initialState`: where sessions start
-- `defaultState`: the goal state (session is complete when it reaches this)
+- `defaultState`: the state where the session is complete
 - `states`: a record of state names to their configuration
+
+For a complete JSON Schema definition, see [schema.json](../schema.json).
 
 ## Example
 
@@ -84,7 +86,7 @@ Machines can also be defined as plain JSON files, useful with the CLI:
 Run with the CLI:
 
 ```bash
-node dist/dialai/cli.js my-machine.json
+npx dialai my-machine.json
 ```
 
 This is a minimal example. Machine JSON files can also include embedded specialist and arbiter configuration—see [Full Machine JSON Structure](#full-machine-json-structure) below.
@@ -95,7 +97,7 @@ Each state in the `states` record can have:
 
 ### `prompt` (optional)
 
-A string describing the decision to be made in this state. This prompt guides specialists in choosing which transition to propose.
+A string describing the decision to be made in this state. This prompt guides specialists in choosing which transition to propose. If omitted, a generic default prompt is used: `"Choose a transition for state '{stateName}'."` with the available transitions listed.
 
 ```typescript
 states: {

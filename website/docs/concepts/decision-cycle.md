@@ -30,7 +30,9 @@ Votes arrive asynchronously as voters evaluate proposals. With multiple proposal
 
 ### 3. Arbitration (Continuous)
 
-After each proposal and vote, `submitArbitration` checks whether any proposal has sufficient support. This is not a one-time evaluation—it runs continuously as new contributions arrive. If consensus is reached, the transition executes automatically. Consensus requires demonstrated support through voting; a single proposal does not automatically win. See [Arbitration](./arbitration.md) for the full rules.
+After each proposal and vote, `submitArbitration` checks whether any proposal has sufficient support. This is not a one-time evaluation—it runs continuously as new contributions arrive. If consensus is reached, the transition executes automatically.
+
+**Note on single proposals:** A single proposal can achieve consensus with just one supporting vote (meeting the ahead-by-k threshold). The diagram below shows this as a valid flow—votes are still required, but when only one proposal exists, a single vote demonstrating support is sufficient for consensus. See [Arbitration](./arbitration.md) for the full rules.
 
 ### 4. Transition Execution
 

@@ -11,15 +11,15 @@ Define a state machine for a decision process.
 
 ```json
 {
-  "machine": {
-    "id": "unique-machine-id",
-    "description": "What this machine does",
-    "defaultState": "goal-state",
-    "states": { ... }
-  },
-  "specialists": {
-    "proposers": [...],
-    "voters": [...]
+  "machineName": "unique-machine-id",
+  "initialState": "start-state",
+  "defaultState": "end-state",
+  "states": {
+    "start-state": {
+      "prompt": "Decision prompt?",
+      "transitions": { "action": "next-state" }
+    },
+    "end-state": {}
   }
 }
 ```
@@ -28,25 +28,20 @@ Define a state machine for a decision process.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `machine.id` | string | Unique identifier for the machine |
-| `machine.defaultState` | string | The goal state that ends the session |
-| `machine.states` | object | State definitions with transitions |
-
-## State Types
-
-| Type | Meaning |
-|------|---------|
-| `initial` | Starting state of the session |
-| `intermediate` | Normal state with outgoing transitions |
-| `default` | Goal state; session completes when reached |
+| `machineName` | string | Unique identifier for the machine |
+| `initialState` | string | The state where sessions begin |
+| `defaultState` | string | The state where sessions are complete |
+| `states` | object | State definitions with transitions |
 
 ## Transition Definition
 
+Transitions map action names to target states:
+
 ```json
 {
-  "action-name": {
-    "target": "next-state",
-    "prompt": "Question that guides the decision"
+  "transitions": {
+    "approve": "approved",
+    "reject": "draft"
   }
 }
 ```
@@ -55,57 +50,29 @@ Define a state machine for a decision process.
 
 ```json
 {
-  "machine": {
-    "id": "document-approval",
-    "description": "Route documents through review and approval",
-    "defaultState": "approved",
-    "states": {
-      "draft": {
-        "type": "initial",
-        "transitions": {
-          "submit": {
-            "target": "review",
-            "prompt": "Submit this document for review?"
-          }
-        }
-      },
-      "review": {
-        "type": "intermediate",
-        "transitions": {
-          "approve": {
-            "target": "approved",
-            "prompt": "Document meets quality standards?"
-          },
-          "reject": {
-            "target": "draft",
-            "prompt": "Document needs revision?"
-          }
-        }
-      },
-      "approved": {
-        "type": "default"
+  "machineName": "document-approval",
+  "initialState": "draft",
+  "defaultState": "approved",
+  "states": {
+    "draft": {
+      "prompt": "Submit this document for review?",
+      "transitions": {
+        "submit": "review"
       }
-    }
-  },
-  "specialists": {
-    "proposers": [
-      {
-        "id": "ai-reviewer",
-        "strategy": "llm",
-        "config": {
-          "model": "claude-sonnet-4-20250514"
-        }
+    },
+    "review": {
+      "prompt": "Document meets quality standards? Approve or reject.",
+      "transitions": {
+        "approve": "approved",
+        "reject": "draft"
       }
-    ],
-    "voters": [
-      {
-        "id": "human-approver",
-        "strategy": "human"
-      }
-    ]
+    },
+    "approved": {}
   }
 }
 ```
+
+For machines with embedded specialists, see [State Machines](../../state-machines.md#full-machine-json-structure).
 
 ## Validation
 

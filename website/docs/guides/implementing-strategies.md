@@ -37,6 +37,8 @@ strategyFn: async (ctx: ProposerContext) => {
 }
 ```
 
+**Note on `toState`:** Proposers must return `toState` in their response. The engine verifies this value against the machine definition (`machine.states[currentState].transitions[transitionName]`). If the returned `toState` doesn't match what the machine defines, the proposal is rejected.
+
 ### Example: Pick the First Transition
 
 ```typescript

@@ -44,7 +44,7 @@ DIAL coordinates **specialists** (both AI and human) to navigate **state machine
 A **session** is an instance of a state machine. The machine definition specifies:
 - A **`machineName`** identifying the type
 - An **`initialState`** where sessions begin
-- A **`defaultState`** (the goal state)
+- A **`defaultState`** (the state where the session is complete)
 - A set of **states**, each with optional `prompt` and `transitions`
 
 When a session is not in its default state, specialists work together to get it there.

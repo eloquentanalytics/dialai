@@ -46,7 +46,7 @@ Each skill below is available as a standalone file that agents can download:
 ### The Decision Cycle
 
 ```
-Propose -> Vote -> Arbitrate -> Execute -> (repeat until goal state)
+Propose -> Vote -> Arbitrate -> Execute -> (repeat until defaultState)
 ```
 
 1. **Propose**: Proposers submit transition proposals
@@ -70,30 +70,20 @@ When consensus cannot be reached, only a specialist registered with `isHuman: tr
 
 ```json
 {
-  "machine": {
-    "id": "machine-id",
-    "description": "What this machine does",
-    "defaultState": "goal-state",
-    "states": {
-      "initial": {
-        "type": "initial",
-        "transitions": {
-          "action": { "target": "next", "prompt": "Decision prompt?" }
-        }
-      },
-      "goal-state": { "type": "default" }
-    }
-  },
-  "specialists": {
-    "proposers": [
-      { "id": "ai", "strategy": "llm", "config": { "model": "claude-sonnet-4-20250514" } }
-    ],
-    "voters": [
-      { "id": "human", "strategy": "human" }
-    ]
+  "machineName": "my-task",
+  "initialState": "pending",
+  "defaultState": "done",
+  "states": {
+    "pending": {
+      "prompt": "Should we complete this task?",
+      "transitions": { "complete": "done" }
+    },
+    "done": {}
   }
 }
 ```
+
+For machines with embedded specialists, see [State Machines](./state-machines.md#full-machine-json-structure).
 
 ## API Functions
 

@@ -148,12 +148,14 @@ interface Proposal {
   roundId: string;
   specialistId: string;
   transitionName: string;
-  toState: string;           // computed from machine definition
+  toState: string;           // verified against machine definition
   reasoning: string;
   isHuman: boolean;          // was this submitted by a human specialist?
   metaJson?: Record<string, unknown>;
 }
 ```
+
+**Note on `toState`:** When a proposer's strategy returns a proposal, it must include `toState`. The engine verifies this value matches `machine.states[currentState].transitions[transitionName]`. This ensures proposals are consistent with the machine definition.
 
 ### Vote
 

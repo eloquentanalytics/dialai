@@ -28,16 +28,16 @@ The repository includes a minimal example at `examples/simple-machine.json`:
 Run it with the CLI:
 
 ```bash
-node dist/dialai/cli.js examples/simple-machine.json
+npx dialai examples/simple-machine.json
 ```
 
 Output:
 ```
-Machine:       simple-task
-Initial state: pending
-Goal state:    done
-Final state:   done
-Session ID:    a1b2c3d4-...
+Machine:        simple-task
+Initial state:  pending
+Default state:  done
+Final state:    done
+Session ID:     a1b2c3d4-...
 ```
 
 ## Programmatic Usage

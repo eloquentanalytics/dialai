@@ -104,7 +104,7 @@ interface MachineDefinition {
 |-------|-------------|
 | `machineName` | Identifies the type of session (e.g., `"document-review"`) |
 | `initialState` | The state a session starts in |
-| `defaultState` | The goal state; session is complete when it reaches this |
+| `defaultState` | The state where the session is complete |
 | `states` | A record of state names to their configuration |
 
 ## Session Fields
@@ -112,7 +112,7 @@ interface MachineDefinition {
 | Field | Type | Description |
 |-------|------|-------------|
 | `sessionId` | `string` | Unique UUID generated at creation |
-| `currentRoundId` | `string` | UUID regenerated on each state transition; used to associate proposals, votes, and arbitration with the current decision cycle |
+| `currentRoundId` | `string` | UUID regenerated on each state transition; used to associate proposals, votes, and arbitration with the current decision cycle. **Note:** API functions accept a `roundId` parameter—pass `session.currentRoundId` as this value. |
 | `currentState` | `string` | The state the session is currently in |
 | `machine` | `MachineDefinition` | The machine definition this session is running |
 | `history` | `TransitionRecord[]` | Record of all transitions that have occurred |
