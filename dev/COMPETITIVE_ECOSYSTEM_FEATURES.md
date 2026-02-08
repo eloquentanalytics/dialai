@@ -4,6 +4,62 @@ Competitive analysis of 10 additional AI agent/LLM frameworks that complement th
 
 ---
 
+## Domain Names & Social Handles
+
+Quick reference of domain names and key handles used by competitors.
+
+### Domain Names
+
+| Project | Primary Domain | Cloud/App Domain | TLD Pattern |
+|---------|----------------|------------------|-------------|
+| LangChain | langchain.com | langsmith.com | .com |
+| LlamaIndex | llamaindex.ai | llamacloud.com | .ai |
+| LangGraph | (part of langchain.com) | langgraph.dev | .dev |
+| Semantic Kernel | learn.microsoft.com/semantic-kernel | - | (Microsoft docs) |
+| Haystack | haystack.deepset.ai | deepset.ai | .ai (subdomain) |
+| OpenAI Agents SDK | platform.openai.com | - | (OpenAI subdomain) |
+| Smolagents | huggingface.co/docs/smolagents | - | (HF subdomain) |
+| Pydantic AI | ai.pydantic.dev | logfire.pydantic.dev | .dev |
+| Strands Agents | strandsagents.com | - | .com |
+| Flowise | flowiseai.com | - | .com |
+
+### Twitter/X Handles
+
+| Project | Handle |
+|---------|--------|
+| LangChain | @LangChainAI |
+| LlamaIndex | @llama_index |
+| Semantic Kernel | (via @Microsoft) |
+| Haystack | @Haystack_AI |
+| OpenAI Agents SDK | @OpenAI |
+| Smolagents | @huggingface |
+| Pydantic AI | @samuel_colvin |
+| Strands Agents | (via @awscloud) |
+| Flowise | @FlowiseAI |
+
+### Discord Communities
+
+| Project | Discord |
+|---------|---------|
+| LangChain | langchain.com/join-community |
+| LlamaIndex | discord.gg/dGcwcsnxhU |
+| Semantic Kernel | aka.ms/SKDiscord |
+| Haystack | (migrated from Slack) |
+| Pydantic AI | Pydantic Discord |
+| Flowise | Flowise Discord |
+
+### LinkedIn Presence
+
+| Project | Followers |
+|---------|-----------|
+| LlamaIndex | 126,330 |
+| LangChain | Active presence |
+| Pydantic AI | Via Pydantic |
+| Strands Agents | Via AWS |
+| Flowise | Via FlowiseAI |
+
+---
+
 ## Summary Comparison
 
 | Tool | Stars | License | Primary Language | Funding | Commercial |

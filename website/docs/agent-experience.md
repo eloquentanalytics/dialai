@@ -2,9 +2,9 @@
 sidebar_position: 2
 ---
 
-# Agent Experience Development
+# AI Agent Experience
 
-DIAL is designed for LLM-driven agents as first-class participants. Every design decision optimizes for agents that need to understand, integrate with, and act within the framework autonomously: the API shape, the documentation format, and the way changelogs are written.
+DIAL is designed for LLM-driven agents to participate as proposers and voters in decision cycles, to design state machines that encode governance workflows, and to develop custom applications that embed DIAL. Every design decision optimizes for agents that need to understand, integrate with, and act within the framework autonomously: the API shape, the documentation format, and the way changelogs are written.
 
 ## Agents as Participants
 
@@ -115,6 +115,140 @@ A specialist that has internalized the constitution will:
 This is also how we use the constitution in fine-tuning. Training data for DIAL specialists is evaluated against the constitution's priority hierarchy. The constitution defines what correct means, and correct means aligned with the human.
 
 The full text is available at [/constitution](/constitution).
+
+## Usage Modes
+
+DIAL can be used by agents in several ways, depending on the deployment context and integration requirements. Each mode offers the same core functionality through different interfaces.
+
+### CLI (Local Execution)
+
+The simplest mode. An agent executes the DIAL CLI directly on the local machine:
+
+```bash
+npx dialai machine.json
+```
+
+**When to use**: Local development, simple automation, scripts where the agent controls the execution environment.
+
+**Documentation**: [Run Machine Skill](./guides/skills/run-machine/SKILL.md)
+
+### HTTP Transport (Remote Server)
+
+Run DIAL as an HTTP server that accepts requests from remote clients:
+
+```bash
+# Start server
+DIALAI_PORT=3000 DIALAI_API_TOKEN=secret dialai-mcp
+
+# Client makes HTTP requests
+curl -H "Authorization: Bearer secret" http://server:3000/tools/dialai_create_session
+```
+
+**When to use**: Centralized deployments, multiple agents sharing state, production environments with load balancing.
+
+**Documentation**: [Proxy Mode](./guides/proxy-mode.md)
+
+### MCP (Local Server)
+
+Expose DIAL as tools via the Model Context Protocol. The agent's host application connects to the MCP server:
+
+```bash
+npx dialai --mcp
+```
+
+Configure in Claude Desktop:
+```json
+{
+  "mcpServers": {
+    "dialai": {
+      "command": "npx",
+      "args": ["dialai", "--mcp"]
+    }
+  }
+}
+```
+
+**When to use**: Claude Desktop, VS Code with Claude extension, any MCP-compatible AI assistant.
+
+**Documentation**: [MCP Server Skill](./guides/skills/mcp-server/SKILL.md)
+
+### MCP Proxy (Remote via MCP)
+
+Combine MCP's tool interface with HTTP transport. The local MCP server forwards requests to a remote DIAL server:
+
+```
+┌─────────────┐    stdio     ┌─────────────┐    HTTP     ┌─────────────┐
+│  Claude     │─────────────▶│  Local MCP  │────────────▶│   Remote    │
+│  Desktop    │              │   Proxy     │             │   Server    │
+└─────────────┘              └─────────────┘             └─────────────┘
+```
+
+Configure in Claude Desktop:
+```json
+{
+  "mcpServers": {
+    "dialai": {
+      "command": "dialai-mcp",
+      "env": {
+        "DIALAI_BASE_URL": "http://remote-server:3000",
+        "DIALAI_API_TOKEN": "secret"
+      }
+    }
+  }
+}
+```
+
+**When to use**: Corporate environments with a central DIAL server, edge deployments where agents need MCP but state lives elsewhere.
+
+**Documentation**: [Proxy Mode](./guides/proxy-mode.md)
+
+### Programmatic (TypeScript/JavaScript)
+
+Import DIAL as a library and call functions directly:
+
+```typescript
+import { createSession, runToCompletion } from 'dialai';
+
+const session = await createSession(machineDefinition);
+const result = await runToCompletion(session.id);
+```
+
+**When to use**: Building custom applications, embedding DIAL in larger systems, maximum control over the execution flow.
+
+**Documentation**: [Programmatic Usage Skill](./guides/skills/programmatic-usage/SKILL.md)
+
+### Agent Skills
+
+DIAL publishes modular skills following the [Agent Skills](https://agentskills.io) open standard. These are self-contained instruction sets that any AI agent can download and execute.
+
+| Skill | Purpose |
+|-------|---------|
+| [run-machine](./guides/skills/run-machine/SKILL.md) | Execute a state machine from CLI |
+| [create-machine](./guides/skills/create-machine/SKILL.md) | Define state machine JSON |
+| [add-specialists](./guides/skills/add-specialists/SKILL.md) | Configure AI and human specialists |
+| [decision-cycles](./guides/skills/decision-cycles/SKILL.md) | Understand the PVAE cycle |
+| [programmatic-usage](./guides/skills/programmatic-usage/SKILL.md) | TypeScript/JavaScript integration |
+| [mcp-server](./guides/skills/mcp-server/SKILL.md) | Run as MCP server |
+| [troubleshooting](./guides/skills/troubleshooting/SKILL.md) | Debug common issues |
+
+**How agents discover skills**:
+
+1. **Fetch the index**: `curl https://dialai.dev/docs/guides/skills/`
+2. **Fetch a specific skill**: `curl https://dialai.dev/docs/guides/skills/run-machine/SKILL.md`
+3. **Install as Claude Code skill**: Copy to `~/.claude/skills/dial-run-machine/SKILL.md`
+
+**Documentation**: [Agent Skills Index](./guides/skills/index.md), [DIAL Skills Reference](./guides/SKILLS.md)
+
+### Choosing a Mode
+
+| Requirement | Recommended Mode |
+|-------------|------------------|
+| Quick local testing | CLI |
+| Claude Desktop integration | MCP |
+| Centralized server, many agents | HTTP Transport |
+| Claude Desktop + central server | MCP Proxy |
+| Custom application | Programmatic |
+| Agent needs to learn DIAL | Agent Skills |
 
 ## Spec Change Workflow
 

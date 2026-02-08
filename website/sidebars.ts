@@ -43,6 +43,7 @@ const sidebars: SidebarsConfig = {
       items: ["examples/intro"],
     },
     "ecosystem",
+    "roadmap",
   ],
 };
 

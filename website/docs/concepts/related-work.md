@@ -30,13 +30,15 @@ Agent frameworks define **how** an AI system operates: the graph of states, tool
 
 These are complementary. A DIAL specialist can *be* a LangGraph agent. DIAL wraps the agent and measures whether its decisions match human choices. The agent framework handles execution; DIAL handles trust calibration.
 
+There's a deeper relationship: a DIAL machine can be viewed as an abstraction over many different LangGraph agents executing simultaneously—each specialist proposes a different path through the state space. Through voting and consensus, DIAL materializes the superposition into a single concrete execution path. The machine definition is the shared structure; the specialists are competing interpretations of how to traverse it.
+
 ### Multi-Agent Debate
 
 Multi-agent debate uses multiple AI models to argue and a human to judge. DIAL's voting mechanism is superficially similar, but the purpose differs: debate aims to improve answer quality through adversarial argument; DIAL aims to measure which specialist best predicts the human, with the goal of eventually removing the human from routine decisions.
 
 ### Constitutional AI / RLHF
 
-Constitutional AI and RLHF train models against offline signals: a constitution document or human preference data collected in advance. The trust relationship is fixed at training time. DIAL's ground truth is the human's live, runtime choices in a specific operational context. Trust evolves continuously, per-specialist, per-state. A constitutionally-trained model can serve as a DIAL specialist; DIAL then measures whether the training generalizes to this particular human's preferences.
+Constitutional AI and RLHF train models against offline signals: a [constitution](/constitution) document or human preference data collected in advance. The trust relationship is fixed at training time. DIAL's ground truth is the human's live, runtime choices in a specific operational context. Trust evolves continuously, per-specialist, per-state. A constitutionally-trained model can serve as a DIAL specialist; DIAL then measures whether the training generalizes to this particular human's preferences.
 
 ### Mixture of Experts (MoE)
 

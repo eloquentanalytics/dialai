@@ -4,6 +4,60 @@ Competitive analysis of the 10 tools in DIAL's ecosystem, plus general open-sour
 
 ---
 
+## Domain Names & Social Handles
+
+Quick reference of domain names and key handles used across the ecosystem.
+
+### Domain Names
+
+| Project | Primary Domain | Cloud/App Domain | TLD Pattern |
+|---------|----------------|------------------|-------------|
+| DSPy | dspy.ai | - | .ai |
+| TensorZero | tensorzero.com | - | .com |
+| TextGrad | textgrad.readthedocs.io | - | (docs only) |
+| Inspect AI | inspect.aisi.org.uk | - | .org.uk |
+| promptfoo | promptfoo.dev | promptfoo.app | .dev / .app |
+| DeepEval | deepeval.com | app.confident-ai.com | .com |
+| AutoGen | microsoft.github.io/autogen | - | (GitHub Pages) |
+| CrewAI | crewai.com | app.crewai.com | .com |
+| Agent Lightning | microsoft.github.io/agent-lightning | - | (GitHub Pages) |
+| ADAS | shengranhu.com/ADAS | - | (personal site) |
+
+### Twitter/X Handles
+
+| Project | Handle |
+|---------|--------|
+| DSPy | @DSPyOSS |
+| TensorZero | @tensorzero |
+| promptfoo | @promptfoo |
+| DeepEval | @deepeval, @confident_ai |
+| AutoGen | @pyautogen |
+| CrewAI | @crewAIInc |
+| Inspect AI | @AISecurityInst |
+| ADAS | @shengranhu |
+
+### Discord Communities
+
+| Project | Discord |
+|---------|---------|
+| DSPy | discord.gg/XCGy2WDCQB |
+| TensorZero | tensorzero.com/discord |
+| promptfoo | discord.gg/promptfoo |
+| DeepEval | discord.gg/a3K9c8GRGt |
+| AutoGen | aka.ms/autogen-discord |
+| CrewAI | discord.com/invite/crewai |
+| Agent Lightning | discord.gg/RYk7CdvDR7 |
+
+### Newsletters
+
+| Project | Newsletter |
+|---------|------------|
+| DSPy | dspyweekly.com (community-run) |
+| DeepEval | Weekly (via blog signup) |
+| CrewAI | Monthly (via crewai.com) |
+
+---
+
 ## Licensing & Commercial Strategy
 
 How each project handles open source vs. commercial offerings:

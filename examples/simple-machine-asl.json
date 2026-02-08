@@ -1,0 +1,20 @@
+{
+  "Comment": "Simple task workflow",
+  "StartAt": "pending",
+  "States": {
+    "pending": {
+      "Type": "Choice",
+      "Comment": "Should we complete this task?",
+      "Choices": [
+        {
+          "Variable": "$.transition",
+          "StringEquals": "complete",
+          "Next": "done"
+        }
+      ]
+    },
+    "done": {
+      "Type": "Succeed"
+    }
+  }
+}
