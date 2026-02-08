@@ -63,7 +63,7 @@ When a session is not in its default state, specialists work together to get it 
 
 The Arbiter is always a fully deterministic, built-in component, never an AI model or a human. This is a deliberate safety constraint: the mechanism that decides whether consensus has been reached must be predictable and auditable.
 
-Human specialists are identified by including "human" (case-insensitive) in their `specialistId`. Human votes override AI votes immediately.
+Human specialists are identified by setting `isHuman: true` when registering. Only human specialists can force a transition when consensus isn't reached.
 
 [Learn more about Specialists →](./specialists.md)
 
@@ -95,8 +95,8 @@ stateDiagram-v2
 **Arbitration** is how DIAL decides when a proposal has won. The built-in strategy uses voting:
 
 - **0 proposals**: No consensus
-- **1 proposal**: Auto-consensus (single proposal wins)
-- **2+ proposals**: Human votes win immediately; otherwise tally votes per proposal, leading proposal must be ahead by k=1 votes
+- **1 proposal**: Requires at least one vote to demonstrate support
+- **2+ proposals**: Tally votes per proposal; leading proposal must be ahead by k=1 votes
 
 [Learn more about Arbitration →](./arbitration.md)
 
@@ -106,7 +106,7 @@ The fundamental principle underlying DIAL:
 
 > **The human is always right, not because humans are infallible, but because humans have context that AI cannot access.**
 
-AI specialists are judged on their ability to predict what humans would choose. When a human specialist votes, that vote wins immediately regardless of AI votes.
+AI specialists are judged on their ability to predict what humans would choose. When consensus cannot be reached, only a human can force a decision.
 
 [Learn more about Human Primacy →](./human-primacy.md)
 

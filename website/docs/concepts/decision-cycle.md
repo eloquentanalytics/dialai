@@ -30,7 +30,7 @@ Votes arrive asynchronously as voters evaluate proposals. With multiple proposal
 
 ### 3. Arbitration (Continuous)
 
-After each proposal and vote, `evaluateConsensus` checks whether any proposal has sufficient support. This is not a one-time evaluation—it runs continuously as new contributions arrive. Consensus requires demonstrated support through voting; a single proposal does not automatically win. See [Arbitration](./arbitration.md) for the full rules.
+After each proposal and vote, `submitArbitration` checks whether any proposal has sufficient support. This is not a one-time evaluation—it runs continuously as new contributions arrive. If consensus is reached, the transition executes automatically. Consensus requires demonstrated support through voting; a single proposal does not automatically win. See [Arbitration](./arbitration.md) for the full rules.
 
 ### 4. Transition Execution
 
@@ -66,7 +66,7 @@ const session = await runSession(machine);
 `runSession` automatically:
 1. Creates a session
 2. Registers a built-in deterministic proposer (picks the first available transition)
-3. Loops: collect proposals → collect votes (if needed) → evaluate consensus → execute transition
+3. Loops: collect proposals → collect votes (if needed) → submit arbitration (evaluates and executes if consensus)
 4. Returns the completed session
 
 ## Error Handling

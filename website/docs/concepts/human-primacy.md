@@ -93,11 +93,9 @@ If an AI specialist has strong reasoning that the human is wrong, it should:
 
 ## When Humans Disagree
 
-### The Architecture Prevents Simultaneous Disagreement
+### The Architecture Handles Disagreement Through State Design
 
-In DIAL, the first human vote at a decision point advances the state machine immediately. There is no window for a second human to cast a competing vote on the same decision; the machine has already moved forward. A second human could only intervene by going back and restarting the decision, but at that point it is a new decision cycle, not a tie.
-
-This means the "two humans disagree" scenario is **hypothetical, not operational**. The system never faces a moment where it must choose between two conflicting human answers.
+When a domain genuinely requires multiple humans to participate, this is modeled through the state machine design. Each human's decision can be its own state transition, or multiple humans can vote with the ahead-by-k consensus mechanism determining the outcome.
 
 ### Both Humans Are "Right" in a Distributional Sense
 
@@ -122,34 +120,57 @@ Human disagreement between reviewers is resolved by human mechanisms (escalation
 
 ## Practical Implementation
 
-### Human Override in Arbitration
+### Human Activity as Ground Truth
 
-DIAL implements human primacy in the `evaluateConsensus` function. When a human specialist votes, their choice wins immediately:
+Human primacy in DIAL means that **human activity is the reference for evaluating AI specialists**. When measuring how well an AI specialist performs, the question is: how closely does it match what humans would decide?
+
+This is implemented through the `isHuman` flag on specialist registration:
+
+- **AI specialists** (`isHuman: false`): Defined in the machine JSON with strategies (LLMs, tools). They must use strategy invocation—they cannot provide explicit values to submit functions.
+- **Human specialists** (`isHuman: true`): Registered separately. They can provide explicit values to all submit functions.
 
 ```typescript
-import { registerVoter, submitVote, evaluateConsensus } from "dialai";
+import { registerVoter, submitVote, submitArbitration } from "dialai";
 
-// Any specialist with "human" in the ID triggers the override
+// Human specialists are registered separately (not in machine JSON)
 registerVoter({
-  specialistId: "human-reviewer",
+  specialistId: "reviewer-jane",
   machineName: "code-review",
-  strategyFn: async (ctx) => ({
-    voteFor: "B",
-    reasoning: "Proposal B provides more constructive feedback",
-  }),
+  isHuman: true,
 });
+
+// Humans can provide explicit votes
+await submitVote(
+  session.sessionId,
+  "reviewer-jane",
+  session.currentRoundId,
+  proposalA.proposalId,
+  proposalB.proposalId,
+  "B",  // AI specialists cannot provide this directly
+  "Proposal B provides more constructive feedback"
+);
+
+// Humans can force arbitration decisions
+await submitArbitration(
+  session.sessionId,
+  session.currentRoundId,
+  "reviewer-jane",
+  "approve",  // AI specialists cannot provide this directly
+  "After reviewing the deadlock, I'm approving this"
+);
 ```
 
-When `evaluateConsensus` runs, it checks every vote. If any vote's `specialistId` contains "human" (case-insensitive), that vote's choice wins immediately, regardless of all other votes:
+AI specialists attempting to provide explicit values are rejected:
 
 ```
-AI Voter 1: votes A
-AI Voter 2: votes A
-AI Voter 3: votes A
-Human:      votes B
+AI calls submitProposal with transitionName → Rejected
+AI calls submitVote with voteFor → Rejected
+AI calls submitArbitration with transitionName → Rejected
 
-Result: B wins immediately
+Only humans can provide explicit decisions.
 ```
+
+This ensures that when humans participate, their decisions are recorded as ground truth. AI specialists are then evaluated on how well their strategy-generated decisions align with human decisions.
 
 ## Common Objections
 

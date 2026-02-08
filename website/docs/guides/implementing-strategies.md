@@ -81,7 +81,7 @@ A voter `strategyFn` receives a `VoterContext` and returns a preference:
 ```typescript
 const myVoter = async (ctx: VoterContext) => {
   // ctx.proposalA, ctx.proposalB: Proposal objects with:
-  //   proposalId, sessionId, specialistId, transitionName, toState, reasoning
+  //   proposalId, sessionId, roundId, specialistId, transitionName, toState, reasoning, isHuman
   // ctx.currentState: string
   // ctx.prompt: string
   // ctx.history: TransitionRecord[]
@@ -151,23 +151,26 @@ You can also bypass strategies and submit proposals or votes directly by providi
 ```typescript
 import { submitProposal, submitVote } from "dialai";
 
-// Submit a proposal directly (providing transitionName and toState bypasses strategy)
+// Submit a proposal directly (providing transitionName bypasses strategy)
 const proposal = await submitProposal(
   sessionId,
   "manual-proposer",
+  session.currentRoundId,
   "approve",
-  "approved",
-  "Manually approved after review"
+  "Manually approved after review",
+  { source: "manual-review" }
 );
 
 // Submit a vote directly (providing voteFor bypasses strategy)
 const vote = await submitVote(
   sessionId,
   "manual-voter",
+  session.currentRoundId,
   proposalA.proposalId,
   proposalB.proposalId,
   "A",
-  "Prefer proposal A"
+  "Prefer proposal A",
+  { reviewerId: "voter-123" }
 );
 ```
 
@@ -178,13 +181,18 @@ To invoke a specialist's registered strategy, simply omit the proposal/vote data
 ```typescript
 import { submitProposal, submitVote } from "dialai";
 
-// Invoke proposer's strategy (omit transitionName and toState)
-const proposal = await submitProposal(sessionId, "ai-proposer-1");
+// Invoke proposer's strategy (omit transitionName)
+const proposal = await submitProposal(
+  sessionId,
+  "ai-proposer-1",
+  session.currentRoundId
+);
 
 // Invoke voter's strategy (omit voteFor)
 const vote = await submitVote(
   sessionId,
   "ai-voter-1",
+  session.currentRoundId,
   proposalA.proposalId,
   proposalB.proposalId
 );

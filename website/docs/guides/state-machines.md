@@ -87,6 +87,8 @@ Run with the CLI:
 node dist/dialai/cli.js my-machine.json
 ```
 
+This is a minimal example. Machine JSON files can also include embedded specialist and arbiter configuration—see [Full Machine JSON Structure](#full-machine-json-structure) below.
+
 ## State Configuration
 
 Each state in the `states` record can have:
@@ -114,6 +116,108 @@ transitions: {
   request_changes: "needs_revision",
 }
 ```
+
+### `proposers` (optional)
+
+A record of proposer specialists registered for this state. Each proposer can be configured with one of four execution modes.
+
+### `voters` (optional)
+
+A record of voter specialists registered for this state. Each voter can be configured with one of four execution modes.
+
+### `arbiter` (optional)
+
+Arbiter configuration for this state, including consensus threshold and optional reasoning synthesis.
+
+## Full Machine JSON Structure
+
+Machines can include embedded AI specialist and arbiter configuration at the state level. Human specialists are registered separately—not in the machine JSON:
+
+```json
+{
+  "machineName": "example-task",
+  "initialState": "pending",
+  "defaultState": "done",
+  "states": {
+    "pending": {
+      "prompt": "Should we complete this task?",
+      "transitions": { "complete": "done" },
+
+      "proposers": {
+        "ai-proposer-1": {
+          "strategyFn": "async (ctx) => ({ transitionName: 'complete', reasoning: 'Task is ready' })"
+        },
+        "llm-proposer-2": {
+          "modelId": "openai/gpt-4o-mini"
+        }
+      },
+
+      "voters": {
+        "voter-1": {
+          "strategyFn": "async (ctx) => ({ voteFor: 'A', reasoning: 'Proposal A is more aligned' })"
+        },
+        "llm-voter-2": {
+          "modelId": "openai/gpt-4o-mini"
+        }
+      },
+
+      "arbiter": {
+        "aheadByK": 2
+      }
+    },
+    "done": {}
+  }
+}
+```
+
+### State-Level Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `prompt` | `string` | Decision prompt for this state |
+| `transitions` | `Record<string, string>` | Map of transition names to target states |
+| `proposers` | `Record<string, SpecialistConfig>` | Proposers registered for this state |
+| `voters` | `Record<string, SpecialistConfig>` | Voters registered for this state |
+| `arbiter` | `ArbiterConfig` | Arbiter configuration for this state |
+
+### Specialist Configuration in JSON
+
+Each proposer or voter supports the same [four execution modes](./registering-specialists.md#execution-modes) as programmatic registration. In JSON, function values are represented as strings:
+
+```json
+{
+  "proposers": {
+    "inline-strategy": {
+      "strategyFn": "async (ctx) => ({ transitionName: 'approve', reasoning: 'Ready' })"
+    },
+    "llm-based": {
+      "modelId": "openai/gpt-4o-mini"
+    },
+    "llm-with-context": {
+      "modelId": "openai/gpt-4o-mini",
+      "contextFn": "async (ctx) => `History: ${ctx.history.length} transitions`"
+    },
+    "webhook-based": {
+      "strategyWebhookUrl": "https://api.example.com/propose",
+      "webhookTokenName": "MY_API_TOKEN"
+    }
+  }
+}
+```
+
+**Note:** Human specialists are registered separately via `registerVoter` or `registerProposer` with `isHuman: true`—they are not defined in the machine JSON. See [Registering Specialists](./registering-specialists.md) for the full configuration reference and [Implementing Strategies](./implementing-strategies.md) for strategy function details.
+
+### Arbiter Configuration
+
+The `arbiter` block controls consensus evaluation:
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `aheadByK` | `number` | `1` | Votes the leading proposal must be ahead by |
+| `modelId` | `string` | — | LLM for reasoning synthesis (optional) |
+| `contextFn` | `string` | — | Context function for reasoning synthesis |
+
+Higher `aheadByK` values require stronger consensus. See [Arbitration](../concepts/arbitration.md) for details.
 
 ## Design Patterns
 

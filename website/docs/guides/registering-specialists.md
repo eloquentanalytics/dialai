@@ -214,24 +214,30 @@ human-reviewer
 human-approver-jane
 ```
 
-To enable the human override in `evaluateConsensus`, include "human" (case-insensitive) anywhere in the `specialistId`:
+To allow a specialist to force arbitration decisions, set `isHuman: true` when registering:
 
 ```typescript
-// These all trigger human primacy:
-registerVoter({ specialistId: "human-reviewer", ... });
-registerVoter({ specialistId: "specialist.human.jane", ... });
-registerVoter({ specialistId: "HUMAN_APPROVER", ... });
+// This allows forcing arbitration:
+registerVoter({
+  specialistId: "reviewer-jane",
+  machineName: "document-review",
+  isHuman: true,
+  strategyFn: async (ctx) => ({ ... }),
+});
 ```
 
 ## Human Specialists
 
-Human specialists can be registered with strategy functions that encode human preferences, or proposals/votes can be submitted directly by providing all parameters to `submitProposal` and `submitVote`:
+Human specialists are registered with `isHuman: true`. Their votes count like any other vote during consensus evaluation. The key difference is that only human specialists can *force* a transition when consensus isn't reached.
+
+Human specialists can have strategy functions that encode human preferences, or proposals/votes can be submitted directly:
 
 ```typescript
 // Register a human specialist with a strategy
 registerVoter({
-  specialistId: "human-reviewer",
+  specialistId: "reviewer-jane",
   machineName: "document-review",
+  isHuman: true,
   strategyFn: async (ctx) => ({
     voteFor: "B",
     reasoning: "Prefer the more conservative approach",
@@ -243,11 +249,28 @@ import { submitVote } from "dialai";
 
 await submitVote(
   session.sessionId,
-  "human-reviewer",
+  "reviewer-jane",  // must be registered with isHuman: true
+  session.currentRoundId,
   proposalA.proposalId,
   proposalB.proposalId,
   "B",  // Providing voteFor bypasses strategy invocation
-  "I prefer the more conservative approach"
+  "I prefer the more conservative approach",
+  { reviewedBy: "jane@example.com" }  // optional metadata
+);
+```
+
+Humans can also bypass the entire decision cycle using `submitArbitration` with an explicit transition:
+
+```typescript
+import { submitArbitration } from "dialai";
+
+// Human override - directly execute a transition
+await submitArbitration(
+  session.sessionId,
+  session.currentRoundId,
+  "approve",
+  "Reviewed and approved by manager",
+  { approvedBy: "manager@example.com" }
 );
 ```
 
@@ -255,9 +278,10 @@ await submitVote(
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
-| `specialistId` | `string` | Yes | -- | Unique identifier. Include "human" for human specialists. |
+| `specialistId` | `string` | Yes | -- | Unique identifier for the specialist |
 | `machineName` | `string` | Yes | -- | Which machine this specialist participates in |
-| `strategyFn` | `async (context) => result` | Mode 1 | -- | Local function that returns a proposal, vote, or ConsensusResult |
+| `isHuman` | `boolean` | No | `false` | Set to `true` to allow forcing arbitration decisions |
+| `strategyFn` | `async (context) => result` | Mode 1 | -- | Local function that returns a proposal or vote |
 | `strategyWebhookUrl` | `string` | Mode 2 | -- | URL to POST context to; expects proposal/vote response |
 | `contextFn` | `async (context) => string` | Mode 3 | -- | Local function that returns context for the LLM |
 | `contextWebhookUrl` | `string` | Mode 4 | -- | URL to POST context request to; expects context response |

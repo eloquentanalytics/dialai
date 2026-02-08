@@ -139,4 +139,4 @@ AI and human voters together:
 }
 ```
 
-Human votes override AI votes due to human primacy.
+Human specialists can provide explicit votes and force arbitration decisions. AI specialists must use strategy invocation.

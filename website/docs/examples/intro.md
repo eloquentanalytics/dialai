@@ -96,10 +96,9 @@ import {
   createSession,
   registerProposer,
   registerVoter,
-  solicitProposal,
-  solicitVote,
-  evaluateConsensus,
-  executeTransition,
+  submitProposal,
+  submitVote,
+  submitArbitration,
   clear,
 } from "dialai";
 import type { MachineDefinition } from "dialai";
@@ -157,18 +156,25 @@ registerVoter({
 
 const session = createSession(machine);
 
-// Solicit from both proposers
-const p1 = await solicitProposal(session.sessionId, "optimist");
-const p2 = await solicitProposal(session.sessionId, "pessimist");
+// Submit proposals from both proposers (strategy invocation - omit transitionName)
+const p1 = await submitProposal(session.sessionId, "optimist", session.currentRoundId);
+const p2 = await submitProposal(session.sessionId, "pessimist", session.currentRoundId);
 
-// Solicit vote
-await solicitVote(session.sessionId, "tiebreaker", p1.proposalId, p2.proposalId);
+// Submit vote (strategy invocation - omit voteFor)
+await submitVote(
+  session.sessionId,
+  "tiebreaker",
+  session.currentRoundId,
+  p1.proposalId,
+  p2.proposalId
+);
 
-// Evaluate and execute
-const result = evaluateConsensus(session.sessionId);
-if (result.consensusReached && result.winningProposalId) {
-  const winner = [p1, p2].find((p) => p.proposalId === result.winningProposalId)!;
-  executeTransition(session.sessionId, winner.transitionName, winner.toState, result.reasoning);
+// Submit arbitration - evaluates consensus and executes if reached
+const result = await submitArbitration(session.sessionId, session.currentRoundId);
+
+if (result.executed) {
+  console.log("Transitioned to:", result.toState);  // "approved"
+  console.log("Reasoning:", result.reasoning);
 }
 
 console.log(session.currentState); // "approved"

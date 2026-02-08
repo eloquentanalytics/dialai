@@ -58,7 +58,7 @@ The arbiter evaluates consensus using the configured strategy.
 | `supermajority` | Configurable threshold (e.g., 66%) |
 | `unanimous` | All voters must agree |
 
-**Human primacy**: Human votes override AI votes. A single human vote for proposal A beats any number of AI votes for proposal B.
+**Human primacy**: When consensus cannot be reached, only a human specialist can force a decision via `submitArbitration`.
 
 ### 4. Execute
 

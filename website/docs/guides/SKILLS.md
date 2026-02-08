@@ -64,7 +64,7 @@ Propose -> Vote -> Arbitrate -> Execute -> (repeat until goal state)
 
 ### Human Primacy
 
-Human votes override AI votes. A single human vote for proposal A beats any number of AI votes for proposal B.
+When consensus cannot be reached, only a specialist registered with `isHuman: true` can force a decision via `submitArbitration`.
 
 ## Machine Definition Template
 
@@ -103,10 +103,10 @@ Human votes override AI votes. A single human vote for proposal A beats any numb
 | `getSession` | Check session state |
 | `registerProposer` | Add a proposer |
 | `registerVoter` | Add a voter |
-| `submitProposal` | Submit a transition proposal |
-| `submitVote` | Cast a vote |
-| `evaluateConsensus` | Check for agreement |
-| `executeTransition` | Apply the winning proposal |
+| `submitProposal` | Submit a transition proposal (with roundId) |
+| `submitVote` | Cast a vote (with roundId) |
+| `submitArbitration` | Evaluate consensus and execute |
+| `executeTransition` | Apply a transition directly |
 
 ## Common Patterns
 

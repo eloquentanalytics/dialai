@@ -85,53 +85,54 @@ import {
   createSession,
   submitProposal,
   submitVote,
-  evaluateConsensus,
-  executeTransition,
+  submitArbitration,
 } from "dialai";
 
 // Create a session - starts in "pending"
 const session = createSession(machine);
-console.log(session.currentState); // "pending"
+console.log(session.currentState);   // "pending"
+console.log(session.currentRoundId); // "e5f6g7h8-..."
 
 // Two specialists each submit a proposal
-const proposalComplete = submitProposal(
+const proposalComplete = await submitProposal(
   session.sessionId,
   "ai-specialist",
+  session.currentRoundId,
   "complete",
-  "done",
-  "The task is ready to complete"
+  "The task is ready to complete",
+  { source: "automated-check" }
 );
 
-const proposalWait = submitProposal(
+const proposalWait = await submitProposal(
   session.sessionId,
   "contrarian-ai",
+  session.currentRoundId,
   "complete",
-  "done",
   "I agree, let's complete it"
 );
 
 // A human votes for proposal A (complete)
-submitVote(
+await submitVote(
   session.sessionId,
   "human-reviewer",
+  session.currentRoundId,
   proposalComplete.proposalId,
   proposalWait.proposalId,
   "A",
-  "Yes, let's complete this task"
+  "Yes, let's complete this task",
+  { reviewedBy: "jane@example.com" }
 );
 
-// Evaluate consensus - human votes win immediately
-const consensus = evaluateConsensus(session.sessionId);
-console.log(consensus.consensusReached); // true
-console.log(consensus.reasoning);        // "The human preferred: done"
+// Submit arbitration - checks for consensus
+const result = await submitArbitration(session.sessionId, session.currentRoundId);
+console.log(result.executed);    // true (human vote created consensus)
+console.log(result.toState);     // "done"
 
-// Execute the winning transition, recording the consensus reasoning
-executeTransition(session.sessionId, "complete", "done", consensus.reasoning);
 console.log(session.currentState); // "done"
-console.log(session.history);      // [{ fromState: "pending", toState: "done", reasoning: "The human preferred: done", ... }]
+console.log(session.history);      // [{ fromState: "pending", toState: "done", ... }]
 ```
 
-Because the specialist ID `"human-reviewer"` contains "human", `evaluateConsensus` gives their vote priority. This is **human primacy**: humans always get the final say.
+Human votes count like any other vote during consensus evaluation. **Human primacy** means that when AI cannot reach consensus, only a human can force a decision by calling `submitArbitration` with an explicit transition.
 
 ## Step 4: Use the CLI
 
@@ -152,11 +153,11 @@ Session ID:    a1b2c3d4-...
 
 ## What's Happening Under the Hood
 
-1. **Session created** in `initialState` (`pending`)
+1. **Session created** in `initialState` (`pending`) with a fresh `currentRoundId`
 2. **Proposers solicited**: each returns a proposed transition (`complete`)
 3. **Votes solicited** (if 2+ proposals): pairwise comparisons
-4. **Consensus evaluated**: human votes override; otherwise ahead-by-k
-5. **Transition executed**: `currentState` moves to `done`, proposals/votes cleared
+4. **Arbitration submitted**: guards checked, ahead-by-k consensus evaluated
+5. **Transition executed**: `currentState` moves to `done`, `currentRoundId` regenerated
 6. **Cycle repeats** until `currentState === defaultState` (already there, done)
 
 ## Next Steps

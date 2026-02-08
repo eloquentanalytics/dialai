@@ -10,7 +10,7 @@ DIAL is designed for LLM-driven agents to participate as proposers and voters in
 
 The specialist abstraction exists so that LLM agents can register themselves as proposers and voters in a decision cycle. An agent reading a state machine definition can determine what state the session is in, what transitions are available, and what the prompt is asking. It can then submit a proposal or cast a vote using the same API a human would use.
 
-This is the point. DIAL does not treat agents as a backend detail or an orchestration layer. Agents sit alongside humans in the decision cycle and are evaluated by the same arbiter under the same rules. The difference is that human votes override, because [human primacy](./concepts/human-primacy.md) is a safety constraint on the system.
+This is the point. DIAL does not treat agents as a backend detail or an orchestration layer. Agents sit alongside humans in the decision cycle and are evaluated by the same arbiter under the same rules. The difference is that only humans can force a decision when consensus isn't reached—this is [human primacy](./concepts/human-primacy.md) as a safety constraint on the system.
 
 ## Spec-Driven Development
 
@@ -68,9 +68,9 @@ DIAL's API is **tool-oriented** rather than resource-oriented. The distinction m
 
 A resource-oriented API exposes data: "here is a session, here are its proposals, here are its votes." An agent working with a resource-oriented API must figure out the correct sequence of reads and writes to accomplish a goal.
 
-A tool-oriented API exposes actions: `submitProposal`, `submitVote`, `evaluateConsensus`, `executeTransition`. Each function is a discrete action with a clear purpose. An agent with tool-use capabilities can map these directly to its tool-calling interface.
+A tool-oriented API exposes actions: `submitProposal`, `submitVote`, `submitArbitration`, `executeTransition`. Each function is a discrete action with a clear purpose. An agent with tool-use capabilities can map these directly to its tool-calling interface.
 
-The 11 functions in the DIAL API are designed to be the 11 tools an agent needs:
+The DIAL API is designed as a set of tools an agent needs:
 
 | Function | Action |
 |---|---|
@@ -79,14 +79,12 @@ The 11 functions in the DIAL API are designed to be the 11 tools an agent needs:
 | `getSessions` | List all active processes |
 | `registerProposer` | Join a decision process as a proposer |
 | `registerVoter` | Join a decision process as a voter |
-| `submitProposal` | Propose a transition |
-| `solicitProposal` | Ask a specialist's strategy to propose |
-| `submitVote` | Cast a vote between two proposals |
-| `solicitVote` | Ask a specialist's strategy to vote |
-| `evaluateConsensus` | Check if the group has reached agreement |
-| `executeTransition` | Apply the winning proposal |
+| `submitProposal` | Propose a transition (with roundId) |
+| `submitVote` | Cast a vote between two proposals (with roundId) |
+| `submitArbitration` | Evaluate consensus and execute winning transition |
+| `executeTransition` | Apply a transition directly |
 
-An agent calling `submitProposal(sessionId, myId, "approve", "approved", "Document meets quality standards")` is doing exactly one thing: proposing a state transition. There is no ambiguity about what the call does, what it returns, or what happens next.
+An agent calling `submitProposal(sessionId, myId, roundId, "approve", "Document meets quality standards")` is doing exactly one thing: proposing a state transition for the current decision round. There is no ambiguity about what the call does, what it returns, or what happens next.
 
 This is agent experience development. The framework is built so that the agent's path from "I have a task" to "I took an action" is as short and unambiguous as possible.
 

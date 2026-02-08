@@ -18,13 +18,21 @@ Voters evaluate proposals and express preferences between them. They compare pai
 
 ### Arbiters
 
-Arbitration is built into the framework via the `evaluateConsensus` function, which tallies votes and applies human primacy rules automatically.
+Arbitration is built into the framework via the `submitArbitration` function, which evaluates guards, tallies votes, applies human primacy rules, and executes the winning transition automatically. The arbiter can be configured at the machine level with `aheadByK` thresholds and optional LLM-based reasoning synthesis.
 
 ## Human vs AI Specialists
 
-**Human specialists** are identified by including "human" (case-insensitive) anywhere in their `specialistId` (e.g., `human-reviewer`, `specialist.human.jane`). When a human specialist votes, their choice wins immediately; no further vote tallying is needed.
+**Human specialists** are registered with `isHuman: true`. They can provide explicit values to submit functions:
+- `submitProposal` with explicit `transitionName`
+- `submitVote` with explicit `voteFor`
+- `submitArbitration` with explicit `transitionName` (to force a decision)
 
-**AI specialists** participate through voting. Each vote counts equally.
+Human specialists are registered separately from the machine definition—the machine JSON only defines AI specialists.
+
+**AI specialists** are registered in the machine definition with strategies (LLMs, tools, deterministic logic). They must use strategy invocation:
+- `submitProposal` must omit `transitionName` (strategy provides it)
+- `submitVote` must omit `voteFor` (strategy provides it)
+- `submitArbitration` must omit `transitionName` (can only check consensus)
 
 ## Registering Specialists
 
@@ -62,8 +70,9 @@ Each registration function (`registerProposer`, `registerVoter`) accepts:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `specialistId` | `string` | Yes | Unique identifier. Include "human" for human specialists. |
+| `specialistId` | `string` | Yes | Unique identifier for the specialist |
 | `machineName` | `string` | Yes | Which machine this specialist participates in |
+| `isHuman` | `boolean` | No | Set to `true` to allow forcing arbitration decisions |
 | `strategyFn` | `async (context) => result` | Mode 1 | Local function that returns a proposal or vote |
 | `strategyWebhookUrl` | `string` | Mode 2 | URL to POST context to; expects result response |
 | `contextFn` | `async (context) => string` | Mode 3 | Local function returning context for the LLM |

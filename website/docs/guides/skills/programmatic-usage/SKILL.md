@@ -34,12 +34,10 @@ console.log('Final state:', result.currentState);
 | `getSessions` | List all active sessions |
 | `registerProposer` | Add a proposer to a session |
 | `registerVoter` | Add a voter to a session |
-| `submitProposal` | Submit a transition proposal |
-| `solicitProposal` | Ask a specialist to propose |
-| `submitVote` | Cast a vote |
-| `solicitVote` | Ask a specialist to vote |
-| `evaluateConsensus` | Check for agreement |
-| `executeTransition` | Apply the winning proposal |
+| `submitProposal` | Submit a transition proposal (with roundId) |
+| `submitVote` | Cast a vote (with roundId) |
+| `submitArbitration` | Evaluate consensus and execute transition |
+| `executeTransition` | Apply a transition directly |
 
 ## Full Example
 
@@ -48,49 +46,54 @@ import {
   createSession,
   registerProposer,
   registerVoter,
-  solicitProposals,
-  solicitVotes,
-  evaluateConsensus,
-  executeTransition,
+  submitProposal,
+  submitVote,
+  submitArbitration,
   getSession
 } from 'dialai';
 
 async function runMachine(machineDefinition: MachineDefinition) {
   // 1. Create a session
   const session = await createSession(machineDefinition);
-  console.log('Session created:', session.id);
+  console.log('Session created:', session.sessionId);
+  console.log('Round ID:', session.currentRoundId);
 
   // 2. Register specialists
-  await registerProposer(session.id, 'ai-proposer', {
+  await registerProposer(session.sessionId, 'ai-proposer', {
     strategy: 'llm',
     config: { model: 'claude-sonnet-4-20250514' }
   });
 
-  await registerVoter(session.id, 'human-voter', {
+  await registerVoter(session.sessionId, 'human-voter', {
     strategy: 'human'
   });
 
   // 3. Run decision cycles until goal
-  let current = await getSession(session.id);
+  let current = await getSession(session.sessionId);
 
   while (current.status === 'active') {
-    // Solicit proposals from all proposers
-    const proposals = await solicitProposals(session.id);
-    console.log('Proposals:', proposals);
+    // Submit proposals (strategy invocation - omit transitionName)
+    const proposal = await submitProposal(
+      current.sessionId,
+      'ai-proposer',
+      current.currentRoundId
+    );
+    console.log('Proposal:', proposal);
 
-    // Collect votes from all voters
-    const votes = await solicitVotes(session.id, proposals);
-    console.log('Votes:', votes);
+    // Submit vote (strategy invocation - omit voteFor)
+    // Note: if only one proposal, voting may be skipped
 
-    // Check consensus
-    const result = await evaluateConsensus(session.id);
+    // Submit arbitration - evaluates and executes if consensus
+    const result = await submitArbitration(
+      current.sessionId,
+      current.currentRoundId
+    );
 
-    if (result.consensus) {
-      await executeTransition(session.id, result.winner);
-      console.log('Transitioned to:', result.winner.target);
+    if (result.executed) {
+      console.log('Transitioned to:', result.toState);
     }
 
-    current = await getSession(session.id);
+    current = await getSession(session.sessionId);
   }
 
   return current;
@@ -179,6 +182,6 @@ import type {
   Proposal,
   Vote,
   TransitionRecord,
-  ConsensusResult
+  ArbitrationResult
 } from 'dialai';
 ```

@@ -12,6 +12,7 @@ A session has:
 
 - A **machine definition**: the blueprint defining possible states and transitions
 - A **current state**: where the session is right now
+- A **current round ID**: regenerated on each state transition to track the decision cycle
 - A **session ID**: a unique UUID generated at creation
 - A **creation timestamp**: when the session was started
 
@@ -20,6 +21,7 @@ graph LR
     subgraph Session
         D[Machine Definition]
         C[Current State]
+        R[Current Round ID]
         I[Session ID]
         T[Created At]
     end
@@ -59,9 +61,10 @@ const machine: MachineDefinition = {
 };
 
 const session = createSession(machine);
-// session.sessionId     → "a1b2c3d4-..."
-// session.currentState  → "pending"
-// session.createdAt     → Date
+// session.sessionId      → "a1b2c3d4-..."
+// session.currentRoundId → "e5f6g7h8-..."
+// session.currentState   → "pending"
+// session.createdAt      → Date
 ```
 
 The session is created in its `initialState`.
@@ -103,6 +106,17 @@ interface MachineDefinition {
 | `initialState` | The state a session starts in |
 | `defaultState` | The goal state; session is complete when it reaches this |
 | `states` | A record of state names to their configuration |
+
+## Session Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `sessionId` | `string` | Unique UUID generated at creation |
+| `currentRoundId` | `string` | UUID regenerated on each state transition; used to associate proposals, votes, and arbitration with the current decision cycle |
+| `currentState` | `string` | The state the session is currently in |
+| `machine` | `MachineDefinition` | The machine definition this session is running |
+| `history` | `TransitionRecord[]` | Record of all transitions that have occurred |
+| `createdAt` | `Date` | When the session was created |
 
 ### State Configuration
 
