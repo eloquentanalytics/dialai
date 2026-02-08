@@ -4,10 +4,10 @@
 
 This file contains all documentation content in a single document following the llmstxt.org standard.
 
-## Agent Experience Development
+## AI Agent Experience
 
 
-DIAL is designed for LLM-driven agents as first-class participants. Every design decision optimizes for agents that need to understand, integrate with, and act within the framework autonomously: the API shape, the documentation format, and the way changelogs are written.
+DIAL is designed for LLM-driven agents to participate as proposers and voters in decision cycles, to design state machines that encode governance workflows, and to develop custom applications that embed DIAL. Every design decision optimizes for agents that need to understand, integrate with, and act within the framework autonomously: the API shape, the documentation format, and the way changelogs are written.
 
 ## Agents as Participants
 
@@ -119,6 +119,140 @@ This is also how we use the constitution in fine-tuning. Training data for DIAL 
 
 The full text is available at [/constitution](/constitution).
 
+## Usage Modes
+
+DIAL can be used by agents in several ways, depending on the deployment context and integration requirements. Each mode offers the same core functionality through different interfaces.
+
+### CLI (Local Execution)
+
+The simplest mode. An agent executes the DIAL CLI directly on the local machine:
+
+```bash
+npx dialai machine.json
+```
+
+**When to use**: Local development, simple automation, scripts where the agent controls the execution environment.
+
+**Documentation**: [Run Machine Skill](./guides/skills/run-machine/SKILL.md)
+
+### HTTP Transport (Remote Server)
+
+Run DIAL as an HTTP server that accepts requests from remote clients:
+
+```bash
+# Start server
+DIALAI_PORT=3000 DIALAI_API_TOKEN=secret dialai-mcp
+
+# Client makes HTTP requests
+curl -H "Authorization: Bearer secret" http://server:3000/tools/dialai_create_session
+```
+
+**When to use**: Centralized deployments, multiple agents sharing state, production environments with load balancing.
+
+**Documentation**: [Proxy Mode](./guides/proxy-mode.md)
+
+### MCP (Local Server)
+
+Expose DIAL as tools via the Model Context Protocol. The agent's host application connects to the MCP server:
+
+```bash
+npx dialai --mcp
+```
+
+Configure in Claude Desktop:
+```json
+{
+  "mcpServers": {
+    "dialai": {
+      "command": "npx",
+      "args": ["dialai", "--mcp"]
+    }
+  }
+}
+```
+
+**When to use**: Claude Desktop, VS Code with Claude extension, any MCP-compatible AI assistant.
+
+**Documentation**: [MCP Server Skill](./guides/skills/mcp-server/SKILL.md)
+
+### MCP Proxy (Remote via MCP)
+
+Combine MCP's tool interface with HTTP transport. The local MCP server forwards requests to a remote DIAL server:
+
+```
+┌─────────────┐    stdio     ┌─────────────┐    HTTP     ┌─────────────┐
+│  Claude     │─────────────▶│  Local MCP  │────────────▶│   Remote    │
+│  Desktop    │              │   Proxy     │             │   Server    │
+└─────────────┘              └─────────────┘             └─────────────┘
+```
+
+Configure in Claude Desktop:
+```json
+{
+  "mcpServers": {
+    "dialai": {
+      "command": "dialai-mcp",
+      "env": {
+        "DIALAI_BASE_URL": "http://remote-server:3000",
+        "DIALAI_API_TOKEN": "secret"
+      }
+    }
+  }
+}
+```
+
+**When to use**: Corporate environments with a central DIAL server, edge deployments where agents need MCP but state lives elsewhere.
+
+**Documentation**: [Proxy Mode](./guides/proxy-mode.md)
+
+### Programmatic (TypeScript/JavaScript)
+
+Import DIAL as a library and call functions directly:
+
+```typescript
+import { createSession, runToCompletion } from 'dialai';
+
+const session = await createSession(machineDefinition);
+const result = await runToCompletion(session.id);
+```
+
+**When to use**: Building custom applications, embedding DIAL in larger systems, maximum control over the execution flow.
+
+**Documentation**: [Programmatic Usage Skill](./guides/skills/programmatic-usage/SKILL.md)
+
+### Agent Skills
+
+DIAL publishes modular skills following the [Agent Skills](https://agentskills.io) open standard. These are self-contained instruction sets that any AI agent can download and execute.
+
+| Skill | Purpose |
+|-------|---------|
+| [run-machine](./guides/skills/run-machine/SKILL.md) | Execute a state machine from CLI |
+| [create-machine](./guides/skills/create-machine/SKILL.md) | Define state machine JSON |
+| [add-specialists](./guides/skills/add-specialists/SKILL.md) | Configure AI and human specialists |
+| [decision-cycles](./guides/skills/decision-cycles/SKILL.md) | Understand the PVAE cycle |
+| [programmatic-usage](./guides/skills/programmatic-usage/SKILL.md) | TypeScript/JavaScript integration |
+| [mcp-server](./guides/skills/mcp-server/SKILL.md) | Run as MCP server |
+| [troubleshooting](./guides/skills/troubleshooting/SKILL.md) | Debug common issues |
+
+**How agents discover skills**:
+
+1. **Fetch the index**: `curl https://dialai.dev/docs/guides/skills/`
+2. **Fetch a specific skill**: `curl https://dialai.dev/docs/guides/skills/run-machine/SKILL.md`
+3. **Install as Claude Code skill**: Copy to `~/.claude/skills/dial-run-machine/SKILL.md`
+
+**Documentation**: [Agent Skills Index](./guides/skills/index.md), [DIAL Skills Reference](./guides/SKILLS.md)
+
+### Choosing a Mode
+
+| Requirement | Recommended Mode |
+|-------------|------------------|
+| Quick local testing | CLI |
+| Claude Desktop integration | MCP |
+| Centralized server, many agents | HTTP Transport |
+| Claude Desktop + central server | MCP Proxy |
+| Custom application | Programmatic |
+| Agent needs to learn DIAL | Agent Skills |
+
 ## Spec Change Workflow
 
 When a specification is updated, the change propagates through the codebase in a fixed order. This order is mandatory.
@@ -159,10 +293,11 @@ const session = await createSession(machine);
 ## `evaluateConsensus(sessionId: string): Promise<ConsensusResult>`
 
 
-Evaluates consensus for all proposals and votes in the session:
+Evaluates consensus for all proposals and votes in the session. Called continuously after each proposal and vote—not just once at the end.
+
+Rules:
 - **0 proposals**: `{ consensusReached: false }`
-- **1 proposal**: `{ consensusReached: true, winningProposalId: ... }`
-- **2+ proposals**: Human votes override; otherwise ahead-by-k (k=1)
+- **1+ proposals**: Human votes override; otherwise ahead-by-k (k=1). A single proposal still requires votes to demonstrate support—it does not auto-win.
 
 ```typescript
 import { evaluateConsensus } from "dialai";
@@ -224,7 +359,7 @@ const all = await getSessions();
 ## API Reference
 
 
-The DialAI API provides 11 functions for creating sessions, registering specialists, and managing the decision cycle. All functions are async and return Promises.
+The DialAI API provides 9 functions for creating sessions, registering specialists, and managing the decision cycle. All functions are async and return Promises.
 
 ## Session Functions
 
@@ -239,9 +374,11 @@ The DialAI API provides 11 functions for creating sessions, registering speciali
 
 ## Proposal Functions
 
-### `submitProposal(sessionId, specialistId, transitionName, toState, reasoning?): Promise<Proposal>`
+### `submitProposal(sessionId, specialistId, transitionName?, toState?, reasoning?): Promise<Proposal>`
 
-Creates and stores a proposal with a generated UUID.
+Creates and stores a proposal with a generated UUID. If `transitionName` and `toState` are omitted, invokes the specialist's registered strategy to generate the proposal.
+
+**Direct Submission** (provide proposal data):
 
 ```typescript
 import { submitProposal } from "dialai";
@@ -255,21 +392,22 @@ const proposal = await submitProposal(
 );
 ```
 
-### `solicitProposal(sessionId, specialistId): Promise<Proposal>`
-
-Calls the specialist's strategy function with the session's current state and transitions, then submits the resulting proposal.
+**Strategy Invocation** (omit proposal data):
 
 ```typescript
-import { solicitProposal } from "dialai";
+import { submitProposal } from "dialai";
 
-const proposal = await solicitProposal(session.sessionId, "ai-proposer-1");
+// Calls specialist's registered strategy, then submits result
+const proposal = await submitProposal(session.sessionId, "ai-proposer-1");
 ```
 
 ## Vote Functions
 
-### `submitVote(sessionId, specialistId, proposalIdA, proposalIdB, voteFor, reasoning?): Promise<Vote>`
+### `submitVote(sessionId, specialistId, proposalIdA, proposalIdB, voteFor?, reasoning?): Promise<Vote>`
 
-Creates and stores a vote with a generated UUID.
+Creates and stores a vote with a generated UUID. If `voteFor` is omitted, invokes the specialist's registered strategy to determine the vote.
+
+**Direct Submission** (provide vote choice):
 
 ```typescript
 import { submitVote } from "dialai";
@@ -284,14 +422,13 @@ const vote = await submitVote(
 );
 ```
 
-### `solicitVote(sessionId, specialistId, proposalIdA, proposalIdB): Promise<Vote>`
-
-Calls the specialist's strategy function with the two proposals, then submits the resulting vote.
+**Strategy Invocation** (omit vote choice):
 
 ```typescript
-import { solicitVote } from "dialai";
+import { submitVote } from "dialai";
 
-const vote = await solicitVote(
+// Calls specialist's registered strategy, then submits result
+const vote = await submitVote(
   session.sessionId,
   "ai-voter-1",
   proposalA.proposalId,
@@ -343,7 +480,7 @@ clear();
 ## `registerProposer(opts): Promise<Proposer>`
 
 
-Registers a proposer for a session type. Supports four execution modes: `strategyFn`, `strategyWebhookUrl`, `contextFn + modelId`, or `contextWebhookUrl + modelId`. See the [registering specialists guide](../guides/registering-specialists.md) for details on all modes.
+Registers a proposer for a machine. Supports four execution modes: `strategyFn`, `strategyWebhookUrl`, `contextFn + modelId`, or `contextWebhookUrl + modelId`. See the [registering specialists guide](../guides/registering-specialists.md) for details on all modes.
 
 ```typescript
 import { registerProposer } from "dialai";
@@ -364,7 +501,7 @@ const proposer = await registerProposer({
 ## `registerVoter(opts): Promise<Voter>`
 
 
-Registers a voter for a session type. Supports the same four execution modes as `registerProposer`. See the [registering specialists guide](../guides/registering-specialists.md) for details.
+Registers a voter for a machine. Supports the same four execution modes as `registerProposer`. See the [registering specialists guide](../guides/registering-specialists.md) for details.
 
 ```typescript
 import { registerVoter } from "dialai";
@@ -397,19 +534,23 @@ const session = await runSession(machine);
 ## Arbitration
 
 
-**Arbitration** is the process of evaluating consensus and determining when a proposal has sufficient support to execute.
+**Arbitration** is the continuous process of evaluating consensus after every proposal and vote to determine when sufficient support exists to execute a transition.
 
 ## Overview
 
-After specialists submit proposals and cast votes, the `evaluateConsensus` function analyzes the results:
+Consensus evaluation is **asynchronous and continuous**. Proposals and votes arrive in an uncontrolled, unbound manner—there is no defined order or timing. After each proposal submission and each vote cast, `evaluateConsensus` re-evaluates whether any proposal has crossed the threshold:
 
 ```mermaid
 graph LR
-    V[Votes] --> A[evaluateConsensus]
-    P[Proposals] --> A
+    P[New Proposal] --> A[evaluateConsensus]
+    V[New Vote] --> A
     A --> |Consensus| E[Execute]
-    A --> |No Consensus| F[Error]
+    A --> |Not Yet| W[Wait for more input]
+    W --> P
+    W --> V
 ```
+
+The key insight is that it's not a specific point in time that decides consensus—it's the mathematics of the algorithm applied to the current state of proposals and votes.
 
 ## The Built-in Arbiter: Ahead-by-K
 
@@ -419,12 +560,13 @@ DIAL ships with a built-in arbitration strategy that implements **voting with hu
 
 1. **Zero proposals**: No consensus (`consensusReached: false`)
 
-2. **Single proposal**: Auto-consensus (the lone proposal wins)
-
-3. **Two or more proposals**: Evaluate votes:
+2. **One or more proposals**: Evaluate votes:
    - If any human has voted, their choice wins immediately
    - Otherwise, tally votes per proposal
    - The leading proposal must be ahead by `k = 1` votes
+   - A single proposal with no votes has no consensus—votes are still required
+
+The number of proposals (1 vs. N) doesn't change the fundamental requirement: sufficient support must be demonstrated through voting. A lone proposal doesn't automatically win.
 
 ### Vote Tallying
 
@@ -502,11 +644,24 @@ interface ConsensusResult {
 
 ## The Engine's Behavior
 
-When using `runSession`, the engine handles arbitration automatically:
+When using `runSession`, the engine handles arbitration automatically with continuous evaluation:
 
-1. **Single proposal**: auto-wins (e.g., only the built-in proposer is registered)
-2. **2+ proposals**: the engine uses Swiss tournament pairing, matching proposals with similar accumulated support first. It round-robins through registered voters, checking for consensus after each vote. Voting stops as soon as the ahead-by-k threshold is met. The O(N²) full comparison is the worst case, not the typical case.
-3. **No consensus**: if no proposal crosses the threshold after all available pairs and voters are exhausted, the engine throws an error
+1. **After each proposal**: `evaluateConsensus` checks if any proposal has sufficient support
+2. **After each vote**: `evaluateConsensus` re-evaluates; voting stops as soon as the ahead-by-k threshold is met
+3. **Swiss tournament pairing**: For multiple proposals, the engine matches proposals with similar accumulated support first. It round-robins through registered voters. The O(N²) full comparison is the worst case, not the typical case.
+4. **No consensus**: If no proposal crosses the threshold after all available voters are exhausted, the engine signals that human input is required
+
+### When AIs Cannot Reach Consensus
+
+It is entirely possible—and expected in complex scenarios—that AI specialists will **not** reach consensus on their own. This is not a failure; it's a feature.
+
+When AI voters are split or vote NEITHER, the system naturally surfaces the decision to a human. The inability to reach consensus is an indicator that:
+
+- The decision requires human judgment
+- The specialists may need additional training or clearer instructions
+- The problem space has genuine ambiguity that humans should resolve
+
+This is how DIAL implements [Human Primacy](./human-primacy.md) in practice: humans don't need to monitor every decision, only the ones where AI specialists genuinely disagree.
 
 ## Best Practices
 
@@ -526,12 +681,14 @@ Always include clear reasoning in proposals and votes:
 { voteFor: "A", reasoning: "A" }
 ```
 
-### 3. Monitor NEITHER Votes
+### 3. Monitor NEITHER Votes and Consensus Failures
 
-High NEITHER rates indicate:
+High NEITHER rates or frequent consensus failures indicate:
+- Decisions that genuinely require human judgment
 - Poor proposal quality
 - Unclear decision prompts
-- Specialists that don't understand the task
+- Specialists that need additional training
+- The need to refine specialist instructions based on patterns of disagreement
 
 ## Related Concepts
 
@@ -546,28 +703,33 @@ High NEITHER rates indicate:
 
 When a session is not in its default state, the system progresses through a repeating cycle until it reaches the goal.
 
+## Asynchronous by Design
+
+The decision cycle is **asynchronous**: proposals and votes arrive in an uncontrolled, unbound manner. There is no defined order or timing—specialists submit their contributions whenever they're ready. The cycle concludes once consensus is reached, but proposals and votes may continue to arrive afterward (they are simply ignored for the completed cycle).
+
+This design accommodates:
+- **Heterogeneous response times**: Fast AI models respond in seconds; humans may take hours or days
+- **Distributed specialists**: Webhook-based specialists may be across networks with variable latency
+- **Late arrivals**: A slow specialist's contribution doesn't block progress if consensus forms first
+
 ## The Cycle
 
-### 1. Proposal Solicitation
+### 1. Proposal Collection
 
-The engine solicits proposals from all registered proposers for the session's type. Each proposer's strategy function is called with the current state and available transitions.
-
-### 2. Proposal Submission
-
-Proposers submit their recommendations. Each proposal includes:
+Proposals arrive asynchronously from registered proposers for the session's machine. Each proposer's strategy function is invoked with the current state and available transitions, and the resulting proposal is submitted. Proposals may arrive at any time and in any order. Each proposal includes:
 - The proposed transition name
 - The target state
 - Reasoning for the proposal
 
-### 3. Vote Solicitation
+### 2. Vote Collection
 
-If there are 2+ proposals, voters compare them pairwise using Swiss tournament pairing. See [Arbitration](./arbitration.md) for pairing and early-stopping details.
+Votes arrive asynchronously as voters evaluate proposals. With multiple proposals, voters compare pairwise using Swiss tournament pairing. Each voter's strategy function is called, and the resulting vote is submitted. Votes may arrive at any time and in any order. See [Arbitration](./arbitration.md) for pairing and early-stopping details.
 
-### 4. Arbitration
+### 3. Arbitration (Continuous)
 
-The built-in `evaluateConsensus` function determines the winner. See [Arbitration](./arbitration.md) for the full rules.
+After each proposal and vote, `evaluateConsensus` checks whether any proposal has sufficient support. This is not a one-time evaluation—it runs continuously as new contributions arrive. Consensus requires demonstrated support through voting; a single proposal does not automatically win. See [Arbitration](./arbitration.md) for the full rules.
 
-### 5. Transition Execution
+### 4. Transition Execution
 
 If consensus is reached, the winning proposal's transition executes. The session's `currentState` is updated, and all proposals and votes for that session are cleared for the next cycle.
 
@@ -601,13 +763,13 @@ const session = await runSession(machine);
 `runSession` automatically:
 1. Creates a session
 2. Registers a built-in deterministic proposer (picks the first available transition)
-3. Loops: solicit proposals → solicit votes (if needed) → evaluate consensus → execute transition
+3. Loops: collect proposals → collect votes (if needed) → evaluate consensus → execute transition
 4. Returns the completed session
 
 ## Error Handling
 
 - If no transitions are available from the current state, the built-in proposer throws
-- If consensus cannot be reached (e.g., tied votes with insufficient margin), the engine throws
+- If consensus cannot be reached (e.g., tied votes with insufficient margin), human input is required—this signals that the decision needs human judgment or that specialists need additional training
 - If the winning proposal's transition is invalid, `executeTransition` throws
 
 ---
@@ -969,13 +1131,15 @@ Agent frameworks define **how** an AI system operates: the graph of states, tool
 
 These are complementary. A DIAL specialist can *be* a LangGraph agent. DIAL wraps the agent and measures whether its decisions match human choices. The agent framework handles execution; DIAL handles trust calibration.
 
+There's a deeper relationship: a DIAL machine can be viewed as an abstraction over many different LangGraph agents executing simultaneously—each specialist proposes a different path through the state space. Through voting and consensus, DIAL materializes the superposition into a single concrete execution path. The machine definition is the shared structure; the specialists are competing interpretations of how to traverse it.
+
 ### Multi-Agent Debate
 
 Multi-agent debate uses multiple AI models to argue and a human to judge. DIAL's voting mechanism is superficially similar, but the purpose differs: debate aims to improve answer quality through adversarial argument; DIAL aims to measure which specialist best predicts the human, with the goal of eventually removing the human from routine decisions.
 
 ### Constitutional AI / RLHF
 
-Constitutional AI and RLHF train models against offline signals: a constitution document or human preference data collected in advance. The trust relationship is fixed at training time. DIAL's ground truth is the human's live, runtime choices in a specific operational context. Trust evolves continuously, per-specialist, per-state. A constitutionally-trained model can serve as a DIAL specialist; DIAL then measures whether the training generalizes to this particular human's preferences.
+Constitutional AI and RLHF train models against offline signals: a [constitution](/constitution) document or human preference data collected in advance. The trust relationship is fixed at training time. DIAL's ground truth is the human's live, runtime choices in a specific operational context. Trust evolves continuously, per-specialist, per-state. A constitutionally-trained model can serve as a DIAL specialist; DIAL then measures whether the training generalizes to this particular human's preferences.
 
 ### Mixture of Experts (MoE)
 
@@ -1121,9 +1285,9 @@ const session = getSession("a1b2c3d4-...");
 const allSessions = getSessions();
 ```
 
-## Session Types
+## Machine Names
 
-A **session type** identifies which kind of machine is being run:
+The **machine name** identifies which kind of machine a session is running:
 
 ```typescript
 machineName: "document-review"
@@ -1131,8 +1295,8 @@ machineName: "code-review"
 machineName: "support-ticket"
 ```
 
-Different session types have:
-- Different machine definitions
+Different machines have:
+- Different machine definitions (states, transitions, prompts)
 - Different registered specialists
 
 ## Best Practices
@@ -1235,7 +1399,7 @@ Each registration function (`registerProposer`, `registerVoter`) accepts:
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `specialistId` | `string` | Yes | Unique identifier. Include "human" for human specialists. |
-| `machineName` | `string` | Yes | Which session type this specialist participates in |
+| `machineName` | `string` | Yes | Which machine this specialist participates in |
 | `strategyFn` | `async (context) => result` | Mode 1 | Local function that returns a proposal or vote |
 | `strategyWebhookUrl` | `string` | Mode 2 | URL to POST context to; expects result response |
 | `contextFn` | `async (context) => string` | Mode 3 | Local function returning context for the LLM |
@@ -2176,13 +2340,13 @@ registerVoter({
 
 ## Direct Submission
 
-You can also bypass strategies and submit proposals or votes directly:
+You can also bypass strategies and submit proposals or votes directly by providing all parameters:
 
 ```typescript
 import { submitProposal, submitVote } from "dialai";
 
-// Submit a proposal without a registered strategy
-const proposal = submitProposal(
+// Submit a proposal directly (providing transitionName and toState bypasses strategy)
+const proposal = await submitProposal(
   sessionId,
   "manual-proposer",
   "approve",
@@ -2190,14 +2354,33 @@ const proposal = submitProposal(
   "Manually approved after review"
 );
 
-// Submit a vote directly
-const vote = submitVote(
+// Submit a vote directly (providing voteFor bypasses strategy)
+const vote = await submitVote(
   sessionId,
   "manual-voter",
   proposalA.proposalId,
   proposalB.proposalId,
   "A",
   "Prefer proposal A"
+);
+```
+
+## Strategy Invocation
+
+To invoke a specialist's registered strategy, simply omit the proposal/vote data:
+
+```typescript
+import { submitProposal, submitVote } from "dialai";
+
+// Invoke proposer's strategy (omit transitionName and toState)
+const proposal = await submitProposal(sessionId, "ai-proposer-1");
+
+// Invoke voter's strategy (omit voteFor)
+const vote = await submitVote(
+  sessionId,
+  "ai-voter-1",
+  proposalA.proposalId,
+  proposalB.proposalId
 );
 ```
 
@@ -2550,7 +2733,7 @@ registerVoter({ specialistId: "HUMAN_APPROVER", ... });
 
 ## Human Specialists
 
-Human specialists can be registered with strategy functions that encode human preferences, or proposals/votes can be submitted directly via `submitProposal` and `submitVote`:
+Human specialists can be registered with strategy functions that encode human preferences, or proposals/votes can be submitted directly by providing all parameters to `submitProposal` and `submitVote`:
 
 ```typescript
 // Register a human specialist with a strategy
@@ -2563,15 +2746,15 @@ registerVoter({
   }),
 });
 
-// Or submit votes directly without a strategy
+// Or submit votes directly by providing all parameters
 import { submitVote } from "dialai";
 
-submitVote(
+await submitVote(
   session.sessionId,
   "human-reviewer",
   proposalA.proposalId,
   proposalB.proposalId,
-  "B",
+  "B",  // Providing voteFor bypasses strategy invocation
   "I prefer the more conservative approach"
 );
 ```
@@ -2581,7 +2764,7 @@ submitVote(
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `specialistId` | `string` | Yes | -- | Unique identifier. Include "human" for human specialists. |
-| `machineName` | `string` | Yes | -- | Which session type this specialist participates in |
+| `machineName` | `string` | Yes | -- | Which machine this specialist participates in |
 | `strategyFn` | `async (context) => result` | Mode 1 | -- | Local function that returns a proposal, vote, or ConsensusResult |
 | `strategyWebhookUrl` | `string` | Mode 2 | -- | URL to POST context to; expects proposal/vote response |
 | `contextFn` | `async (context) => string` | Mode 3 | -- | Local function that returns context for the LLM |
@@ -3657,7 +3840,7 @@ cat machine.json | jq '.machine.states | to_entries | .[] | "\(.key) -> \(.value
 ## State Machines
 
 
-State machines define the structure of your sessions. Each session type has its own machine definition.
+State machines define the structure of your sessions. Each machine has its own definition.
 
 ## Why State Machines?
 
@@ -4014,3 +4197,210 @@ graph LR
 | **Decision Cycle** | The repeating process: Propose, Vote, Arbitrate, Execute |
 | **Arbiter** | The built-in logic that evaluates consensus and determines when a proposal wins |
 | **Default State** | The goal state; the session is complete when it reaches this state |
+
+---
+
+## Roadmap
+
+
+This roadmap captures recommendations from research on making libraries easier for agents to use. Items are organized by their complexity-to-value tradeoff: high-value, low-complexity items first.
+
+## High Value, Low Complexity
+
+### Verbose Error Messages with Recovery Instructions
+
+**Status**: Partially implemented
+
+Every error should include a plain-English explanation and at least one suggested fix. Research shows that chatty text errors drive faster agent recovery than terse codes alone.
+
+> "While JSON structure is fine for machines, a plain-English 'message' field often helps an LLM more than a perfectly terse schema." — [Stytch](https://stytch.com/blog/if-an-ai-agent-can-'t-figure-out-how-your-api-works-neither-can-your-users/)
+
+**Current state**: DIAL errors include codes and messages. Some errors include recovery suggestions.
+
+**Gap**: Not all error paths include actionable recovery instructions. Need systematic audit.
+
+### OpenAPI Schema for HTTP Transport
+
+**Status**: Not implemented
+
+Publish an OpenAPI 3.1 schema for the HTTP transport endpoints. Agents using structured tool calling can directly ingest the schema.
+
+> "When creating action groups for agents, you must define the parameters using an OpenAPI schema in JSON or YAML format." — [AWS Bedrock Docs](https://docs.aws.amazon.com/bedrock/latest/userguide/agents-api-schema.html)
+
+**Value**: Enables automatic tool generation for frameworks like Amazon Bedrock, LangChain, and others that consume OpenAPI.
+
+### Document All Error Codes Exhaustively
+
+**Status**: Not implemented
+
+Create a reference page listing every error code, what triggers it, and how to fix it. Agents need this to fail forward instead of stalling.
+
+> "Every error an endpoint can throw should be documented, listing the code, triggering conditions, and at least one fix." — [Stytch](https://stytch.com/blog/if-an-ai-agent-can-'t-figure-out-how-your-api-works-neither-can-your-users/)
+
+## High Value, Medium Complexity
+
+### Bulk Operations for Sessions
+
+**Status**: Not implemented
+
+Add batch endpoints for common operations: create multiple sessions, solicit proposals from all proposers, collect all votes in one call.
+
+> "Wrapping bulk APIs over single-entity APIs enables LLM/agent efficiency, preserves backward compatibility, and keeps systems secure and extensible." — [Stytch](https://stytch.com/blog/if-an-ai-agent-can-'t-figure-out-how-your-api-works-neither-can-your-users/)
+
+**Current state**: Each operation is a single call. Running 10 proposals requires 10 API calls.
+
+**Gap**: For multi-agent scenarios, this creates unnecessary round-trips.
+
+### Rich Tool Descriptors for MCP
+
+**Status**: Partially implemented
+
+Enhance MCP tool schemas with detailed parameter descriptions, expected outcomes, and potential side effects.
+
+> "The March 2025 MCP specification update introduced richer tool descriptors, allowing servers to provide more detailed metadata about tool parameters, expected outcomes, and potential side effects." — [MCP Best Practices](https://modelcontextprotocol.info/docs/best-practices/)
+
+**Current state**: MCP tools have basic descriptions.
+
+**Gap**: Missing detailed parameter documentation, outcome descriptions, and side effect warnings.
+
+### llms.txt MCP Integration
+
+**Status**: Not implemented
+
+Create an MCP server that serves llms.txt content on demand, allowing agents to fetch relevant documentation sections as needed.
+
+> "LLMTEXT, an open source toolkit, helps developers create, validate, and use llms.txt files—making any website instantly accessible to AI agents through standardized markdown documentation and MCP servers." — [Parallel.ai](https://parallel.ai/blog/LLMTEXT-for-llmstxt)
+
+**Value**: Agents can load documentation into context window on demand rather than pre-loading everything.
+
+## Medium Value, Low Complexity
+
+### Examples in Every Error Message
+
+**Status**: Not implemented
+
+Include a valid example alongside each error message showing the correct format.
+
+**Current state**: Errors describe what's wrong.
+
+**Gap**: Errors don't show what right looks like.
+
+### Tool Count Optimization
+
+**Status**: Implemented (good state)
+
+Keep the number of tools small and focused. DIAL exposes 11 tools, each with a single purpose.
+
+> "Fewer, well-designed tools often outperform many granular ones, especially for agents with small context windows or tight latency budgets." — [MCP Best Practices](https://modelcontextprotocol.info/docs/best-practices/)
+
+**Current state**: DIAL already follows this principle. No action needed.
+
+### Machine Definition Validation Endpoint
+
+**Status**: Not implemented
+
+Add a `validateMachine` tool/endpoint that checks a machine definition for errors before creating a session.
+
+**Value**: Fail fast before execution. Agents can iterate on definitions without wasting cycles.
+
+## Medium Value, Medium Complexity
+
+### Reflection/Self-Correction Patterns Documentation
+
+**Status**: Not implemented
+
+Document how to build self-correcting agents using DIAL, where a specialist evaluates its own output and refines it.
+
+> "The Evaluator-Optimizer pattern uses a self-correction loop where a second LLM step acts as a reflector or evaluator, critiquing the initial output." — [AIMultiple Research](https://research.aimultiple.com/agentic-ai-design-patterns/)
+
+**Value**: Guidance for building more robust specialist implementations.
+
+### Streaming Responses for Long Operations
+
+**Status**: Partially implemented (SSE transport exists)
+
+Expose streaming for operations that may take time, such as consensus evaluation with many specialists.
+
+**Current state**: SSE transport exists for HTTP but not all operations stream progress.
+
+**Gap**: Long-running operations should emit progress events.
+
+## Medium Value, High Complexity
+
+### Agent-to-Agent (A2A) Protocol Support
+
+**Status**: Not implemented
+
+Implement the emerging A2A protocol for multi-agent communication, allowing DIAL specialists to communicate directly.
+
+> "In multi-agent systems, agents communicate using Agent-to-Agent (A2A) protocols that define the flow of information between them." — [AIMultiple Research](https://research.aimultiple.com/agentic-ai-design-patterns/)
+
+**Complexity**: Requires protocol implementation, security model, message routing.
+
+**Value**: Native support for complex multi-agent workflows.
+
+### OAuth 2.1 Authorization
+
+**Status**: Not implemented
+
+Replace simple token auth with OAuth 2.1 for production deployments.
+
+> "The March 2025 update to the MCP specification formally recommends OAuth 2.1 as the primary mechanism for authorization." — [MCP Best Practices](https://modelcontextprotocol.info/docs/best-practices/)
+
+**Complexity**: OAuth flows, token management, refresh handling.
+
+**Value**: Enterprise-grade security, standardized auth for MCP ecosystem.
+
+### Code Execution for Tool Composition
+
+**Status**: Not implemented
+
+Allow agents to write code that composes DIAL tools rather than calling each tool individually.
+
+> "Code execution with MCP enables agents to use context more efficiently by loading tools on demand, filtering data before it reaches the model, and executing complex logic in a single step." — [Anthropic Engineering](https://www.anthropic.com/engineering/code-execution-with-mcp)
+
+**Complexity**: Sandboxed execution environment, security model.
+
+**Value**: Dramatically reduces context usage for complex operations.
+
+## Low Value, Low Complexity
+
+### Semantic Versioning in Responses
+
+**Status**: Not implemented
+
+Include the DIAL version in API responses so agents know what spec they're working with.
+
+**Current state**: Version is in VERSION.md but not in API responses.
+
+**Gap**: Agents must read a separate file to know the version.
+
+### Health Check Endpoint
+
+**Status**: Not implemented
+
+Add a `/health` endpoint for the HTTP transport that returns server status.
+
+**Value**: Standard infrastructure pattern. Low effort.
+
+## Contributing
+
+If you're implementing any of these items, please:
+
+1. Update this document to reflect the new status
+2. Add documentation following the [spec change workflow](./agent-experience.md#spec-change-workflow)
+3. Write changelogs as instructions to agents
+
+## Sources
+
+Research informing this roadmap:
+
+- [7 Practical Guidelines for Designing AI-Friendly APIs](https://medium.com/@chipiga86/7-practical-guidelines-for-designing-ai-friendly-apis-c5527f6869e6)
+- [If an AI agent can't figure out how your API works, neither can your users](https://stytch.com/blog/if-an-ai-agent-can-'t-figure-out-how-your-api-works-neither-can-your-users/)
+- [MCP Best Practices: Architecture & Implementation Guide](https://modelcontextprotocol.info/docs/best-practices/)
+- [Code execution with MCP: building more efficient AI agents](https://www.anthropic.com/engineering/code-execution-with-mcp)
+- [The /llms.txt file](https://llmstxt.org/)
+- [What is llms.txt?](https://www.gitbook.com/blog/what-is-llms-txt)
+- [4 Agentic AI Design Patterns & Real-World Examples](https://research.aimultiple.com/agentic-ai-design-patterns/)
+- [MCP Specification 2025-06-18](https://modelcontextprotocol.io/specification/2025-06-18)
+- [OpenAPI Specification](https://swagger.io/specification/)
