@@ -4,6 +4,8 @@ sidebar_position: 2
 
 # Registering Specialists
 
+This guide covers how to register specialists using the `dialai` library. For the conceptual foundation, see [Specialists](/docs/concepts/specialists).
+
 Specialists are registered using one of two functions: `registerProposer` or `registerVoter`. Each function accepts configuration for how the specialist produces its output.
 
 ## Proposer Registration

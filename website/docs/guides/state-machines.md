@@ -4,18 +4,18 @@ sidebar_position: 1
 
 # State Machines
 
-State machines define the structure of your sessions. Each machine has its own definition.
+This guide covers how to define state machines in the `dialai` library. For the conceptual foundation, see [Sessions](/docs/concepts/sessions).
 
 ## Why State Machines?
 
-Every agentic AI system is a state machine: the agent occupies a state, takes an action, and transitions to a new state. Frameworks like LangGraph make this explicit: agents are graphs of states and edges. Even "open-ended" agent loops (observe → reason → act → observe) follow this structure.
+Every agentic AI system is a state machine: the agent occupies a state, takes an action, and transitions to a new state. DIAL makes the state machine explicit so that each transition becomes a **measurable decision point**.
 
-DIAL makes the state machine explicit so that each transition becomes a **measurable decision point**. This doesn't limit what you can model; it clarifies *where decisions happen* so they can be calibrated. You don't need a DIAL decision point at every micro-step; you place them at the boundaries where delegation risk matters. An agent's internal tool-call loop can remain opaque. DIAL measures the outcomes at the states you care about.
+This doesn't limit what you can model; it clarifies *where decisions happen* so they can be calibrated. You place decision points at the boundaries where delegation risk matters. An agent's internal tool-call loop can remain opaque—DIAL measures the outcomes at the states you care about.
 
-This means open-ended tasks fit naturally:
+Open-ended tasks fit naturally:
 - **Document generation**: Proposals *are* the candidate documents. Specialists propose drafts, voters compare them, the human picks or edits the winner.
-- **Agentic workflows**: The default state is the agent's normal operating mode. It transitions out for decisions that need deliberation (tool selection, plan changes) and back when resolved.
-- **Research and exploration**: Model as a loop: the agent explores, then a decision determines whether findings are sufficient or more exploration is needed.
+- **Agentic workflows**: The default state is the agent's normal operating mode. It transitions out for decisions that need deliberation and back when resolved.
+- **Research and exploration**: Model as a loop—the agent explores, then a decision determines whether findings are sufficient or more exploration is needed.
 
 ## Defining a Machine
 

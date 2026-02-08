@@ -4,80 +4,78 @@ sidebar_position: 3
 
 # Specialists
 
-Specialists are the "pluggable" actors that participate in sessions. They can be AI models or humans.
+Specialists are the pluggable actors that participate in sessions. They can be AI models or humans.
 
 ## Roles
 
+| Role | Description | Can be AI? | Can be Human? |
+|------|-------------|------------|---------------|
+| **Proposer** | Analyzes state, suggests transitions | Yes | Yes |
+| **Voter** | Compares proposals, expresses preferences | Yes | Yes |
+| **Arbiter** | Evaluates consensus (built-in) | No | No |
+
 ### Proposers
 
-Proposers analyze the current state and suggest what transition should happen next. Any number of proposers can participate. A proposer's `strategyFn` receives a `ProposerContext` and returns a proposed transition.
+Proposers analyze the current state and suggest what transition should happen next. Any number of proposers can participate. Each proposer receives the current state, available transitions, and decision prompt, then returns a proposed transition with reasoning.
 
 ### Voters
 
-Voters evaluate proposals and express preferences between them. They compare pairs of proposals and vote for A, B, BOTH, or NEITHER. A voter's `strategyFn` receives a `VoterContext` and returns a vote choice.
+Voters evaluate proposals and express preferences between them. They compare pairs of proposals and vote:
+
+| Vote | Meaning |
+|------|---------|
+| **A** | Prefer proposal A |
+| **B** | Prefer proposal B |
+| **BOTH** | Both proposals are acceptable |
+| **NEITHER** | Neither proposal is acceptable |
 
 ### Arbiters
 
-Arbitration is built into the framework via the `submitArbitration` function, which evaluates guards, tallies votes, applies human primacy rules, and executes the winning transition automatically. The arbiter can be configured at the machine level with `aheadByK` thresholds and optional LLM-based reasoning synthesis.
+The arbiter is always a **fully deterministic, built-in component**—never an AI model or a human. This is a deliberate safety constraint: the mechanism that decides whether consensus has been reached must be predictable and auditable.
+
+See [Arbitration](./arbitration.md) for details on how consensus is evaluated.
 
 ## Human vs AI Specialists
 
-**Human specialists** are registered with `isHuman: true`. They can provide explicit values to submit functions:
-- `submitProposal` with explicit `transitionName`
-- `submitVote` with explicit `voteFor`
-- `submitArbitration` with explicit `transitionName` (to force a decision)
+The key distinction between human and AI specialists is **what they can do**:
 
-Human specialists are registered separately from the machine definition—the machine JSON only defines AI specialists.
+**Human specialists** have special privileges:
+- Can provide explicit decisions (which transition to propose, which proposal to vote for)
+- Can force a transition when consensus isn't reached (human override)
+- Their decisions serve as ground truth for evaluating AI specialists
 
-**AI specialists** are registered in the machine definition with strategies (LLMs, tools, deterministic logic). They must use strategy invocation:
-- `submitProposal` must omit `transitionName` (strategy provides it)
-- `submitVote` must omit `voteFor` (strategy provides it)
-- `submitArbitration` must omit `transitionName` (can only check consensus)
+**AI specialists** operate through strategies:
+- Must use strategy invocation (an LLM, webhook, or local function decides for them)
+- Cannot provide explicit decisions directly
+- Cannot force transitions—they can only check for consensus
 
-## Registering Specialists
+This asymmetry is intentional. It implements [Human Primacy](./human-primacy.md): humans are the ultimate authority, and AI specialists are evaluated on how well they predict human decisions.
 
-```typescript
-import { registerProposer, registerVoter } from "dialai";
+## Specialist Strategies
 
-// Register a proposer with an inline strategy
-registerProposer({
-  specialistId: "ai-proposer-1",
-  machineName: "my-task",
-  strategyFn: async (ctx) => {
-    const name = Object.keys(ctx.transitions)[0];
-    return {
-      transitionName: name,
-      toState: ctx.transitions[name],
-      reasoning: "First available transition",
-    };
-  },
-});
+Specialists execute their role through **strategies**—functions that determine what they propose or how they vote. Strategies can be:
 
-// Register a voter
-registerVoter({
-  specialistId: "ai-voter-1",
-  machineName: "my-task",
-  strategyFn: async (ctx) => ({
-    voteFor: "A",
-    reasoning: "Proposal A moves closer to the goal",
-  }),
-});
-```
+1. **Local functions**: Code that runs in-process
+2. **Webhooks**: Remote services that receive context and return decisions
+3. **LLM-based**: Context is assembled and sent to a language model
+4. **Hybrid**: A local function provides context, then an LLM makes the decision
 
-### Registration Options
+This flexibility allows specialists to range from simple deterministic logic to sophisticated AI agents.
 
-Each registration function (`registerProposer`, `registerVoter`) accepts:
+## Multiple Specialists
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `specialistId` | `string` | Yes | Unique identifier for the specialist |
-| `machineName` | `string` | Yes | Which machine this specialist participates in |
-| `isHuman` | `boolean` | No | Set to `true` to allow forcing arbitration decisions |
-| `strategyFn` | `async (context) => result` | Mode 1 | Local function that returns a proposal or vote |
-| `strategyWebhookUrl` | `string` | Mode 2 | URL to POST context to; expects result response |
-| `contextFn` | `async (context) => string` | Mode 3 | Local function returning context for the LLM |
-| `contextWebhookUrl` | `string` | Mode 4 | URL to POST context request to; expects context response |
-| `modelId` | `string` | Modes 3, 4 | LLM model identifier |
-| `webhookTokenName` | `string` | Modes 2, 4 | Env var name holding the webhook auth token |
+DIAL supports any number of specialists per role:
 
-Both registration functions support the same four execution modes. See the [registering specialists guide](../guides/registering-specialists.md) for full details.
+- **Multiple proposers**: Each may propose a different transition. Voting determines which wins.
+- **Multiple voters**: More voters can provide stronger consensus signals. The ahead-by-k threshold determines when consensus is reached.
+
+This design enables:
+- **Redundancy**: Multiple perspectives on the same decision
+- **Specialization**: Different specialists optimized for different aspects
+- **Competition**: Specialists are evaluated on alignment with human decisions
+
+## Related Concepts
+
+- [Decision Cycle](./decision-cycle.md): How specialists participate
+- [Arbitration](./arbitration.md): How their votes are tallied
+- [Human Primacy](./human-primacy.md): The foundation for human/AI distinction

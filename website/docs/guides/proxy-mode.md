@@ -1,10 +1,10 @@
 ---
-sidebar_position: 5
+sidebar_position: 4
 ---
 
 # Proxy Mode
 
-DIAL supports running as an HTTP server or forwarding requests to a remote DIAL instance. This enables distributed deployments where a central DIAL server handles all state machine execution.
+This guide covers distributed deployment patterns for the `dialai` library. DIAL supports running as an HTTP server or forwarding requests to a remote DIAL instance, enabling centralized state machine execution.
 
 ## Environment Variables
 

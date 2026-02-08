@@ -65,12 +65,7 @@ The specialist's ceiling is the quality of the human signal. The framework makes
 
 ### 1. Predict, Don't Judge
 
-An AI specialist should choose what the human **would** choose, even if its own reasoning disagrees.
-
-```
-Bad:  "Based on my analysis, the correct action is X"
-Good: "Based on observed human patterns, the human would likely choose Y"
-```
+An AI specialist should choose what the human **would** choose, even if its own reasoning disagrees. The specialist's role is to model human behavior, not to substitute its own judgment.
 
 ### 2. Judgment Criteria
 
@@ -118,59 +113,17 @@ graph LR
 
 Human disagreement between reviewers is resolved by human mechanisms (escalation, authority structures, negotiation), at the process design level, not inside DIAL arbitration. The framework does not pretend to solve organizational disagreement; it identifies it as outside the scope of AI-human calibration.
 
-## Practical Implementation
-
-### Human Activity as Ground Truth
+## Human Activity as Ground Truth
 
 Human primacy in DIAL means that **human activity is the reference for evaluating AI specialists**. When measuring how well an AI specialist performs, the question is: how closely does it match what humans would decide?
 
-This is implemented through the `isHuman` flag on specialist registration:
+The key distinction:
 
-- **AI specialists** (`isHuman: false`): Defined in the machine JSON with strategies (LLMs, tools). They must use strategy invocation—they cannot provide explicit values to submit functions.
-- **Human specialists** (`isHuman: true`): Registered separately. They can provide explicit values to all submit functions.
+- **AI specialists** are evaluated against human choices—they must predict what humans would decide
+- **Human specialists** provide the ground truth that AI specialists are measured against
+- **Only humans** can force a decision when AI specialists cannot reach consensus
 
-```typescript
-import { registerVoter, submitVote, submitArbitration } from "dialai";
-
-// Human specialists are registered separately (not in machine JSON)
-registerVoter({
-  specialistId: "reviewer-jane",
-  machineName: "code-review",
-  isHuman: true,
-});
-
-// Humans can provide explicit votes
-await submitVote(
-  session.sessionId,
-  "reviewer-jane",
-  session.currentRoundId,
-  proposalA.proposalId,
-  proposalB.proposalId,
-  "B",  // AI specialists cannot provide this directly
-  "Proposal B provides more constructive feedback"
-);
-
-// Humans can force arbitration decisions
-await submitArbitration(
-  session.sessionId,
-  session.currentRoundId,
-  "reviewer-jane",
-  "approve",  // AI specialists cannot provide this directly
-  "After reviewing the deadlock, I'm approving this"
-);
-```
-
-AI specialists attempting to provide explicit values are rejected:
-
-```
-AI calls submitProposal with transitionName → Rejected
-AI calls submitVote with voteFor → Rejected
-AI calls submitArbitration with transitionName → Rejected
-
-Only humans can provide explicit decisions.
-```
-
-This ensures that when humans participate, their decisions are recorded as ground truth. AI specialists are then evaluated on how well their strategy-generated decisions align with human decisions.
+This ensures that when humans participate, their decisions are recorded as ground truth. AI specialists are then evaluated on how well their decisions align with human decisions.
 
 ## Common Objections
 

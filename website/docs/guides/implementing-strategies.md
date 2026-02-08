@@ -4,6 +4,8 @@ sidebar_position: 3
 
 # Implementing Strategies
 
+This guide covers how to implement strategy functions for specialists. For the conceptual foundation, see [Specialists](/docs/concepts/specialists) and [Decision Cycle](/docs/concepts/decision-cycle).
+
 Strategies are async functions that define how specialists make decisions. Each specialist is registered with a `strategyFn` that gets called during the decision cycle.
 
 ## Proposer Strategy

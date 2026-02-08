@@ -42,20 +42,6 @@ DIAL is not about AI replacing humans. It targets decisions that humans already 
 
 ## How It Works
 
-1. **Model the task as a state machine**: Define states, transitions, and decision prompts
-2. **Register proposers and voters**: AI and human specialists that propose transitions and vote on them
-3. **Run decision cycles**: Propose, Vote, Arbitrate, Execute
-4. **Reach `defaultState`**: The session completes when it reaches its `defaultState`
-
-## Using DIAL
-
-DIAL can be used in two ways:
-
-- **CLI Mode**: Run state machines from the command line with `dialai <machine.json>`
-- **MCP Server Mode**: Expose DIAL functionality as tools via the Model Context Protocol (MCP) for integration with AI assistants like Claude Desktop
-
-Both modes share the same core engine and API. See [Installation](./getting-started/installation.md) for setup instructions.
-
 ```mermaid
 graph LR
     A[Propose] --> B[Vote]
@@ -64,32 +50,30 @@ graph LR
     D --> A
 ```
 
-## What's Next?
+1. **Model the task as a state machine**: Define states, transitions, and decision prompts
+2. **Register proposers and voters**: AI and human specialists that propose transitions and vote on them
+3. **Run decision cycles**: Propose → Vote → Arbitrate → Execute
+4. **Reach completion**: The session completes when it reaches its default state
 
-<div className="row">
-  <div className="col col--6">
-    <div className="card margin-bottom--md">
-      <div className="card__header">
-        <h3>🚀 Get Started</h3>
-      </div>
-      <div className="card__body">
-        <p>Install DIAL and run your first state machine with AI and human specialists.</p>
-        <a href="/docs/getting-started/installation" className="button button--primary">Installation Guide →</a>
-      </div>
-    </div>
-  </div>
-  <div className="col col--6">
-    <div className="card margin-bottom--md">
-      <div className="card__header">
-        <h3>📚 Learn Concepts</h3>
-      </div>
-      <div className="card__body">
-        <p>Understand sessions, specialists, decision cycles, and arbitration strategies.</p>
-        <a href="/docs/concepts/intro" className="button button--secondary">Explore Concepts →</a>
-      </div>
-    </div>
-  </div>
-</div>
+## Documentation Structure
+
+This documentation is organized into two main sections:
+
+### [Concepts](/docs/concepts/intro)
+
+The theory and philosophy behind DIAL. No code—just ideas:
+- What sessions, specialists, and decision cycles are
+- How arbitration and consensus work
+- Why human primacy matters
+- How DIAL relates to other approaches
+
+### [Implementation](/docs/getting-started/installation)
+
+How to use the `dialai` library:
+- Installation and quick start
+- API reference
+- Guides for building state machines and registering specialists
+- Examples and deployment patterns
 
 ## Key Terminology
 
@@ -97,6 +81,6 @@ graph LR
 |------|------------|
 | **Session** | An instance of a state machine being navigated by specialists |
 | **Specialist** | A pluggable actor (AI or human) that proposes transitions or votes |
-| **Decision Cycle** | The repeating process: Propose, Vote, Arbitrate, Execute |
+| **Decision Cycle** | The repeating process: Propose → Vote → Arbitrate → Execute |
 | **Arbiter** | The built-in logic that evaluates consensus and determines when a proposal wins |
-| **`defaultState`** | The state where the session is complete; defined in the machine definition |
+| **Default State** | The state where the session is complete |

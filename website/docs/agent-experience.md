@@ -1,10 +1,10 @@
 ---
-sidebar_position: 2
+sidebar_position: 8
 ---
 
 # AI Agent Experience
 
-DIAL is designed for LLM-driven agents to participate as proposers and voters in decision cycles, to design state machines that encode governance workflows, and to develop custom applications that embed DIAL. Every design decision optimizes for agents that need to understand, integrate with, and act within the framework autonomously: the API shape, the documentation format, and the way changelogs are written.
+DIAL is designed for LLM-driven agents to participate as proposers and voters in decision cycles, to design state machines that encode governance workflows, and to develop custom applications that embed DIAL. This page explains how DIAL is optimized for agents and provides guidance for AI assistants working with the framework.
 
 ## Agents as Participants
 

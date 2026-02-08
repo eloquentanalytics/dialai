@@ -4,13 +4,15 @@ sidebar_position: 1
 
 # Examples
 
-This section contains example implementations demonstrating DialAI usage.
+This section contains example implementations demonstrating `dialai` library usage. For the concepts behind these examples, see [Concepts](/docs/concepts/intro).
 
-## Simple Machine
+## Minimal Example
 
-The repository includes a minimal example at `examples/simple-machine.json`:
+The simplest possible machine: one state with one transition.
 
-```json
+```bash
+# Create machine.json
+cat > machine.json << 'EOF'
 {
   "machineName": "simple-task",
   "initialState": "pending",
@@ -23,24 +25,25 @@ The repository includes a minimal example at `examples/simple-machine.json`:
     "done": {}
   }
 }
-```
+EOF
 
-Run it with the CLI:
-
-```bash
-npx dialai examples/simple-machine.json
+# Run it
+npx dialai machine.json
 ```
 
 Output:
+
 ```
-Machine:        simple-task
-Initial state:  pending
-Default state:  done
-Final state:    done
-Session ID:     a1b2c3d4-...
+Machine:       simple-task
+Initial state: pending
+Goal state:    done
+Final state:   done
+Session ID:    a1b2c3d4-...
 ```
 
 ## Programmatic Usage
+
+The same machine, run programmatically:
 
 ```typescript
 import { runSession } from "dialai";
@@ -63,7 +66,7 @@ const session = await runSession(machine);
 console.log(session.currentState); // "done"
 ```
 
-## Multi-Step Machine
+## Multi-Step Pipeline
 
 A 3-state machine that requires 2 cycles to reach the goal:
 
@@ -86,10 +89,13 @@ const pipeline: MachineDefinition = {
 };
 
 const session = await runSession(pipeline);
-// queued → processing → complete
+// Transitions: queued → processing → complete
+console.log(session.history.length); // 2
 ```
 
-## Custom Specialists Example
+## Full Decision Cycle
+
+Walk through the complete decision cycle step by step:
 
 ```typescript
 import {
@@ -98,12 +104,14 @@ import {
   registerVoter,
   submitProposal,
   submitVote,
-  submitArbitration,
+  evaluateConsensus,
+  executeTransition,
   clear,
 } from "dialai";
 import type { MachineDefinition } from "dialai";
 
-clear(); // Reset state
+// Reset state
+clear();
 
 const machine: MachineDefinition = {
   machineName: "review",
@@ -111,10 +119,10 @@ const machine: MachineDefinition = {
   defaultState: "approved",
   states: {
     pending: {
+      prompt: "Review this item. Approve or reject?",
       transitions: {
         approve: "approved",
         reject: "rejected",
-        revise: "pending",
       },
     },
     approved: {},
@@ -122,8 +130,13 @@ const machine: MachineDefinition = {
   },
 };
 
-// Two proposers that disagree
-registerProposer({
+// Step 1: Create session
+const session = createSession(machine);
+console.log("Created session:", session.sessionId);
+console.log("Current state:", session.currentState); // "pending"
+
+// Step 2: Register specialists
+await registerProposer({
   specialistId: "optimist",
   machineName: "review",
   strategyFn: async (ctx) => ({
@@ -133,7 +146,7 @@ registerProposer({
   }),
 });
 
-registerProposer({
+await registerProposer({
   specialistId: "pessimist",
   machineName: "review",
   strategyFn: async (ctx) => ({
@@ -143,39 +156,325 @@ registerProposer({
   }),
 });
 
-// A voter that prefers approval
-registerVoter({
+await registerVoter({
   specialistId: "tiebreaker",
   machineName: "review",
   strategyFn: async (ctx) => {
-    if (ctx.proposalA.toState === "approved") return { voteFor: "A", reasoning: "Approve" };
-    if (ctx.proposalB.toState === "approved") return { voteFor: "B", reasoning: "Approve" };
+    // Prefer approval
+    if (ctx.proposalA.toState === "approved") {
+      return { voteFor: "A", reasoning: "Approve" };
+    }
+    if (ctx.proposalB.toState === "approved") {
+      return { voteFor: "B", reasoning: "Approve" };
+    }
     return { voteFor: "NEITHER", reasoning: "Neither approves" };
   },
 });
 
-const session = createSession(machine);
+// Step 3: Submit proposals (invoke strategies)
+const p1 = await submitProposal(session.sessionId, "optimist");
+const p2 = await submitProposal(session.sessionId, "pessimist");
+console.log("Proposal 1:", p1.transitionName, "→", p1.toState);
+console.log("Proposal 2:", p2.transitionName, "→", p2.toState);
 
-// Submit proposals from both proposers (strategy invocation - omit transitionName)
-const p1 = await submitProposal(session.sessionId, "optimist", session.currentRoundId);
-const p2 = await submitProposal(session.sessionId, "pessimist", session.currentRoundId);
-
-// Submit vote (strategy invocation - omit voteFor)
-await submitVote(
+// Step 4: Submit vote (invoke strategy)
+const vote = await submitVote(
   session.sessionId,
   "tiebreaker",
-  session.currentRoundId,
   p1.proposalId,
   p2.proposalId
 );
+console.log("Vote:", vote.voteFor, "-", vote.reasoning);
 
-// Submit arbitration - evaluates consensus and executes if reached
-const result = await submitArbitration(session.sessionId, session.currentRoundId);
+// Step 5: Evaluate consensus
+const result = await evaluateConsensus(session.sessionId);
+console.log("Consensus reached:", result.consensusReached);
+console.log("Winner:", result.winningProposalId);
 
-if (result.executed) {
-  console.log("Transitioned to:", result.toState);  // "approved"
-  console.log("Reasoning:", result.reasoning);
+// Step 6: Execute transition
+if (result.consensusReached && result.winningProposalId) {
+  const winner = [p1, p2].find(p => p.proposalId === result.winningProposalId)!;
+  await executeTransition(
+    session.sessionId,
+    winner.transitionName,
+    winner.toState,
+    result.reasoning
+  );
 }
 
-console.log(session.currentState); // "approved"
+console.log("Final state:", session.currentState); // "approved"
+console.log("History:", session.history);
+```
+
+## Custom Proposer Strategies
+
+Different proposer strategies for different use cases:
+
+### First Available Transition
+
+```typescript
+await registerProposer({
+  specialistId: "first-transition",
+  machineName: "my-task",
+  strategyFn: async (ctx) => {
+    const name = Object.keys(ctx.transitions)[0];
+    return {
+      transitionName: name,
+      toState: ctx.transitions[name],
+      reasoning: "First available transition",
+    };
+  },
+});
+```
+
+### Goal-Directed
+
+```typescript
+await registerProposer({
+  specialistId: "goal-directed",
+  machineName: "my-task",
+  strategyFn: async (ctx) => {
+    // Prefer transitions that lead to terminal states
+    for (const [name, target] of Object.entries(ctx.transitions)) {
+      if (target === "done" || target === "approved" || target === "completed") {
+        return {
+          transitionName: name,
+          toState: target,
+          reasoning: `Direct path to goal: ${target}`,
+        };
+      }
+    }
+    // Fallback to first
+    const name = Object.keys(ctx.transitions)[0];
+    return {
+      transitionName: name,
+      toState: ctx.transitions[name],
+      reasoning: "No direct path to goal",
+    };
+  },
+});
+```
+
+### History-Aware
+
+```typescript
+await registerProposer({
+  specialistId: "history-aware",
+  machineName: "my-task",
+  strategyFn: async (ctx) => {
+    // Avoid transitions we've taken before
+    const previousTransitions = new Set(ctx.history.map(h => h.transitionName));
+
+    for (const [name, target] of Object.entries(ctx.transitions)) {
+      if (!previousTransitions.has(name)) {
+        return {
+          transitionName: name,
+          toState: target,
+          reasoning: `New transition: ${name}`,
+        };
+      }
+    }
+
+    // All transitions have been taken, pick first
+    const name = Object.keys(ctx.transitions)[0];
+    return {
+      transitionName: name,
+      toState: ctx.transitions[name],
+      reasoning: "All transitions already taken",
+    };
+  },
+});
+```
+
+## Custom Voter Strategies
+
+### Prefer Shortest Path
+
+```typescript
+await registerVoter({
+  specialistId: "shortest-path",
+  machineName: "my-task",
+  strategyFn: async (ctx) => {
+    const goalStates = ["done", "approved", "completed"];
+    const aIsGoal = goalStates.includes(ctx.proposalA.toState);
+    const bIsGoal = goalStates.includes(ctx.proposalB.toState);
+
+    if (aIsGoal && !bIsGoal) return { voteFor: "A", reasoning: "A reaches goal" };
+    if (bIsGoal && !aIsGoal) return { voteFor: "B", reasoning: "B reaches goal" };
+    if (aIsGoal && bIsGoal) return { voteFor: "BOTH", reasoning: "Both reach goal" };
+    return { voteFor: "NEITHER", reasoning: "Neither reaches goal" };
+  },
+});
+```
+
+### Prefer Specific Transitions
+
+```typescript
+await registerVoter({
+  specialistId: "approve-biased",
+  machineName: "review",
+  strategyFn: async (ctx) => {
+    if (ctx.proposalA.transitionName === "approve") {
+      return { voteFor: "A", reasoning: "Prefer approval" };
+    }
+    if (ctx.proposalB.transitionName === "approve") {
+      return { voteFor: "B", reasoning: "Prefer approval" };
+    }
+    return { voteFor: "NEITHER", reasoning: "Neither is approval" };
+  },
+});
+```
+
+## Machine JSON Examples
+
+### Document Review Workflow
+
+```json
+{
+  "machineName": "document-review",
+  "initialState": "submitted",
+  "defaultState": "published",
+  "states": {
+    "submitted": {
+      "prompt": "Review the document. Approve, request revisions, or reject?",
+      "transitions": {
+        "approve": "published",
+        "revise": "revision_requested",
+        "reject": "rejected"
+      }
+    },
+    "revision_requested": {
+      "prompt": "Author has revised. Approve now or request more changes?",
+      "transitions": {
+        "approve": "published",
+        "revise": "revision_requested",
+        "reject": "rejected"
+      }
+    },
+    "published": {},
+    "rejected": {}
+  }
+}
+```
+
+### Support Ticket Triage
+
+```json
+{
+  "machineName": "support-ticket",
+  "initialState": "new",
+  "defaultState": "resolved",
+  "states": {
+    "new": {
+      "prompt": "Triage this ticket: escalate, assign, or resolve?",
+      "transitions": {
+        "escalate": "escalated",
+        "assign": "in_progress",
+        "resolve": "resolved"
+      }
+    },
+    "escalated": {
+      "prompt": "Senior review complete. Assign or resolve?",
+      "transitions": {
+        "assign": "in_progress",
+        "resolve": "resolved"
+      }
+    },
+    "in_progress": {
+      "prompt": "Work complete. Resolve or escalate?",
+      "transitions": {
+        "resolve": "resolved",
+        "escalate": "escalated"
+      }
+    },
+    "resolved": {}
+  }
+}
+```
+
+### Agentic Workflow
+
+```json
+{
+  "machineName": "coding-agent",
+  "initialState": "operating",
+  "defaultState": "done",
+  "states": {
+    "operating": {
+      "prompt": "Agent is working. Continue, use tool, replan, or finalize?",
+      "transitions": {
+        "use_tool": "tool_selection",
+        "replan": "planning",
+        "finalize": "done"
+      }
+    },
+    "tool_selection": {
+      "prompt": "Which tool should the agent use?",
+      "transitions": {
+        "selected": "operating"
+      }
+    },
+    "planning": {
+      "prompt": "What should the new plan be?",
+      "transitions": {
+        "resume": "operating"
+      }
+    },
+    "done": {}
+  }
+}
+```
+
+## Testing Patterns
+
+### Isolated Test Setup
+
+```typescript
+import { clear, createSession, runSession } from "dialai";
+import { describe, it, beforeEach, expect } from "vitest";
+
+describe("MyMachine", () => {
+  beforeEach(() => {
+    clear(); // Reset all state between tests
+  });
+
+  it("reaches default state", async () => {
+    const session = await runSession(machine);
+    expect(session.currentState).toBe(machine.defaultState);
+  });
+
+  it("records history", async () => {
+    const session = await runSession(machine);
+    expect(session.history.length).toBeGreaterThan(0);
+  });
+});
+```
+
+### Testing Specific Transitions
+
+```typescript
+it("takes approve transition when voter prefers it", async () => {
+  clear();
+
+  await registerVoter({
+    specialistId: "always-approve",
+    machineName: "review",
+    strategyFn: async (ctx) => {
+      if (ctx.proposalA.transitionName === "approve") {
+        return { voteFor: "A", reasoning: "Approve" };
+      }
+      if (ctx.proposalB.transitionName === "approve") {
+        return { voteFor: "B", reasoning: "Approve" };
+      }
+      return { voteFor: "NEITHER", reasoning: "No approval" };
+    },
+  });
+
+  const session = await runSession(machine);
+
+  const approvalTransition = session.history.find(
+    h => h.transitionName === "approve"
+  );
+  expect(approvalTransition).toBeDefined();
+});
 ```

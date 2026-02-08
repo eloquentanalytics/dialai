@@ -15,64 +15,76 @@ This design accommodates:
 - **Distributed specialists**: Webhook-based specialists may be across networks with variable latency
 - **Late arrivals**: A slow specialist's contribution doesn't block progress if consensus forms first
 
-## The Cycle
+## The Four Phases
 
-### 1. Proposal Collection
+### 1. Propose
 
-Proposals arrive asynchronously from registered proposers for the session's machine. Each proposer's strategy function is invoked with the current state and available transitions, and the resulting proposal is submitted. Proposals may arrive at any time and in any order. Each proposal includes:
+Proposals arrive asynchronously from registered proposers. Each proposer analyzes the current state and available transitions, then submits a proposal. Each proposal includes:
 - The proposed transition name
 - The target state
 - Reasoning for the proposal
 
-### 2. Vote Collection
+Multiple proposers may submit different proposals for the same decision point. This is expected—the voting phase resolves which proposal wins.
 
-Votes arrive asynchronously as voters evaluate proposals. With multiple proposals, voters compare pairwise using Swiss tournament pairing. Each voter's strategy function is called, and the resulting vote is submitted. Votes may arrive at any time and in any order. See [Arbitration](./arbitration.md) for pairing and early-stopping details.
+### 2. Vote
 
-### 3. Arbitration (Continuous)
+With multiple proposals, voters compare them pairwise. Each voter expresses a preference:
 
-After each proposal and vote, `submitArbitration` checks whether any proposal has sufficient support. This is not a one-time evaluation—it runs continuously as new contributions arrive. If consensus is reached, the transition executes automatically.
+| Vote | Meaning |
+|------|---------|
+| **A** | Prefer proposal A |
+| **B** | Prefer proposal B |
+| **BOTH** | Both are acceptable |
+| **NEITHER** | Both are unacceptable |
 
-**Note on single proposals:** A single proposal can achieve consensus with just one supporting vote (meeting the ahead-by-k threshold). The diagram below shows this as a valid flow—votes are still required, but when only one proposal exists, a single vote demonstrating support is sufficient for consensus. See [Arbitration](./arbitration.md) for the full rules.
+Votes arrive asynchronously. The system uses Swiss tournament pairing to efficiently compare proposals with similar support levels first.
 
-### 4. Transition Execution
+### 3. Arbitrate
 
-If consensus is reached, the winning proposal's transition executes. The session's `currentState` is updated, and all proposals and votes for that session are cleared for the next cycle.
+After each proposal and vote, consensus is evaluated. This is not a one-time evaluation—it runs continuously as new contributions arrive. The built-in arbiter checks:
 
-The cycle repeats until the session reaches its `defaultState`.
+- Do any proposals exist?
+- Does the leading proposal have sufficient support (ahead by k votes)?
 
-## The Engine
+If consensus is reached, the transition executes automatically.
 
-The `runSession` function automates the full cycle:
+**Note on single proposals:** A single proposal can achieve consensus with just one supporting vote. Votes are still required—a proposal without any votes has no demonstrated support.
 
-```typescript
-import { runSession } from "dialai";
-import type { MachineDefinition } from "dialai";
+### 4. Execute
 
-const machine: MachineDefinition = {
-  machineName: "my-task",
-  initialState: "pending",
-  defaultState: "done",
-  states: {
-    pending: {
-      prompt: "Should we complete this task?",
-      transitions: { complete: "done" },
-    },
-    done: {},
-  },
-};
+If consensus is reached, the winning proposal's transition executes:
+- The session's current state updates to the target state
+- All proposals and votes for that round are cleared
+- A new round begins
 
-const session = await runSession(machine);
-// session.currentState === "done"
+The cycle repeats until the session reaches its **default state** (the completion state).
+
+```mermaid
+stateDiagram-v2
+    [*] --> Propose
+    Propose --> Vote: 2+ proposals
+    Propose --> Arbitrate: 1 proposal
+    Vote --> Arbitrate
+    Arbitrate --> Execute: Consensus
+    Arbitrate --> [*]: No Consensus (Human Required)
+    Execute --> [*]: Default State Reached
+    Execute --> Propose: Continue
 ```
 
-`runSession` automatically:
-1. Creates a session
-2. Registers a built-in deterministic proposer (picks the first available transition)
-3. Loops: collect proposals → collect votes (if needed) → submit arbitration (evaluates and executes if consensus)
-4. Returns the completed session
+## When Consensus Fails
 
-## Error Handling
+It is entirely possible—and expected in complex scenarios—that specialists will **not** reach consensus on their own. This is not a failure; it's a feature.
 
-- If no transitions are available from the current state, the built-in proposer throws
-- If consensus cannot be reached (e.g., tied votes with insufficient margin), human input is required—this signals that the decision needs human judgment or that specialists need additional training
-- If the winning proposal's transition is invalid, `executeTransition` throws
+When voters are split or vote NEITHER, the system naturally surfaces the decision to a human. The inability to reach consensus indicates:
+
+- The decision requires human judgment
+- The specialists may need additional training or clearer instructions
+- The problem space has genuine ambiguity that humans should resolve
+
+This is how DIAL implements [Human Primacy](./human-primacy.md) in practice: humans don't need to monitor every decision, only the ones where AI specialists genuinely disagree.
+
+## Related Concepts
+
+- [Arbitration](./arbitration.md): How consensus is evaluated
+- [Specialists](./specialists.md): The actors that propose and vote
+- [Human Primacy](./human-primacy.md): Why humans override when consensus fails

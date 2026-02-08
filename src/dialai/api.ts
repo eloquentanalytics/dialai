@@ -6,6 +6,7 @@ import type {
   Proposal,
   Vote,
   ConsensusResult,
+  ArbitrationResult,
   ProposerContext,
   VoterContext,
 } from "./types.js";
@@ -160,7 +161,11 @@ export async function submitProposal(
   specialistId: string,
   transitionName?: string,
   toState?: string,
-  reasoning?: string
+  reasoning?: string,
+  costUSD?: number,
+  latencyMsec?: number,
+  numInputTokens?: number,
+  numOutputTokens?: number
 ): Promise<Proposal> {
   // If proposal data missing, invoke strategy
   if (transitionName === undefined || toState === undefined) {
@@ -177,6 +182,10 @@ export async function submitProposal(
     transitionName,
     toState,
     reasoning: reasoning ?? "",
+    costUSD,
+    latencyMsec,
+    numInputTokens,
+    numOutputTokens,
   };
   proposals.set(proposal.proposalId, proposal);
   return proposal;
@@ -238,7 +247,11 @@ export async function submitVote(
   proposalIdA: string,
   proposalIdB: string,
   voteFor?: "A" | "B" | "BOTH" | "NEITHER",
-  reasoning?: string
+  reasoning?: string,
+  costUSD?: number,
+  latencyMsec?: number,
+  numInputTokens?: number,
+  numOutputTokens?: number
 ): Promise<Vote> {
   // If vote choice missing, invoke strategy
   if (voteFor === undefined) {
@@ -255,6 +268,10 @@ export async function submitVote(
     proposalIdB,
     voteFor,
     reasoning: reasoning ?? "",
+    costUSD,
+    latencyMsec,
+    numInputTokens,
+    numOutputTokens,
   };
   votes.set(vote.voteId, vote);
   return vote;
@@ -376,4 +393,187 @@ export async function executeTransition(
   }
 
   return session;
+}
+
+export async function submitArbitration(
+  sessionId: string,
+  roundId: string,
+  specialistId?: string,
+  transitionName?: string,
+  reasoning?: string,
+  metaJson?: Record<string, unknown>,
+  costUSD?: number,
+  latencyMsec?: number,
+  numInputTokens?: number,
+  numOutputTokens?: number
+): Promise<ArbitrationResult> {
+  const session = await getSession(sessionId);
+
+  // Check if roundId matches current state (stale check)
+  // For now, we use a simple approach: roundId should match the history length
+  const currentRoundId = String(session.history.length);
+  const stale = roundId !== currentRoundId;
+
+  if (stale) {
+    return {
+      arbitrationId: crypto.randomUUID(),
+      sessionId,
+      roundId,
+      specialistId,
+      stale: true,
+      guardsPass: false,
+      guardReason: `Round ID mismatch: expected ${currentRoundId}, got ${roundId}`,
+      executed: false,
+      isHuman: false,
+      metaJson,
+      costUSD,
+      latencyMsec,
+      numInputTokens,
+      numOutputTokens,
+    };
+  }
+
+  // Check if this is a human forcing a transition
+  const isHuman = specialistId?.toLowerCase().includes("human") ?? false;
+
+  // If transitionName provided, this is a forced transition (human only)
+  if (transitionName !== undefined) {
+    if (!isHuman) {
+      return {
+        arbitrationId: crypto.randomUUID(),
+        sessionId,
+        roundId,
+        specialistId,
+        stale: false,
+        guardsPass: false,
+        guardReason: "Only human specialists can force arbitration",
+        executed: false,
+        isHuman: false,
+        metaJson,
+        costUSD,
+        latencyMsec,
+        numInputTokens,
+        numOutputTokens,
+      };
+    }
+
+    // Find matching transition
+    const stateConfig = session.machine.states[session.currentState];
+    const transitions = stateConfig?.transitions ?? {};
+    const toState = transitions[transitionName];
+
+    if (!toState) {
+      return {
+        arbitrationId: crypto.randomUUID(),
+        sessionId,
+        roundId,
+        specialistId,
+        stale: false,
+        guardsPass: false,
+        guardReason: `Invalid transition "${transitionName}" from state "${session.currentState}"`,
+        executed: false,
+        isHuman: true,
+        metaJson,
+        costUSD,
+        latencyMsec,
+        numInputTokens,
+        numOutputTokens,
+      };
+    }
+
+    // Execute the forced transition
+    await executeTransition(sessionId, transitionName, toState, reasoning);
+
+    return {
+      arbitrationId: crypto.randomUUID(),
+      sessionId,
+      roundId,
+      specialistId,
+      stale: false,
+      guardsPass: true,
+      guardReason: "Human forced transition",
+      transitionName,
+      toState,
+      reasoning,
+      executed: true,
+      isHuman: true,
+      metaJson,
+      costUSD,
+      latencyMsec,
+      numInputTokens,
+      numOutputTokens,
+    };
+  }
+
+  // No transitionName: evaluate consensus
+  const consensus = await evaluateConsensus(sessionId);
+
+  if (!consensus.consensusReached) {
+    return {
+      arbitrationId: crypto.randomUUID(),
+      sessionId,
+      roundId,
+      specialistId,
+      stale: false,
+      guardsPass: false,
+      guardReason: consensus.reasoning,
+      executed: false,
+      isHuman,
+      metaJson,
+      costUSD,
+      latencyMsec,
+      numInputTokens,
+      numOutputTokens,
+    };
+  }
+
+  // Consensus reached - execute winning proposal
+  const winningProposal = proposals.get(consensus.winningProposalId!);
+  if (!winningProposal) {
+    return {
+      arbitrationId: crypto.randomUUID(),
+      sessionId,
+      roundId,
+      specialistId,
+      stale: false,
+      guardsPass: false,
+      guardReason: "Winning proposal not found",
+      winningProposalId: consensus.winningProposalId,
+      executed: false,
+      isHuman,
+      metaJson,
+      costUSD,
+      latencyMsec,
+      numInputTokens,
+      numOutputTokens,
+    };
+  }
+
+  await executeTransition(
+    sessionId,
+    winningProposal.transitionName,
+    winningProposal.toState,
+    consensus.reasoning
+  );
+
+  return {
+    arbitrationId: crypto.randomUUID(),
+    sessionId,
+    roundId,
+    specialistId,
+    stale: false,
+    guardsPass: true,
+    guardReason: consensus.reasoning,
+    winningProposalId: consensus.winningProposalId,
+    transitionName: winningProposal.transitionName,
+    toState: winningProposal.toState,
+    reasoning: consensus.reasoning,
+    executed: true,
+    isHuman,
+    metaJson,
+    costUSD,
+    latencyMsec,
+    numInputTokens,
+    numOutputTokens,
+  };
 }

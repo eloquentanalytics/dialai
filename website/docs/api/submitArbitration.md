@@ -2,7 +2,7 @@
 sidebar_position: 9
 ---
 
-# `submitArbitration(sessionId, roundId, specialistId?, transitionName?, reasoning?, metaJson?): Promise<ArbitrationResult>`
+# `submitArbitration(sessionId, roundId, specialistId?, transitionName?, reasoning?, metaJson?, costUSD?, latencyMsec?, numInputTokens?, numOutputTokens?): Promise<ArbitrationResult>`
 
 Evaluates consensus and optionally executes the winning transition. Follows the same unified pattern as `submitProposal` and `submitVote`: if the key decision parameter is omitted, the arbiter's strategy is invoked.
 
@@ -15,7 +15,11 @@ submitArbitration(
   specialistId?: string,      // who is calling (required for override)
   transitionName?: string,    // if omitted, check consensus; if provided, force transition
   reasoning?: string,
-  metaJson?: Record<string, unknown>
+  metaJson?: Record<string, unknown>,
+  costUSD?: number,
+  latencyMsec?: number,
+  numInputTokens?: number,
+  numOutputTokens?: number
 ): Promise<ArbitrationResult>
 ```
 
@@ -27,6 +31,10 @@ submitArbitration(
 | `transitionName` | `string` | No | If provided, force this transition (requires human specialist) |
 | `reasoning` | `string` | No | Explanation for the arbitration decision |
 | `metaJson` | `object` | No | Arbitrary client metadata (opaque to DIAL) |
+| `costUSD` | `number` | No | Cost in USD to generate this arbitration decision |
+| `latencyMsec` | `number` | No | Time in milliseconds to generate this decision |
+| `numInputTokens` | `number` | No | Number of input tokens used |
+| `numOutputTokens` | `number` | No | Number of output tokens used |
 
 ## Behavior
 
@@ -56,6 +64,10 @@ If any guard fails, `guardsPass: false` and `executed: false` are returned with 
 
 ```typescript
 interface ArbitrationResult {
+  arbitrationId: string;       // unique identifier for this arbitration
+  sessionId: string;           // the session this arbitration is for
+  roundId: string;             // the round this arbitration is for
+  specialistId?: string;       // who called this arbitration
   stale: boolean;              // roundId mismatch
   guardsPass: boolean;         // all guards passed
   guardReason: string;         // explanation if guards failed
@@ -66,6 +78,10 @@ interface ArbitrationResult {
   executed: boolean;           // whether transition was executed
   isHuman: boolean;            // whether this was a human-forced decision
   metaJson?: Record<string, unknown>;
+  costUSD?: number;            // cost in USD for this arbitration
+  latencyMsec?: number;        // time in milliseconds
+  numInputTokens?: number;     // input tokens used
+  numOutputTokens?: number;    // output tokens used
 }
 ```
 

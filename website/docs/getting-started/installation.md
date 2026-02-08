@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Installation
 
-Get DIAL up and running in your project.
+Get the `dialai` library up and running in your project. This section covers the practical implementation of DIAL—for the concepts and theory, see [Concepts](/docs/concepts/intro).
 
 ## Prerequisites
 

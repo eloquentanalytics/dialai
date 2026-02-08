@@ -78,6 +78,10 @@ export interface Proposal {
   transitionName: string;
   toState: string;
   reasoning: string;
+  costUSD?: number;
+  latencyMsec?: number;
+  numInputTokens?: number;
+  numOutputTokens?: number;
 }
 
 export interface Vote {
@@ -88,6 +92,10 @@ export interface Vote {
   proposalIdB: string;
   voteFor: VoteChoice;
   reasoning: string;
+  costUSD?: number;
+  latencyMsec?: number;
+  numInputTokens?: number;
+  numOutputTokens?: number;
 }
 
 export type VoteChoice = "A" | "B" | "BOTH" | "NEITHER";
@@ -96,4 +104,25 @@ export interface ConsensusResult {
   consensusReached: boolean;
   winningProposalId?: string;
   reasoning: string;
+}
+
+export interface ArbitrationResult {
+  arbitrationId: string;
+  sessionId: string;
+  roundId: string;
+  specialistId?: string;
+  stale: boolean;
+  guardsPass: boolean;
+  guardReason: string;
+  winningProposalId?: string;
+  transitionName?: string;
+  toState?: string;
+  reasoning?: string;
+  executed: boolean;
+  isHuman: boolean;
+  metaJson?: Record<string, unknown>;
+  costUSD?: number;
+  latencyMsec?: number;
+  numInputTokens?: number;
+  numOutputTokens?: number;
 }

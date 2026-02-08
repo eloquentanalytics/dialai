@@ -4,7 +4,7 @@ sidebar_position: 2
 
 # Quick Start
 
-Build your first DIAL state machine with specialists.
+Build your first DIAL state machine with specialists. This guide focuses on the code—for the concepts behind what you're building, see [Concepts](/docs/concepts/intro).
 
 ## What We'll Build
 

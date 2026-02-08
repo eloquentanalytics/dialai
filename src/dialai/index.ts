@@ -10,6 +10,7 @@ export type {
   Proposal,
   Vote,
   ConsensusResult,
+  ArbitrationResult,
   VoteChoice,
 } from "./types.js";
 
@@ -22,6 +23,7 @@ export {
   submitProposal,
   submitVote,
   evaluateConsensus,
+  submitArbitration,
   executeTransition,
 } from "./api.js";
 

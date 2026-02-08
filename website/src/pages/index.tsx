@@ -85,21 +85,33 @@ const concepts = [
   },
 ];
 
-const codeExample = `import { createDialClient } from '@dialai/core';
+const codeExample = `import { createSession, submitProposal, submitVote } from "dialai";
 
 const machine = {
-  id: 'content-review',
-  initial: 'draft',
+  machineName: "content-review",
+  initialState: "draft",
+  defaultState: "published",
   states: {
-    draft:    { on: { SUBMIT: 'review' } },
-    review:   { on: { APPROVE: 'published', REJECT: 'draft' } },
-    published: { type: 'final' },
+    draft: {
+      prompt: "Submit for review or keep editing?",
+      transitions: { submit: "review" },
+    },
+    review: {
+      prompt: "Approve or reject?",
+      transitions: { approve: "published", reject: "draft" },
+    },
+    published: {},
   },
 };
 
-const client = createDialClient({ machine });
-const result = await client.run();
-// result.costs → per-specialist USD, latency, alignment`;
+const session = await createSession(machine);
+
+// Each submit tracks cost, latency, and tokens
+const proposal = await submitProposal(
+  session.sessionId, "ai-reviewer",
+  "approve", "published", "Content looks good",
+  0.003, 200, 150, 50  // costUSD, latencyMsec, tokens
+);`;
 
 function HeroSection() {
   return (
@@ -295,11 +307,11 @@ function CodeExampleSection() {
         <div className={styles.codeContent}>
           <div className={styles.codeTextCol}>
             <Heading as="h2" className={styles.sectionTitle}>
-              Define a machine. Get cost data.
+              Define a machine. Run to completion.
             </Heading>
             <p className={styles.sectionSubtitle} style={{ margin: 0 }}>
               Model your workflow as a state machine, register AI and human
-              specialists, and DIAL measures per-decision delegation costs
+              specialists, and DIAL coordinates the decision cycle
               automatically.
             </p>
           </div>
