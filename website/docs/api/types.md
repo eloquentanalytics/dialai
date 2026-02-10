@@ -170,7 +170,7 @@ interface Arbiter {
     winningProposalId?: string;
     reasoning: string;
   }>;
-  strategyFnName?: string;        // Built-in: "most_similar", "ahead_by_k", "pairwise_consensus"
+  strategyFnName?: string;        // Built-in: "mostSimilar", "aheadByK", "pairwiseConsensus"
   strategyWebhookUrl?: string;
   webhookTokenName?: string;
   threshold?: number;             // Strategy-specific threshold
@@ -253,7 +253,7 @@ interface ArbiterContext {
   prompt: string;               // Decision prompt for this state
   proposals: Proposal[];        // All proposals in this round
   votes: Vote[];                // All votes in this round
-  humanGoldExamples?: HumanGoldExample[];  // Human gold examples (for most_similar)
+  humanGoldExamples?: HumanGoldExample[];  // Human gold examples (for mostSimilar)
   history: TransitionRecord[];  // All previous transitions
   threshold: number;            // Configured threshold for this arbiter
 }
@@ -407,7 +407,7 @@ interface RegisterProposerOptions {
     reasoning: string;
   }>;
   strategyWebhookUrl?: string;
-  strategyFnName?: string;  // Built-in strategy name (e.g., "first_available", "random")
+  strategyFnName?: string;  // Built-in strategy name (e.g., "firstAvailable", "random")
 
   // For LLM-based modes:
   modelId?: string;
@@ -435,7 +435,7 @@ interface RegisterVoterOptions {
     reasoning: string;
   }>;
   strategyWebhookUrl?: string;
-  strategyFnName?: string;  // Built-in strategy name (e.g., "prefer_a", "random")
+  strategyFnName?: string;  // Built-in strategy name (e.g., "preferA", "random")
 
   // For LLM-based modes:
   modelId?: string;
@@ -464,7 +464,7 @@ interface RegisterArbiterOptions {
     reasoning: string;
   }>;
   strategyWebhookUrl?: string;
-  strategyFnName?: string;  // Built-in strategy: "most_similar", "ahead_by_k", "pairwise_consensus"
+  strategyFnName?: string;  // Built-in strategy: "mostSimilar", "aheadByK", "pairwiseConsensus"
 
   // For webhooks:
   webhookTokenName?: string;

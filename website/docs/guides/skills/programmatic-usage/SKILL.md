@@ -16,13 +16,12 @@ npm install dialai
 ## Quick Start
 
 ```typescript
-import { createSession, runToCompletion } from 'dialai';
+import { runSession } from 'dialai';
 import machineDefinition from './machine.json';
 
-const session = await createSession(machineDefinition);
-const result = await runToCompletion(session.id);
+const session = await runSession(machineDefinition);
 
-console.log('Final state:', result.currentState);
+console.log('Final state:', session.currentState);
 ```
 
 ## Core Functions

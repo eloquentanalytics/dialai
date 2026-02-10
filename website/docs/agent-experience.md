@@ -206,10 +206,10 @@ Configure in Claude Desktop:
 Import DIAL as a library and call functions directly:
 
 ```typescript
-import { createSession, runToCompletion } from 'dialai';
+import { runSession } from 'dialai';
 
-const session = await createSession(machineDefinition);
-const result = await runToCompletion(session.id);
+const session = await runSession(machineDefinition);
+console.log('Final state:', session.currentState);
 ```
 
 **When to use**: Building custom applications, embedding DIAL in larger systems, maximum control over the execution flow.

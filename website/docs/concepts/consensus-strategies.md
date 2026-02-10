@@ -10,12 +10,12 @@ DIAL provides three built-in consensus strategies for arbiters. Each strategy de
 
 | Strategy | Voting Required | Best For | Threshold Meaning |
 |----------|:---------------:|----------|-------------------|
-| `first_proposal` | No | Testing, single-proposer, bootstrap | -- |
-| `most_similar` | No | States with reliable human gold examples | Minimum semantic similarity (0.0–1.0) |
-| `ahead_by_k` | Yes (ranked) | Fast preference aggregation | Vote lead required (integer) |
-| `pairwise_consensus` | Yes (pairwise) | Nuanced/complex decisions | Agreement percentage (0.0–1.0) |
+| `firstProposal` | No | Testing, single-proposer, bootstrap | -- |
+| `mostSimilar` | No | States with reliable human gold examples | Minimum semantic similarity (0.0–1.0) |
+| `aheadByK` | Yes (ranked) | Fast preference aggregation | Vote lead required (integer) |
+| `pairwiseConsensus` | Yes (pairwise) | Nuanced/complex decisions | Agreement percentage (0.0–1.0) |
 
-## `first_proposal`
+## `firstProposal`
 
 The simplest arbiter strategy: immediately declares consensus on the first proposal received. No voting phase, no comparison—the first proposal wins.
 
@@ -33,7 +33,7 @@ The simplest arbiter strategy: immediately declares consensus on the first propo
 registerArbiter({
   specialistId: "fast-arbiter",
   machineName: "simple-task",
-  strategyFnName: "first_proposal",
+  strategyFnName: "firstProposal",
   // No threshold needed
 });
 ```
@@ -41,7 +41,7 @@ registerArbiter({
 ### Algorithm
 
 ```
-function first_proposal(ctx: ArbiterContext) -> ConsensusResult:
+function firstProposal(ctx: ArbiterContext) -> ConsensusResult:
     if len(ctx.proposals) == 0:
         return {
             consensusReached: false,
@@ -78,9 +78,9 @@ This strategy bypasses DIAL's core value proposition (measured consensus). Use i
 2. You're testing/debugging the system
 3. You're measuring baseline performance
 
-For production use cases, prefer `ahead_by_k` (with k=1 for speed) or `most_similar` (for alignment measurement).
+For production use cases, prefer `aheadByK` (with k=1 for speed) or `mostSimilar` (for alignment measurement).
 
-## `most_similar`
+## `mostSimilar`
 
 Compares each proposal directly to human gold examples using semantic similarity. No voting phase required—the proposal most similar to human gold wins.
 
@@ -97,7 +97,7 @@ Compares each proposal directly to human gold examples using semantic similarity
 registerArbiter({
   specialistId: "similarity-arbiter",
   machineName: "document-review",
-  strategyFnName: "most_similar",
+  strategyFnName: "mostSimilar",
   threshold: 0.85,  // minimum similarity to declare winner
 });
 ```
@@ -105,7 +105,7 @@ registerArbiter({
 ### Algorithm
 
 ```
-function most_similar(ctx: ArbiterContext) -> ConsensusResult:
+function mostSimilar(ctx: ArbiterContext) -> ConsensusResult:
     if ctx.humanGoldExamples is empty:
         return { consensusReached: false, reasoning: "No human gold examples available" }
 
@@ -158,7 +158,7 @@ async function semanticSimilarity(a: string, b: string): Promise<number> {
 }
 ```
 
-## `ahead_by_k`
+## `aheadByK`
 
 Requires a proposal to be ahead by k votes to win. Specialists vote by ranking all proposals; the top-ranked proposal from each voter gets +1.
 
@@ -175,7 +175,7 @@ Requires a proposal to be ahead by k votes to win. Specialists vote by ranking a
 registerArbiter({
   specialistId: "voting-arbiter",
   machineName: "triage-task",
-  strategyFnName: "ahead_by_k",
+  strategyFnName: "aheadByK",
   threshold: 2,  // must be ahead by 2 votes
 });
 ```
@@ -183,7 +183,7 @@ registerArbiter({
 ### Algorithm
 
 ```
-function ahead_by_k(ctx: ArbiterContext) -> ConsensusResult:
+function aheadByK(ctx: ArbiterContext) -> ConsensusResult:
     if len(ctx.proposals) == 0:
         return { consensusReached: false, reasoning: "No proposals" }
 
@@ -235,7 +235,7 @@ function ahead_by_k(ctx: ArbiterContext) -> ConsensusResult:
     }
 ```
 
-## `pairwise_consensus`
+## `pairwiseConsensus`
 
 Performs repeated pairwise comparisons between proposals. Each pair is voted on; the winner of each matchup advances. Consensus is reached when one proposal has won a sufficient percentage of its matchups.
 
@@ -252,7 +252,7 @@ Performs repeated pairwise comparisons between proposals. Each pair is voted on;
 registerArbiter({
   specialistId: "consensus-arbiter",
   machineName: "complex-decision",
-  strategyFnName: "pairwise_consensus",
+  strategyFnName: "pairwiseConsensus",
   threshold: 0.75,  // must win 75% of matchups
 });
 ```
@@ -260,7 +260,7 @@ registerArbiter({
 ### Algorithm
 
 ```
-function pairwise_consensus(ctx: ArbiterContext) -> ConsensusResult:
+function pairwiseConsensus(ctx: ArbiterContext) -> ConsensusResult:
     if len(ctx.proposals) == 0:
         return { consensusReached: false, reasoning: "No proposals" }
 
@@ -362,35 +362,35 @@ Custom strategies must be deterministic—given the same inputs, they must produ
 ```mermaid
 graph TD
     A[Need Consensus Strategy] --> B{Testing or<br/>single proposer?}
-    B -->|Yes| C[first_proposal]
+    B -->|Yes| C[firstProposal]
     B -->|No| D{Human gold<br/>available?}
     D -->|Yes| E{Similarity<br/>scores clear?}
     D -->|No| F{How many<br/>proposals?}
-    E -->|Yes| G[most_similar]
+    E -->|Yes| G[mostSimilar]
     E -->|No| F
-    F -->|2| H[ahead_by_k]
+    F -->|2| H[aheadByK]
     F -->|3+| I{Need nuance?}
-    I -->|Yes| J[pairwise_consensus]
+    I -->|Yes| J[pairwiseConsensus]
     I -->|No| H
 ```
 
 | Scenario | Recommended Strategy |
 |----------|---------------------|
-| Testing, dev, bootstrap | `first_proposal` |
-| Single proposer, no deliberation needed | `first_proposal` |
-| Reliable human gold examples | `most_similar` |
-| Fast triage, clear preferences | `ahead_by_k` |
-| Complex decisions, subtle differences | `pairwise_consensus` |
-| Unknown/varying conditions | Start with `pairwise_consensus`, collapse to simpler |
+| Testing, dev, bootstrap | `firstProposal` |
+| Single proposer, no deliberation needed | `firstProposal` |
+| Reliable human gold examples | `mostSimilar` |
+| Fast triage, clear preferences | `aheadByK` |
+| Complex decisions, subtle differences | `pairwiseConsensus` |
+| Unknown/varying conditions | Start with `pairwiseConsensus`, collapse to simpler |
 
 ## Progressive Collapse
 
 As alignment improves, systems naturally collapse toward simpler strategies:
 
-1. **Start**: `pairwise_consensus` (maximum data collection)
+1. **Start**: `pairwiseConsensus` (maximum data collection)
 2. **Improve**: Models learn from voting patterns
-3. **Simplify**: Switch to `ahead_by_k` (less overhead)
-4. **Optimize**: When gold examples are reliable, use `most_similar` (no voting)
+3. **Simplify**: Switch to `aheadByK` (less overhead)
+4. **Optimize**: When gold examples are reliable, use `mostSimilar` (no voting)
 5. **Collapse**: Eventually, a single well-aligned model runs deterministically
 
 This progression is a natural outcome of measuring and optimizing alignment over time.

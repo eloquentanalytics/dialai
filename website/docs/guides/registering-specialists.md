@@ -56,7 +56,7 @@ import { registerArbiter } from "dialai";
 registerArbiter({
   specialistId: "consensus-arbiter",
   machineName: "my-task",
-  strategyFnName: "ahead_by_k",
+  strategyFnName: "aheadByK",
   threshold: 2,
 });
 ```
@@ -186,7 +186,7 @@ Reference a built-in strategy by name. The orchestrator loads the strategy from 
 registerArbiter({
   specialistId: "consensus-arbiter",
   machineName: "document-review",
-  strategyFnName: "ahead_by_k",
+  strategyFnName: "aheadByK",
   threshold: 2,
 });
 ```
@@ -328,7 +328,7 @@ await submitArbitration(
 | `machineName` | `string` | Yes | -- | Which machine this specialist participates in |
 | `isHuman` | `boolean` | No | `false` | Set to `true` to allow forcing arbitration decisions (proposers/voters only) |
 | `strategyFn` | `async (context) => result` | Mode 1 | -- | Local function that returns a proposal, vote, or consensus result |
-| `strategyFnName` | `string` | Mode 5 | -- | Built-in strategy name (e.g., `"ahead_by_k"`, `"most_similar"`) |
+| `strategyFnName` | `string` | Mode 5 | -- | Built-in strategy name (e.g., `"aheadByK"`, `"mostSimilar"`) |
 | `strategyWebhookUrl` | `string` | Mode 2 | -- | URL to POST context to; expects proposal/vote/consensus response |
 | `contextFn` | `async (context) => string` | Mode 3 | -- | Local function that returns context for the LLM (proposers/voters only) |
 | `contextWebhookUrl` | `string` | Mode 4 | -- | URL to POST context request to; expects context response (proposers/voters only) |
@@ -344,15 +344,15 @@ DIAL provides built-in strategies for all specialist roles. These are referenced
 
 | Strategy | Description | Threshold |
 |----------|-------------|-----------|
-| `first_available` | Proposes the first available transition (alphabetically) | -- |
-| `last_available` | Proposes the last available transition (alphabetically) | -- |
+| `firstAvailable` | Proposes the first available transition (alphabetically) | -- |
+| `lastAvailable` | Proposes the last available transition (alphabetically) | -- |
 | `random` | Proposes a random available transition | -- |
-| `weighted_random` | Proposes randomly with weights from `metaJson.weights` | -- |
+| `weightedRandom` | Proposes randomly with weights from `metaJson.weights` | -- |
 
-#### `first_available`
+#### `firstAvailable`
 
 ```
-function first_available(ctx: ProposerContext) -> Proposal:
+function firstAvailable(ctx: ProposerContext) -> Proposal:
     transitions = sorted(ctx.transitions.keys())
     name = transitions[0]
     return {
@@ -362,10 +362,10 @@ function first_available(ctx: ProposerContext) -> Proposal:
     }
 ```
 
-#### `last_available`
+#### `lastAvailable`
 
 ```
-function last_available(ctx: ProposerContext) -> Proposal:
+function lastAvailable(ctx: ProposerContext) -> Proposal:
     transitions = sorted(ctx.transitions.keys())
     name = transitions[len(transitions) - 1]
     return {
@@ -388,16 +388,16 @@ function random(ctx: ProposerContext) -> Proposal:
     }
 ```
 
-#### `weighted_random`
+#### `weightedRandom`
 
 ```
-function weighted_random(ctx: ProposerContext) -> Proposal:
+function weightedRandom(ctx: ProposerContext) -> Proposal:
     weights = ctx.metaJson?.weights or {}
     transitions = list(ctx.transitions.keys())
 
     # Default weight is 1.0 for unspecified transitions
     weighted = [(t, weights.get(t, 1.0)) for t in transitions]
-    name = weighted_random_choice(weighted)
+    name = weightedRandom_choice(weighted)
 
     return {
         transitionName: name,
@@ -410,29 +410,29 @@ function weighted_random(ctx: ProposerContext) -> Proposal:
 
 | Strategy | Description | Threshold |
 |----------|-------------|-----------|
-| `prefer_a` | Always votes for proposal A | -- |
-| `prefer_b` | Always votes for proposal B | -- |
+| `preferA` | Always votes for proposal A | -- |
+| `preferB` | Always votes for proposal B | -- |
 | `both` | Always votes BOTH (both acceptable) | -- |
 | `neither` | Always votes NEITHER (neither acceptable) | -- |
 | `random` | Votes randomly between A and B | -- |
-| `random_all` | Votes randomly between A, B, BOTH, NEITHER | -- |
-| `prefer_goal` | Prefers whichever proposal leads closer to goalState | -- |
-| `prefer_shorter_path` | Prefers the proposal with fewer hops to goalState | -- |
+| `randomAll` | Votes randomly between A, B, BOTH, NEITHER | -- |
+| `preferGoal` | Prefers whichever proposal leads closer to goalState | -- |
+| `preferShorterPath` | Prefers the proposal with fewer hops to goalState | -- |
 
-#### `prefer_a`
+#### `preferA`
 
 ```
-function prefer_a(ctx: VoterContext) -> Vote:
+function preferA(ctx: VoterContext) -> Vote:
     return {
         voteFor: "A",
         reasoning: "Default preference for proposal A"
     }
 ```
 
-#### `prefer_b`
+#### `preferB`
 
 ```
-function prefer_b(ctx: VoterContext) -> Vote:
+function preferB(ctx: VoterContext) -> Vote:
     return {
         voteFor: "B",
         reasoning: "Default preference for proposal B"
@@ -470,10 +470,10 @@ function random(ctx: VoterContext) -> Vote:
     }
 ```
 
-#### `random_all`
+#### `randomAll`
 
 ```
-function random_all(ctx: VoterContext) -> Vote:
+function randomAll(ctx: VoterContext) -> Vote:
     choice = random_choice(["A", "B", "BOTH", "NEITHER"])
     return {
         voteFor: choice,
@@ -481,10 +481,10 @@ function random_all(ctx: VoterContext) -> Vote:
     }
 ```
 
-#### `prefer_goal`
+#### `preferGoal`
 
 ```
-function prefer_goal(ctx: VoterContext) -> Vote:
+function preferGoal(ctx: VoterContext) -> Vote:
     # Prefer whichever proposal's toState matches the machine's goalState
     goalState = ctx.machine.goalState
 
@@ -500,10 +500,10 @@ function prefer_goal(ctx: VoterContext) -> Vote:
     return { voteFor: "NEITHER", reasoning: "Neither proposal reaches goal state" }
 ```
 
-#### `prefer_shorter_path`
+#### `preferShorterPath`
 
 ```
-function prefer_shorter_path(ctx: VoterContext) -> Vote:
+function preferShorterPath(ctx: VoterContext) -> Vote:
     # Calculate minimum hops to goalState from each proposal's toState
     hopsA = calculate_min_hops(ctx.machine, ctx.proposalA.toState, ctx.machine.goalState)
     hopsB = calculate_min_hops(ctx.machine, ctx.proposalB.toState, ctx.machine.goalState)
@@ -521,17 +521,17 @@ function prefer_shorter_path(ctx: VoterContext) -> Vote:
 
 | Strategy | Description | Threshold |
 |----------|-------------|-----------|
-| `first_proposal` | Immediately selects the first proposal received | -- |
-| `ahead_by_k` | Requires k-vote lead for consensus | Vote lead (integer) |
-| `most_similar` | Compares proposals to human gold examples | Min similarity (0.0–1.0) |
-| `pairwise_consensus` | Repeated pairwise testing until consensus | Agreement % (0.0–1.0) |
+| `firstProposal` | Immediately selects the first proposal received | -- |
+| `aheadByK` | Requires k-vote lead for consensus | Vote lead (integer) |
+| `mostSimilar` | Compares proposals to human gold examples | Min similarity (0.0–1.0) |
+| `pairwiseConsensus` | Repeated pairwise testing until consensus | Agreement % (0.0–1.0) |
 
-#### `first_proposal`
+#### `firstProposal`
 
 The simplest arbiter: immediately declares consensus on the first proposal received, with no voting required.
 
 ```
-function first_proposal(ctx: ArbiterContext) -> ConsensusResult:
+function firstProposal(ctx: ArbiterContext) -> ConsensusResult:
     if len(ctx.proposals) == 0:
         return {
             consensusReached: false,
@@ -554,17 +554,17 @@ function first_proposal(ctx: ArbiterContext) -> ConsensusResult:
 - Single-proposer scenarios where voting adds no value
 - Bootstrap phase before specialists are trained
 
-#### `ahead_by_k`
+#### `aheadByK`
 
-See [Consensus Strategies](/docs/concepts/consensus-strategies#ahead_by_k) for full documentation.
+See [Consensus Strategies](/docs/concepts/consensus-strategies#aheadByK) for full documentation.
 
-#### `most_similar`
+#### `mostSimilar`
 
-See [Consensus Strategies](/docs/concepts/consensus-strategies#most_similar) for full documentation.
+See [Consensus Strategies](/docs/concepts/consensus-strategies#mostSimilar) for full documentation.
 
-#### `pairwise_consensus`
+#### `pairwiseConsensus`
 
-See [Consensus Strategies](/docs/concepts/consensus-strategies#pairwise_consensus) for full documentation.
+See [Consensus Strategies](/docs/concepts/consensus-strategies#pairwiseConsensus) for full documentation.
 
 ### Strategy Combinations
 
@@ -572,11 +572,11 @@ Common combinations of proposer, voter, and arbiter strategies:
 
 | Use Case | Proposer | Voter | Arbiter |
 |----------|----------|-------|---------|
-| **Testing/Dev** | `first_available` | `prefer_a` | `first_proposal` |
-| **Random baseline** | `random` | `random` | `ahead_by_k` (k=1) |
-| **Goal-oriented** | `random` | `prefer_goal` | `ahead_by_k` (k=2) |
-| **Human-aligned** | (LLM) | (LLM) | `most_similar` |
-| **High-stakes** | (LLM) | (LLM) | `pairwise_consensus` |
+| **Testing/Dev** | `firstAvailable` | `preferA` | `firstProposal` |
+| **Random baseline** | `random` | `random` | `aheadByK` (k=1) |
+| **Goal-oriented** | `random` | `preferGoal` | `aheadByK` (k=2) |
+| **Human-aligned** | (LLM) | (LLM) | `mostSimilar` |
+| **High-stakes** | (LLM) | (LLM) | `pairwiseConsensus` |
 
 ### Implementing Custom Strategies
 

@@ -243,6 +243,7 @@ function selectBestModel(
 ## Related Concepts
 
 - [Arbitration](./arbitration.md): How consensus is evaluated (if using voting)
+- [Consensus Strategies](./consensus-strategies.md): Built-in strategies for arbiters
 - [Human Primacy](./human-primacy.md): Why human gold examples are the ground truth
 - [Specialists](./specialists.md): How models participate as proposers and voters
 - [Decision Cycle](./decision-cycle.md): The PVAE cycle (includes voting phase)
