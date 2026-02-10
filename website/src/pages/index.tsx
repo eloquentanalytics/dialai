@@ -80,17 +80,17 @@ const concepts = [
     title: "Decision Cycle",
     icon: "img/icon-decision-cycle.svg",
     description:
-      "A five-phase cycle — Solicit, Propose, Vote, Arbitrate, Execute — repeated until resolution.",
+      "A four-phase cycle — Propose, Vote, Arbitrate, Execute — repeated until resolution.",
     link: "/docs/concepts/decision-cycle",
   },
 ];
 
-const codeExample = `import { createSession, submitProposal, submitVote } from "dialai";
+const codeExample = `import { createSession, submitProposal } from "dialai";
 
 const machine = {
   machineName: "content-review",
   initialState: "draft",
-  defaultState: "published",
+  goalState: "published",
   states: {
     draft: {
       prompt: "Submit for review or keep editing?",
@@ -108,9 +108,13 @@ const session = await createSession(machine);
 
 // Each submit tracks cost, latency, and tokens
 const proposal = await submitProposal(
-  session.sessionId, "ai-reviewer",
-  "approve", "published", "Content looks good",
-  0.003, 200, 150, 50  // costUSD, latencyMsec, tokens
+  session.sessionId,
+  "ai-reviewer",
+  session.currentRoundId,  // roundId
+  "approve",               // transitionName
+  "Content looks good",    // reasoning
+  { source: "review" },    // metaJson
+  0.003, 200, 150, 50      // costUSD, latencyMsec, tokens
 );`;
 
 function HeroSection() {
