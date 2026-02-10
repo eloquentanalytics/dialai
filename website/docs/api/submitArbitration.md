@@ -2,7 +2,7 @@
 sidebar_position: 10
 ---
 
-# `submitArbitration(sessionId, roundId, specialistId?, transitionName?, reasoning?, metaJson?, costUSD?, latencyMsec?, numInputTokens?, numOutputTokens?): Promise<ArbitrationResult>`
+# `submitArbitration(sessionId, roundId?, specialistId?, transitionName?, reasoning?, metaJson?, costUSD?, latencyMsec?, numInputTokens?, numOutputTokens?): Promise<ArbitrationResult>`
 
 Evaluates consensus and optionally executes the winning transition. Follows the same unified pattern as `submitProposal` and `submitVote`: if the key decision parameter is omitted, the arbiter's strategy is invoked.
 
@@ -11,7 +11,7 @@ Evaluates consensus and optionally executes the winning transition. Follows the 
 ```typescript
 submitArbitration(
   sessionId: string,
-  roundId: string,
+  roundId?: string,           // omit to use current round
   specialistId?: string,      // who is calling (required for override)
   transitionName?: string,    // if omitted, check consensus; if provided, force transition
   reasoning?: string,
@@ -26,7 +26,7 @@ submitArbitration(
 | Param | Type | Required | Description |
 |-------|------|----------|-------------|
 | `sessionId` | `string` | Yes | Session identifier |
-| `roundId` | `string` | Yes | Associates arbitration with current state round |
+| `roundId` | `string` | No | Associates arbitration with current state round; omit to use current round |
 | `specialistId` | `string` | No | Who is calling; required when forcing a transition |
 | `transitionName` | `string` | No | If provided, force this transition (requires human specialist) |
 | `reasoning` | `string` | No | Explanation for the arbitration decision |

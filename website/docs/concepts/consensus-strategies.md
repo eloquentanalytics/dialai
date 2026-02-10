@@ -12,8 +12,8 @@ DIAL provides three built-in consensus strategies for arbiters. Each strategy de
 |----------|:---------------:|----------|-------------------|
 | `firstProposal` | No | Testing, single-proposer, bootstrap | -- |
 | `mostSimilar` | No | States with reliable human gold examples | Minimum semantic similarity (0.0–1.0) |
-| `aheadByK` | Yes (ranked) | Fast preference aggregation | Vote lead required (integer) |
-| `pairwiseConsensus` | Yes (pairwise) | Nuanced/complex decisions | Agreement percentage (0.0–1.0) |
+| `aheadByK` | Yes | Fast preference aggregation | Vote lead required (integer) |
+| `pairwiseConsensus` | Yes | Nuanced/complex decisions | Agreement percentage (0.0–1.0) |
 
 ## `firstProposal`
 

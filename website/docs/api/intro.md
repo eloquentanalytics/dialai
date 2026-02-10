@@ -393,7 +393,7 @@ const result = await submitArbitration(
 ```typescript
 submitArbitration(
   sessionId: string,
-  roundId: string,
+  roundId?: string,           // omit to use current round
   specialistId?: string,
   transitionName?: string,
   reasoning?: string,
@@ -408,7 +408,7 @@ submitArbitration(
 | Param | Type | Required | Description |
 |-------|------|----------|-------------|
 | `sessionId` | `string` | Yes | Session identifier |
-| `roundId` | `string` | Yes | Must match current round (enables staleness detection) |
+| `roundId` | `string` | No | Omit to use current round; if provided, enables staleness detection |
 | `specialistId` | `string` | No | Who is calling (required for override) |
 | `transitionName` | `string` | No | Force this transition (human only) |
 | `reasoning` | `string` | No | Explanation for the decision |

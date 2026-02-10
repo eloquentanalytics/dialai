@@ -314,6 +314,7 @@ import { submitArbitration } from "dialai";
 await submitArbitration(
   session.sessionId,
   session.currentRoundId,
+  "human-reviewer",           // must be registered with isHuman: true
   "approve",
   "Reviewed and approved by manager",
   { approvedBy: "manager@example.com" }
@@ -328,7 +329,7 @@ await submitArbitration(
 | `machineName` | `string` | Yes | -- | Which machine this specialist participates in |
 | `isHuman` | `boolean` | No | `false` | Set to `true` to allow forcing arbitration decisions (proposers/voters only) |
 | `strategyFn` | `async (context) => result` | Mode 1 | -- | Local function that returns a proposal, vote, or consensus result |
-| `strategyFnName` | `string` | Mode 5 | -- | Built-in strategy name (e.g., `"aheadByK"`, `"mostSimilar"`) |
+| `strategyFnName` | `string` | Mode 5 | -- | Built-in strategy name (see [Default Strategies](#default-strategies)) |
 | `strategyWebhookUrl` | `string` | Mode 2 | -- | URL to POST context to; expects proposal/vote/consensus response |
 | `contextFn` | `async (context) => string` | Mode 3 | -- | Local function that returns context for the LLM (proposers/voters only) |
 | `contextWebhookUrl` | `string` | Mode 4 | -- | URL to POST context request to; expects context response (proposers/voters only) |

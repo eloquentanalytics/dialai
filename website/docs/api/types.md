@@ -407,7 +407,7 @@ interface RegisterProposerOptions {
     reasoning: string;
   }>;
   strategyWebhookUrl?: string;
-  strategyFnName?: string;  // Built-in strategy name (e.g., "firstAvailable", "random")
+  strategyFnName?: string;  // Built-in: "firstAvailable", "lastAvailable", "random", "weightedRandom"
 
   // For LLM-based modes:
   modelId?: string;
@@ -435,7 +435,7 @@ interface RegisterVoterOptions {
     reasoning: string;
   }>;
   strategyWebhookUrl?: string;
-  strategyFnName?: string;  // Built-in strategy name (e.g., "preferA", "random")
+  strategyFnName?: string;  // Built-in: "preferA", "preferB", "both", "neither", "random", "randomAll", "preferGoal", "preferShorterPath"
 
   // For LLM-based modes:
   modelId?: string;

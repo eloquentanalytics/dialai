@@ -62,13 +62,13 @@ The cycle repeats until the session reaches its **goal state** (the rest state).
 ```mermaid
 stateDiagram-v2
     [*] --> Propose
-    Propose --> Vote: 2+ proposals
-    Propose --> Arbitrate: 1 proposal
-    Vote --> Arbitrate
-    Arbitrate --> Execute: Consensus
-    Arbitrate --> [*]: No Consensus (Human Required)
-    Execute --> [*]: Goal State Reached
-    Execute --> Propose: Continue
+    Propose --> Arbitrate: after each proposal
+    Arbitrate --> Vote: no consensus yet
+    Vote --> Arbitrate: after each vote
+    Arbitrate --> Execute: consensus reached
+    Arbitrate --> [*]: no consensus (human required)
+    Execute --> [*]: goal state reached
+    Execute --> Propose: continue
 ```
 
 ## When Consensus Fails
