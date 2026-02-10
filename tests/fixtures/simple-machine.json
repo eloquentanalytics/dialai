@@ -1,0 +1,14 @@
+{
+  "machineName": "simple-task",
+  "initialState": "pending",
+  "goalState": "done",
+  "states": {
+    "pending": {
+      "prompt": "Should we complete this task?",
+      "transitions": {
+        "complete": "done"
+      }
+    },
+    "done": {}
+  }
+}

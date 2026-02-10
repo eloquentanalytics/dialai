@@ -1,0 +1,22 @@
+{
+  "machineName": "document-review",
+  "initialState": "pending",
+  "goalState": "approved",
+  "states": {
+    "pending": {
+      "prompt": "Review the document. Approve or request changes?",
+      "transitions": {
+        "approve": "approved",
+        "request_changes": "needs_revision"
+      }
+    },
+    "needs_revision": {
+      "prompt": "Revisions submitted. Approve or request more changes?",
+      "transitions": {
+        "approve": "approved",
+        "request_changes": "needs_revision"
+      }
+    },
+    "approved": {}
+  }
+}
