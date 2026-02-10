@@ -42,3 +42,6 @@ pnpm-debug.log*
 # Website build
 website/build/
 website/.docusaurus/
+
+# Generated PDFs
+website/*.pdf
