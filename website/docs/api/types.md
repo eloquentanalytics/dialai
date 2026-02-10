@@ -79,22 +79,21 @@ interface Session {
   machineName: string;          // Name of the machine being run
   currentState: string;         // Current state in the machine
   machine: MachineDefinition;   // The full machine definition
-  history: TransitionRecord[];  // All transitions that have occurred
+  history: TransitionRecord[];  // All executed transitions in order
   createdAt: Date;              // When the session was created
 }
 ```
 
 ### TransitionRecord
 
-A record of a single state transition.
+A record of a single state transition. Provided to specialists via the `history` field in their context.
 
 ```typescript
 interface TransitionRecord {
-  fromState: string;      // State before the transition
-  toState: string;        // State after the transition
-  transitionName: string; // Name of the transition taken
-  reasoning: string;      // Why this transition was chosen
-  timestamp: Date;        // When the transition occurred
+  transitionName: string;              // Name of the transition taken
+  reasoning: string;                   // Why this transition was chosen
+  executionTimestamp: Date;            // When the transition was executed
+  metaJson?: Record<string, unknown>;  // Arbitrary metadata from the winning proposal
 }
 ```
 
@@ -105,7 +104,7 @@ interface TransitionRecord {
 Union type for all specialist roles.
 
 ```typescript
-type Specialist = Proposer | Voter;
+type Specialist = Proposer | Voter | Arbiter;
 ```
 
 ### Proposer
@@ -123,11 +122,13 @@ interface Proposer {
     toState: string;
     reasoning: string;
   }>;
+  strategyFnName?: string;        // Built-in strategy name
   strategyWebhookUrl?: string;
   contextFn?: (ctx: ProposerContext) => Promise<string>;
   contextWebhookUrl?: string;
   modelId?: string;
   webhookTokenName?: string;
+  threshold?: number;             // Strategy-specific threshold
 }
 ```
 
@@ -145,13 +146,38 @@ interface Voter {
     voteFor: VoteChoice;
     reasoning: string;
   }>;
+  strategyFnName?: string;        // Built-in strategy name
   strategyWebhookUrl?: string;
   contextFn?: (ctx: VoterContext) => Promise<string>;
   contextWebhookUrl?: string;
   modelId?: string;
   webhookTokenName?: string;
+  threshold?: number;             // Strategy-specific threshold
 }
 ```
+
+### Arbiter
+
+A specialist that evaluates consensus and determines winning proposals.
+
+```typescript
+interface Arbiter {
+  role: "arbiter";
+  specialistId: string;
+  machineName: string;
+  strategyFn?: (ctx: ArbiterContext) => Promise<{
+    consensusReached: boolean;
+    winningProposalId?: string;
+    reasoning: string;
+  }>;
+  strategyFnName?: string;        // Built-in: "most_similar", "ahead_by_k", "pairwise_consensus"
+  strategyWebhookUrl?: string;
+  webhookTokenName?: string;
+  threshold?: number;             // Strategy-specific threshold
+}
+```
+
+**Note:** Arbiters do not have `isHuman` because arbitration must always be deterministic. Human override is handled separately via `submitArbitration` with an explicit `transitionName`.
 
 ## Context Types
 
@@ -212,6 +238,49 @@ const voterStrategy = async (ctx: VoterContext) => {
     return { voteFor: "B", reasoning: "Proposal B leads to approval" };
   }
   return { voteFor: "NEITHER", reasoning: "Neither proposal leads to approval" };
+};
+```
+
+### ArbiterContext
+
+Context provided to arbiter strategy functions.
+
+```typescript
+interface ArbiterContext {
+  sessionId: string;            // Current session ID
+  roundId: string;              // Current round ID
+  currentState: string;         // Current state name
+  prompt: string;               // Decision prompt for this state
+  proposals: Proposal[];        // All proposals in this round
+  votes: Vote[];                // All votes in this round
+  humanGoldExamples?: HumanGoldExample[];  // Human gold examples (for most_similar)
+  history: TransitionRecord[];  // All previous transitions
+  threshold: number;            // Configured threshold for this arbiter
+}
+```
+
+**Example usage in a strategy function:**
+
+```typescript
+const arbiterStrategy = async (ctx: ArbiterContext) => {
+  // Simple ahead-by-k logic
+  const tallies = countVotes(ctx.proposals, ctx.votes);
+  const sorted = Object.entries(tallies).sort((a, b) => b[1] - a[1]);
+
+  if (sorted.length < 2) {
+    return { consensusReached: false, reasoning: "Not enough proposals" };
+  }
+
+  const lead = sorted[0][1] - sorted[1][1];
+  if (lead >= ctx.threshold) {
+    return {
+      consensusReached: true,
+      winningProposalId: sorted[0][0],
+      reasoning: `Proposal ahead by ${lead} votes (threshold: ${ctx.threshold})`,
+    };
+  }
+
+  return { consensusReached: false, reasoning: `Lead of ${lead} below threshold ${ctx.threshold}` };
 };
 ```
 
@@ -338,12 +407,16 @@ interface RegisterProposerOptions {
     reasoning: string;
   }>;
   strategyWebhookUrl?: string;
+  strategyFnName?: string;  // Built-in strategy name (e.g., "first_available", "random")
 
   // For LLM-based modes:
   modelId?: string;
   contextFn?: (ctx: ProposerContext) => Promise<string>;
   contextWebhookUrl?: string;
   webhookTokenName?: string;
+
+  // For built-in strategies:
+  threshold?: number;  // Strategy-specific threshold
 }
 ```
 
@@ -362,24 +435,59 @@ interface RegisterVoterOptions {
     reasoning: string;
   }>;
   strategyWebhookUrl?: string;
+  strategyFnName?: string;  // Built-in strategy name (e.g., "prefer_a", "random")
 
   // For LLM-based modes:
   modelId?: string;
   contextFn?: (ctx: VoterContext) => Promise<string>;
   contextWebhookUrl?: string;
   webhookTokenName?: string;
+
+  // For built-in strategies:
+  threshold?: number;  // Strategy-specific threshold
 }
 ```
 
+### RegisterArbiterOptions
+
+Options for `registerArbiter()`.
+
+```typescript
+interface RegisterArbiterOptions {
+  specialistId: string;    // Required: unique identifier
+  machineName: string;     // Required: which machine to participate in
+
+  // Execution mode (exactly one required):
+  strategyFn?: (ctx: ArbiterContext) => Promise<{
+    consensusReached: boolean;
+    winningProposalId?: string;
+    reasoning: string;
+  }>;
+  strategyWebhookUrl?: string;
+  strategyFnName?: string;  // Built-in strategy: "most_similar", "ahead_by_k", "pairwise_consensus"
+
+  // For webhooks:
+  webhookTokenName?: string;
+
+  // For built-in strategies:
+  threshold?: number;  // Strategy-specific threshold (see Consensus Strategies)
+}
+```
+
+**Note:** Arbiters do not support LLM-based modes (`contextFn + modelId`, `contextWebhookUrl + modelId`) because arbitration must be deterministic and auditable. See [Consensus Strategies](/docs/concepts/consensus-strategies) for details on built-in arbiter strategies.
+
 ## Execution Modes
 
-Both proposers and voters support four execution modes. Exactly one must be configured.
+Proposers and voters support five execution modes. Arbiters support three (no LLM modes). Exactly one must be configured.
 
-| Mode | Parameters | Description |
-|------|------------|-------------|
-| **Local Strategy** | `strategyFn` | Your function handles everything |
-| **Webhook Strategy** | `strategyWebhookUrl`, `webhookTokenName` | Remote service returns decisions |
-| **Local Context + LLM** | `contextFn`, `modelId` | You provide context, LLM decides |
-| **Webhook Context + LLM** | `contextWebhookUrl`, `webhookTokenName`, `modelId` | Remote context, LLM decides |
+| Mode | Parameters | Proposer | Voter | Arbiter |
+|------|------------|:--------:|:-----:|:-------:|
+| **Local Strategy** | `strategyFn` | ✓ | ✓ | ✓ |
+| **Webhook Strategy** | `strategyWebhookUrl`, `webhookTokenName` | ✓ | ✓ | ✓ |
+| **Built-in Strategy** | `strategyFnName`, `threshold?` | ✓ | ✓ | ✓ |
+| **Local Context + LLM** | `contextFn`, `modelId` | ✓ | ✓ | ✗ |
+| **Webhook Context + LLM** | `contextWebhookUrl`, `webhookTokenName`, `modelId` | ✓ | ✓ | ✗ |
+
+Arbiters cannot use LLM-based modes because arbitration must be deterministic and auditable.
 
 See [Registering Specialists](/docs/guides/registering-specialists) for detailed examples of each mode.

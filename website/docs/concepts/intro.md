@@ -107,6 +107,8 @@ When comparing proposals A and B, specialists vote:
 - [Sessions](./sessions.md): State machine instances
 - [Specialists](./specialists.md): AI and human actors
 - [Decision Cycle](./decision-cycle.md): The Propose → Vote → Arbitrate → Execute process
-- [Arbitration](./arbitration.md): Consensus strategies
+- [Arbitration](./arbitration.md): The arbiter's role in the decision cycle
+- [Consensus Strategies](./consensus-strategies.md): Built-in strategies for determining consensus
 - [Human Primacy](./human-primacy.md): The foundational principle
+- [Alignment vs. Voting](./alignment-vs-voting.md): When to use direct alignment measurement vs. voting
 - [Related Work](./related-work.md): How DIAL relates to other approaches

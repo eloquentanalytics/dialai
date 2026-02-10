@@ -46,9 +46,28 @@ registerVoter({
 });
 ```
 
+## Arbiter Registration
+
+An arbiter evaluates consensus and determines winning proposals.
+
+```typescript
+import { registerArbiter } from "dialai";
+
+registerArbiter({
+  specialistId: "consensus-arbiter",
+  machineName: "my-task",
+  strategyFnName: "ahead_by_k",
+  threshold: 2,
+});
+```
+
+Arbiters support three execution modes: `strategyFn`, `strategyWebhookUrl`, and `strategyFnName`. They do not support LLM-based modes because arbitration must be deterministic.
+
+See [Consensus Strategies](/docs/concepts/consensus-strategies) for details on the built-in arbiter strategies.
+
 ## Execution Modes
 
-Both registration functions support four execution modes. They are mutually exclusive.
+Proposers and voters support five execution modes. Arbiters support three (no LLM modes). They are mutually exclusive.
 
 ### 1. `strategyFn` -- Local Function
 
@@ -157,26 +176,64 @@ The webhook response should contain a `content` or `markdown` field with the con
 The orchestrator waits up to 55 seconds for the response. If the webhook does not respond in time, the orchestrator calls the LLM with no additional context.
 
 **Required parameters:** `contextWebhookUrl`, `webhookTokenName`, `modelId`
-**Forbidden parameters:** `strategyFn`, `strategyWebhookUrl`, `contextFn`
+**Forbidden parameters:** `strategyFn`, `strategyWebhookUrl`, `contextFn`, `strategyFnName`
+
+### 5. `strategyFnName` -- Built-in Named Strategy
+
+Reference a built-in strategy by name. The orchestrator loads the strategy from its internal registry and invokes it with the appropriate context.
+
+```typescript
+registerArbiter({
+  specialistId: "consensus-arbiter",
+  machineName: "document-review",
+  strategyFnName: "ahead_by_k",
+  threshold: 2,
+});
+```
+
+Built-in strategies are stored in `src/strategies/` and loaded by name at runtime. The `threshold` parameter is passed to the strategy and its meaning varies by strategy type.
+
+**Available strategies by role:**
+
+| Role | Strategy Name | Description |
+|------|---------------|-------------|
+| Proposer | `first_available` | Proposes the first available transition |
+| Proposer | `random` | Proposes a random available transition |
+| Voter | `prefer_a` | Always votes for proposal A |
+| Voter | `prefer_b` | Always votes for proposal B |
+| Voter | `random` | Votes randomly |
+| Arbiter | `most_similar` | Compares proposals to human gold examples |
+| Arbiter | `ahead_by_k` | Requires k-vote lead for consensus |
+| Arbiter | `pairwise_consensus` | Repeated pairwise testing until consensus |
+
+See [Consensus Strategies](/docs/concepts/consensus-strategies) for detailed documentation on arbiter strategies.
+
+**Required parameters:** `strategyFnName`
+**Optional parameters:** `threshold`
+**Forbidden parameters:** `strategyFn`, `strategyWebhookUrl`, `contextFn`, `contextWebhookUrl`, `modelId`
 
 ## Validation Rules
 
 Valid parameter combinations:
 
-| Mode | strategyFn | strategyWebhookUrl | contextFn | contextWebhookUrl | modelId | webhookTokenName |
-|------|:---:|:---:|:---:|:---:|:---:|:---:|
-| 1. Local strategy | required | | | | | |
-| 2. Webhook strategy | | required | | | | required |
-| 3. Local context + LLM | | | required | | required | |
-| 4. Webhook context + LLM | | | | required | required | required |
+| Mode | strategyFn | strategyFnName | strategyWebhookUrl | contextFn | contextWebhookUrl | modelId | webhookTokenName | threshold |
+|------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| 1. Local strategy | required | | | | | | | |
+| 2. Webhook strategy | | | required | | | | required | |
+| 3. Local context + LLM | | | | required | | required | | |
+| 4. Webhook context + LLM | | | | | required | required | required | |
+| 5. Built-in strategy | | required | | | | | | optional |
 
 Invalid configurations are rejected at registration time with descriptive error messages:
 
 - `strategyFn` + `modelId` -- *"modelId is only used with contextFn or contextWebhookUrl. A strategyFn returns proposals/votes directly and does not need a model."*
+- `strategyFn` + `strategyFnName` -- *"Provide either strategyFn (custom function) or strategyFnName (built-in strategy), not both."*
+- `strategyFnName` + `modelId` -- *"modelId is only used with contextFn or contextWebhookUrl. A strategyFnName references a built-in strategy and does not need a model."*
 - `contextFn` without `modelId` -- *"contextFn provides context for an LLM to generate proposals/votes. You must also specify modelId."*
 - `strategyFn` + `contextFn` -- *"Provide either strategyFn (you handle everything) or contextFn + modelId (orchestrator calls the LLM), not both."*
 - `contextWebhookUrl` without `webhookTokenName` -- *"Webhook URLs require webhookTokenName for authentication."*
-- No execution parameters at all -- *"Specialist must specify one of: strategyFn, strategyWebhookUrl, contextFn + modelId, or contextWebhookUrl + modelId."*
+- Arbiter with `contextFn` or `contextWebhookUrl` -- *"Arbiters cannot use LLM-based modes. Arbitration must be deterministic."*
+- No execution parameters at all -- *"Specialist must specify one of: strategyFn, strategyFnName, strategyWebhookUrl, contextFn + modelId, or contextWebhookUrl + modelId."*
 
 ## Context Shapes
 
@@ -282,10 +339,12 @@ await submitArbitration(
 |-------|------|----------|---------|-------------|
 | `specialistId` | `string` | Yes | -- | Unique identifier for the specialist |
 | `machineName` | `string` | Yes | -- | Which machine this specialist participates in |
-| `isHuman` | `boolean` | No | `false` | Set to `true` to allow forcing arbitration decisions |
-| `strategyFn` | `async (context) => result` | Mode 1 | -- | Local function that returns a proposal or vote |
-| `strategyWebhookUrl` | `string` | Mode 2 | -- | URL to POST context to; expects proposal/vote response |
-| `contextFn` | `async (context) => string` | Mode 3 | -- | Local function that returns context for the LLM |
-| `contextWebhookUrl` | `string` | Mode 4 | -- | URL to POST context request to; expects context response |
+| `isHuman` | `boolean` | No | `false` | Set to `true` to allow forcing arbitration decisions (proposers/voters only) |
+| `strategyFn` | `async (context) => result` | Mode 1 | -- | Local function that returns a proposal, vote, or consensus result |
+| `strategyFnName` | `string` | Mode 5 | -- | Built-in strategy name (e.g., `"ahead_by_k"`, `"most_similar"`) |
+| `strategyWebhookUrl` | `string` | Mode 2 | -- | URL to POST context to; expects proposal/vote/consensus response |
+| `contextFn` | `async (context) => string` | Mode 3 | -- | Local function that returns context for the LLM (proposers/voters only) |
+| `contextWebhookUrl` | `string` | Mode 4 | -- | URL to POST context request to; expects context response (proposers/voters only) |
 | `modelId` | `string` | Modes 3, 4 | -- | LLM model identifier (e.g., `"openai/gpt-4o-mini"`) |
 | `webhookTokenName` | `string` | Modes 2, 4 | -- | Env var name holding the webhook auth token |
+| `threshold` | `number` | No | varies | Strategy-specific threshold (see [Consensus Strategies](/docs/concepts/consensus-strategies)) |
