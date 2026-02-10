@@ -42,11 +42,11 @@ node dist/dialai/cli.js examples/simple-machine.json
 ```
 
 ```
-Machine:        simple-task
-Initial state:  pending
-Goal state:     done
-Final state:    done
-Session ID:     a1b2c3d4-...
+Machine:       simple-task
+Initial state: pending
+Goal state:    done
+Final state:   done
+Session ID:    a1b2c3d4-...
 ```
 
 The CLI is minimal by design. It demonstrates the exact sequence of API calls an agent would make (create a session, register proposers and voters, solicit proposals, evaluate consensus, execute transitions) in a form that is easy for an agent to read, replicate, and extend.

@@ -13,13 +13,13 @@ Define a state machine for a decision process.
 {
   "machineName": "unique-machine-id",
   "initialState": "start-state",
-  "goalState": "rest-state",
+  "defaultState": "end-state",
   "states": {
     "start-state": {
       "prompt": "Decision prompt?",
       "transitions": { "action": "next-state" }
     },
-    "rest-state": {}
+    "end-state": {}
   }
 }
 ```
@@ -30,10 +30,8 @@ Define a state machine for a decision process.
 |-------|------|-------------|
 | `machineName` | string | Unique identifier for the machine |
 | `initialState` | string | The state where sessions begin |
-| `goalState` | string | The rest state where no action is needed; sessions are at rest in this state |
+| `defaultState` | string | The state where sessions are complete |
 | `states` | object | State definitions with transitions |
-
-Note: `initialState` and `goalState` can be the same for cyclical workflows (e.g., an agent that starts in `idle`, does work, and returns to `idle`).
 
 ## Transition Definition
 
@@ -54,7 +52,7 @@ Transitions map action names to target states:
 {
   "machineName": "document-approval",
   "initialState": "draft",
-  "goalState": "approved",
+  "defaultState": "approved",
   "states": {
     "draft": {
       "prompt": "Submit this document for review?",

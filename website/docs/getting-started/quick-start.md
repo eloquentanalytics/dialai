@@ -25,7 +25,7 @@ Save this as `examples/simple-machine.json`:
 {
   "machineName": "simple-task",
   "initialState": "pending",
-  "goalState": "done",
+  "defaultState": "done",
   "states": {
     "pending": {
       "prompt": "Should we complete this task?",
@@ -37,7 +37,7 @@ Save this as `examples/simple-machine.json`:
 ```
 
 - **`initialState`**: where the session starts (`pending`)
-- **`goalState`**: the rest state where no action is needed (`done`); the session is at rest when it reaches this state
+- **`defaultState`**: the state where the machine comes to rest (`done`); the session is complete when it reaches this state
 - **`prompt`**: the question specialists answer when the session is in that state
 - **`transitions`**: the available answers and what state each leads to
 
@@ -51,7 +51,7 @@ import type { MachineDefinition } from "dialai";
 const machine: MachineDefinition = {
   machineName: "simple-task",
   initialState: "pending",
-  goalState: "done",
+  defaultState: "done",
   states: {
     pending: {
       prompt: "Should we complete this task?",
@@ -146,7 +146,7 @@ Output:
 ```
 Machine:        simple-task
 Initial state:  pending
-Goal state:     done
+Default state:  done
 Final state:    done
 Session ID:     a1b2c3d4-...
 ```
@@ -158,7 +158,7 @@ Session ID:     a1b2c3d4-...
 3. **Votes solicited** (if 2+ proposals): pairwise comparisons
 4. **Arbitration submitted**: guards checked, ahead-by-k consensus evaluated
 5. **Transition executed**: `currentState` moves to `done`, `currentRoundId` regenerated
-6. **Cycle repeats** until `currentState === goalState` (already there, at rest)
+6. **Cycle repeats** until `currentState === defaultState` (already there, done)
 
 ## Next Steps
 

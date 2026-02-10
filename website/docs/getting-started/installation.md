@@ -80,7 +80,7 @@ import type { MachineDefinition } from "dialai";
 const machine: MachineDefinition = {
   machineName: "test",
   initialState: "start",
-  goalState: "end",
+  defaultState: "end",
   states: {
     start: { transitions: { finish: "end" } },
     end: {},

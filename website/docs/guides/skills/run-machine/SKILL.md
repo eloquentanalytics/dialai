@@ -43,7 +43,7 @@ npx dialai examples/approval-workflow.json --human
 ```
 Machine:        code-review
 Initial state:  draft
-Goal state:     approved
+Default state:  approved
 Final state:    approved
 Session ID:     a1b2c3d4-...
 ```
@@ -53,7 +53,7 @@ Session ID:     a1b2c3d4-...
 1. DIAL creates a session from the machine definition
 2. Registers all specialists defined in the machine
 3. Runs decision cycles (Propose, Vote, Arbitrate, Execute)
-4. Reaches rest when `goalState` is reached
+4. Terminates when `defaultState` is reached
 
 ## Verbose Output Shows
 

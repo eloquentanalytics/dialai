@@ -34,7 +34,7 @@ The blueprint for a state machine. Defines the states, transitions, and prompts.
 interface MachineDefinition {
   machineName: string;       // Unique identifier for this machine type
   initialState: string;      // State where sessions start
-  goalState: string;         // Rest state where no action is needed
+  defaultState: string;      // State where sessions are complete
   states: Record<string, {
     prompt?: string;         // Decision prompt for this state
     transitions?: Record<string, string>;  // Map of transition names to target states
@@ -48,7 +48,7 @@ interface MachineDefinition {
 const machine: MachineDefinition = {
   machineName: "document-review",
   initialState: "pending",
-  goalState: "approved",
+  defaultState: "approved",
   states: {
     pending: {
       prompt: "Review the document. Approve or request changes?",
@@ -117,7 +117,6 @@ interface Proposer {
   role: "proposer";
   specialistId: string;
   machineName: string;
-  isHuman?: boolean;              // If true, can force arbitration decisions
   strategyFn?: (ctx: ProposerContext) => Promise<{
     transitionName: string;
     toState: string;
@@ -140,7 +139,6 @@ interface Voter {
   role: "voter";
   specialistId: string;
   machineName: string;
-  isHuman?: boolean;              // If true, can force arbitration decisions
   strategyFn?: (ctx: VoterContext) => Promise<{
     voteFor: VoteChoice;
     reasoning: string;
@@ -225,13 +223,10 @@ A proposed state transition.
 interface Proposal {
   proposalId: string;       // UUID generated on creation
   sessionId: string;        // Session this proposal belongs to
-  roundId: string;          // Round this proposal belongs to
   specialistId: string;     // Who submitted this proposal
-  isHuman: boolean;         // Whether this was submitted by a human specialist
   transitionName: string;   // The transition being proposed
   toState: string;          // Target state of the transition
   reasoning: string;        // Why this transition was proposed
-  metaJson?: Record<string, unknown>;  // Arbitrary client metadata
   costUSD?: number;         // Cost in USD to generate this proposal
   latencyMsec?: number;     // Time in milliseconds to generate
   numInputTokens?: number;  // Input tokens used
@@ -249,14 +244,11 @@ A vote comparing two proposals.
 interface Vote {
   voteId: string;           // UUID generated on creation
   sessionId: string;        // Session this vote belongs to
-  roundId: string;          // Round this vote belongs to
   specialistId: string;     // Who cast this vote
-  isHuman: boolean;         // Whether this was cast by a human specialist
   proposalIdA: string;      // First proposal being compared
   proposalIdB: string;      // Second proposal being compared
   voteFor: VoteChoice;      // The vote choice
   reasoning: string;        // Why this vote was cast
-  metaJson?: Record<string, unknown>;  // Arbitrary client metadata
   costUSD?: number;         // Cost in USD to generate this vote
   latencyMsec?: number;     // Time in milliseconds to generate
   numInputTokens?: number;  // Input tokens used
