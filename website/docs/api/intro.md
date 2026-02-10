@@ -155,23 +155,26 @@ Creates and stores a proposal. If `transitionName` and `toState` are omitted, in
 ```typescript
 import { submitProposal } from "dialai";
 
-// Strategy invocation (AI specialists)
-const proposal = await submitProposal(
-  session.sessionId,
-  "ai-proposer-1"
-);
-
-// Direct submission with cost tracking
+// Strategy invocation (AI specialists) - roundId ensures freshness
 const proposal = await submitProposal(
   session.sessionId,
   "ai-proposer-1",
-  "approve",          // transitionName
-  "approved",         // toState
-  "Looks good to me", // reasoning
-  0.003,              // costUSD
-  200,                // latencyMsec
-  150,                // numInputTokens
-  50                  // numOutputTokens
+  session.currentRoundId  // roundId - omit to skip staleness check
+);
+
+// Direct submission with all parameters
+const proposal = await submitProposal(
+  session.sessionId,
+  "ai-proposer-1",
+  session.currentRoundId, // roundId
+  "approve",              // transitionName
+  "approved",             // toState
+  "Looks good to me",     // reasoning
+  { source: "review" },   // metaJson
+  0.003,                  // costUSD
+  200,                    // latencyMsec
+  150,                    // numInputTokens
+  50                      // numOutputTokens
 );
 ```
 
@@ -216,22 +219,25 @@ Creates and stores a vote comparing two proposals. If `voteFor` is omitted, invo
 ```typescript
 import { submitVote } from "dialai";
 
-// Strategy invocation
+// Strategy invocation - roundId ensures freshness
 const vote = await submitVote(
   session.sessionId,
   "ai-voter-1",
+  session.currentRoundId,  // roundId - omit to skip staleness check
   proposalA.proposalId,
   proposalB.proposalId
 );
 
-// Direct submission with cost tracking
+// Direct submission with all parameters
 const vote = await submitVote(
   session.sessionId,
   "ai-voter-1",
+  session.currentRoundId,    // roundId
   proposalA.proposalId,
   proposalB.proposalId,
   "A",                       // voteFor
   "Proposal A is clearer",   // reasoning
+  { reviewer: "ai-1" },      // metaJson
   0.002,                     // costUSD
   150,                       // latencyMsec
   100,                       // numInputTokens

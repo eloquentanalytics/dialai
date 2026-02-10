@@ -170,7 +170,7 @@ interface Arbiter {
     winningProposalId?: string;
     reasoning: string;
   }>;
-  strategyFnName?: string;        // Built-in: "most_similar", "ahead_by_k", "pairwise_concensus"
+  strategyFnName?: string;        // Built-in: "most_similar", "ahead_by_k", "pairwise_consensus"
   strategyWebhookUrl?: string;
   webhookTokenName?: string;
   threshold?: number;             // Strategy-specific threshold
@@ -464,7 +464,7 @@ interface RegisterArbiterOptions {
     reasoning: string;
   }>;
   strategyWebhookUrl?: string;
-  strategyFnName?: string;  // Built-in strategy: "most_similar", "ahead_by_k", "pairwise_concensus"
+  strategyFnName?: string;  // Built-in strategy: "most_similar", "ahead_by_k", "pairwise_consensus"
 
   // For webhooks:
   webhookTokenName?: string;
@@ -482,11 +482,11 @@ Proposers and voters support five execution modes. Arbiters support three (no LL
 
 | Mode | Parameters | Proposer | Voter | Arbiter |
 |------|------------|:--------:|:-----:|:-------:|
-| **Local Strategy** | `strategyFn` | ✓ | ✓ | ✓ |
-| **Webhook Strategy** | `strategyWebhookUrl`, `webhookTokenName` | ✓ | ✓ | ✓ |
-| **Built-in Strategy** | `strategyFnName`, `threshold?` | ✓ | ✓ | ✓ |
-| **Local Context + LLM** | `contextFn`, `modelId` | ✓ | ✓ | ✗ |
-| **Webhook Context + LLM** | `contextWebhookUrl`, `webhookTokenName`, `modelId` | ✓ | ✓ | ✗ |
+| **1. Local Strategy** | `strategyFn` | ✓ | ✓ | ✓ |
+| **2. Webhook Strategy** | `strategyWebhookUrl`, `webhookTokenName` | ✓ | ✓ | ✓ |
+| **3. Local Context + LLM** | `contextFn`, `modelId` | ✓ | ✓ | ✗ |
+| **4. Webhook Context + LLM** | `contextWebhookUrl`, `webhookTokenName`, `modelId` | ✓ | ✓ | ✗ |
+| **5. Built-in Strategy** | `strategyFnName`, `threshold?` | ✓ | ✓ | ✓ |
 
 Arbiters cannot use LLM-based modes because arbitration must be deterministic and auditable.
 

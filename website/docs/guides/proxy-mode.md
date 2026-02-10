@@ -19,7 +19,7 @@ This guide covers distributed deployment patterns for the `dialai` library. DIAL
 Start the MCP server with an HTTP endpoint exposed:
 
 ```bash
-DIALAI_PORT=3000 DIALAI_API_TOKEN=secret dialai-mcp
+DIALAI_PORT=3000 DIALAI_API_TOKEN=secret npx dialai --mcp
 ```
 
 This starts both:
@@ -50,10 +50,10 @@ The CLI will connect to the remote server and execute the session there instead 
 
 ### MCP Proxy Mode
 
-The `dialai-mcp` server can also forward tool calls to a remote server:
+The MCP server can also forward tool calls to a remote server:
 
 ```bash
-DIALAI_BASE_URL=http://server:3000 DIALAI_API_TOKEN=secret dialai-mcp
+DIALAI_BASE_URL=http://server:3000 DIALAI_API_TOKEN=secret npx dialai --mcp
 ```
 
 In this mode, the local MCP server acts as a proxy—receiving tool calls via stdio and forwarding them to the remote HTTP server.
@@ -76,7 +76,7 @@ Run a single DIAL server that multiple clients connect to:
 
 Server:
 ```bash
-DIALAI_PORT=3000 DIALAI_API_TOKEN=shared-secret dialai-mcp
+DIALAI_PORT=3000 DIALAI_API_TOKEN=shared-secret npx dialai --mcp
 ```
 
 Clients:
@@ -97,7 +97,7 @@ Use a local MCP server as a gateway to a remote DIAL instance:
 
 Remote server:
 ```bash
-DIALAI_PORT=3000 DIALAI_API_TOKEN=secret dialai-mcp
+DIALAI_PORT=3000 DIALAI_API_TOKEN=secret npx dialai --mcp
 ```
 
 Local proxy (configured in Claude Desktop):
@@ -105,7 +105,8 @@ Local proxy (configured in Claude Desktop):
 {
   "mcpServers": {
     "dialai": {
-      "command": "dialai-mcp",
+      "command": "npx",
+      "args": ["dialai", "--mcp"],
       "env": {
         "DIALAI_BASE_URL": "http://remote-server:3000",
         "DIALAI_API_TOKEN": "secret"

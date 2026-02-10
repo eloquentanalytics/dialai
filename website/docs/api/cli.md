@@ -93,7 +93,7 @@ Session ID:    a1b2c3d4-5678-90ab-cdef-1234567890ab
 
 ```bash
 # Start server (in another terminal)
-DIALAI_PORT=3000 DIALAI_API_TOKEN=secret dialai-mcp
+DIALAI_PORT=3000 DIALAI_API_TOKEN=secret npx dialai --mcp
 
 # Run machine via remote server
 DIALAI_BASE_URL=http://localhost:3000 DIALAI_API_TOKEN=secret dialai task.json

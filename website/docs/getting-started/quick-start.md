@@ -89,7 +89,7 @@ import {
 } from "dialai";
 
 // Create a session - starts in "pending"
-const session = createSession(machine);
+const session = await createSession(machine);
 console.log(session.currentState);   // "pending"
 console.log(session.currentRoundId); // "e5f6g7h8-..."
 

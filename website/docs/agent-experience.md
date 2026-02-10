@@ -38,7 +38,7 @@ This is a deliberate choice. The primary consumer of DIAL's change history is an
 DIAL ships reference implementations in TypeScript as CLI tools. The CLI accepts a machine definition as JSON and runs it to completion:
 
 ```bash
-node dist/dialai/cli.js examples/simple-machine.json
+npx dialai examples/simple-machine.json
 ```
 
 ```
@@ -136,7 +136,7 @@ Run DIAL as an HTTP server that accepts requests from remote clients:
 
 ```bash
 # Start server
-DIALAI_PORT=3000 DIALAI_API_TOKEN=secret dialai-mcp
+DIALAI_PORT=3000 DIALAI_API_TOKEN=secret npx dialai --mcp
 
 # Client makes HTTP requests
 curl -H "Authorization: Bearer secret" http://server:3000/tools/dialai_create_session
@@ -186,7 +186,8 @@ Configure in Claude Desktop:
 {
   "mcpServers": {
     "dialai": {
-      "command": "dialai-mcp",
+      "command": "npx",
+      "args": ["dialai", "--mcp"],
       "env": {
         "DIALAI_BASE_URL": "http://remote-server:3000",
         "DIALAI_API_TOKEN": "secret"

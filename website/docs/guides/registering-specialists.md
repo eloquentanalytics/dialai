@@ -524,7 +524,7 @@ function prefer_shorter_path(ctx: VoterContext) -> Vote:
 | `first_proposal` | Immediately selects the first proposal received | -- |
 | `ahead_by_k` | Requires k-vote lead for consensus | Vote lead (integer) |
 | `most_similar` | Compares proposals to human gold examples | Min similarity (0.0–1.0) |
-| `pairwise_concensus` | Repeated pairwise testing until consensus | Agreement % (0.0–1.0) |
+| `pairwise_consensus` | Repeated pairwise testing until consensus | Agreement % (0.0–1.0) |
 
 #### `first_proposal`
 
@@ -562,9 +562,9 @@ See [Consensus Strategies](/docs/concepts/consensus-strategies#ahead_by_k) for f
 
 See [Consensus Strategies](/docs/concepts/consensus-strategies#most_similar) for full documentation.
 
-#### `pairwise_concensus`
+#### `pairwise_consensus`
 
-See [Consensus Strategies](/docs/concepts/consensus-strategies#pairwise_concensus) for full documentation.
+See [Consensus Strategies](/docs/concepts/consensus-strategies#pairwise_consensus) for full documentation.
 
 ### Strategy Combinations
 
@@ -576,7 +576,7 @@ Common combinations of proposer, voter, and arbiter strategies:
 | **Random baseline** | `random` | `random` | `ahead_by_k` (k=1) |
 | **Goal-oriented** | `random` | `prefer_goal` | `ahead_by_k` (k=2) |
 | **Human-aligned** | (LLM) | (LLM) | `most_similar` |
-| **High-stakes** | (LLM) | (LLM) | `pairwise_concensus` |
+| **High-stakes** | (LLM) | (LLM) | `pairwise_consensus` |
 
 ### Implementing Custom Strategies
 

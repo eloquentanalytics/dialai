@@ -129,7 +129,7 @@ See [Quick Start](./quick-start.md) for a full example.
 DIAL can also run as an MCP (Model Context Protocol) server, exposing its functionality as tools for AI assistants:
 
 ```bash
-dialai-mcp
+npx dialai --mcp
 ```
 
 The MCP server provides tools for:
@@ -144,7 +144,8 @@ To use with Claude Desktop, add to your MCP configuration:
 {
   "mcpServers": {
     "dialai": {
-      "command": "dialai-mcp"
+      "command": "npx",
+      "args": ["dialai", "--mcp"]
     }
   }
 }
