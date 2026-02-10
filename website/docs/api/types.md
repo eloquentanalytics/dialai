@@ -170,7 +170,7 @@ interface Arbiter {
     winningProposalId?: string;
     reasoning: string;
   }>;
-  strategyFnName?: string;        // Built-in: "most_similar", "ahead_by_k", "pairwise_consensus"
+  strategyFnName?: string;        // Built-in: "most_similar", "ahead_by_k", "pairwise_concensus"
   strategyWebhookUrl?: string;
   webhookTokenName?: string;
   threshold?: number;             // Strategy-specific threshold
@@ -464,7 +464,7 @@ interface RegisterArbiterOptions {
     reasoning: string;
   }>;
   strategyWebhookUrl?: string;
-  strategyFnName?: string;  // Built-in strategy: "most_similar", "ahead_by_k", "pairwise_consensus"
+  strategyFnName?: string;  // Built-in strategy: "most_similar", "ahead_by_k", "pairwise_concensus"
 
   // For webhooks:
   webhookTokenName?: string;

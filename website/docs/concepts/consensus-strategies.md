@@ -13,7 +13,7 @@ DIAL provides three built-in consensus strategies for arbiters. Each strategy de
 | `first_proposal` | No | Testing, single-proposer, bootstrap | -- |
 | `most_similar` | No | States with reliable human gold examples | Minimum semantic similarity (0.0–1.0) |
 | `ahead_by_k` | Yes (ranked) | Fast preference aggregation | Vote lead required (integer) |
-| `pairwise_consensus` | Yes (pairwise) | Nuanced/complex decisions | Agreement percentage (0.0–1.0) |
+| `pairwise_concensus` | Yes (pairwise) | Nuanced/complex decisions | Agreement percentage (0.0–1.0) |
 
 ## `first_proposal`
 
@@ -235,7 +235,7 @@ function ahead_by_k(ctx: ArbiterContext) -> ConsensusResult:
     }
 ```
 
-## `pairwise_consensus`
+## `pairwise_concensus`
 
 Performs repeated pairwise comparisons between proposals. Each pair is voted on; the winner of each matchup advances. Consensus is reached when one proposal has won a sufficient percentage of its matchups.
 
@@ -252,7 +252,7 @@ Performs repeated pairwise comparisons between proposals. Each pair is voted on;
 registerArbiter({
   specialistId: "consensus-arbiter",
   machineName: "complex-decision",
-  strategyFnName: "pairwise_consensus",
+  strategyFnName: "pairwise_concensus",
   threshold: 0.75,  // must win 75% of matchups
 });
 ```
@@ -260,7 +260,7 @@ registerArbiter({
 ### Algorithm
 
 ```
-function pairwise_consensus(ctx: ArbiterContext) -> ConsensusResult:
+function pairwise_concensus(ctx: ArbiterContext) -> ConsensusResult:
     if len(ctx.proposals) == 0:
         return { consensusReached: false, reasoning: "No proposals" }
 
@@ -370,7 +370,7 @@ graph TD
     E -->|No| F
     F -->|2| H[ahead_by_k]
     F -->|3+| I{Need nuance?}
-    I -->|Yes| J[pairwise_consensus]
+    I -->|Yes| J[pairwise_concensus]
     I -->|No| H
 ```
 
@@ -380,14 +380,14 @@ graph TD
 | Single proposer, no deliberation needed | `first_proposal` |
 | Reliable human gold examples | `most_similar` |
 | Fast triage, clear preferences | `ahead_by_k` |
-| Complex decisions, subtle differences | `pairwise_consensus` |
-| Unknown/varying conditions | Start with `pairwise_consensus`, collapse to simpler |
+| Complex decisions, subtle differences | `pairwise_concensus` |
+| Unknown/varying conditions | Start with `pairwise_concensus`, collapse to simpler |
 
 ## Progressive Collapse
 
 As alignment improves, systems naturally collapse toward simpler strategies:
 
-1. **Start**: `pairwise_consensus` (maximum data collection)
+1. **Start**: `pairwise_concensus` (maximum data collection)
 2. **Improve**: Models learn from voting patterns
 3. **Simplify**: Switch to `ahead_by_k` (less overhead)
 4. **Optimize**: When gold examples are reliable, use `most_similar` (no voting)
