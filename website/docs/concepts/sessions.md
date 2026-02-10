@@ -35,7 +35,7 @@ A session starts in its **initial state**—the starting point defined in the ma
 
 ### 2. Progression
 
-When a session is **not in its default state**, the decision cycle activates:
+When a session is **not in its goal state**, the decision cycle activates:
 
 1. Specialists propose transitions
 2. Proposals are compared through voting (if 2+ exist)
@@ -45,9 +45,9 @@ When a session is **not in its default state**, the decision cycle activates:
 
 Each time a transition executes, a new round begins with a fresh round ID.
 
-### 3. Completion
+### 3. Rest
 
-A session is "complete" when it reaches its **default state**—the completion state defined in the machine definition. Once in the default state, no further decision cycles are needed.
+A session is "at rest" when it reaches its **goal state**—the rest state defined in the machine definition. In the goal state, no further decision cycles are needed. Note that "goal" does not mean "over"—for cyclical workflows, the initial state and goal state can be the same, and the session may transition out of the goal state when new work arrives.
 
 ## Machine Definition
 
@@ -57,7 +57,7 @@ Each session runs according to a **machine definition** that specifies:
 |-------|-------------|
 | **machineName** | Identifies the type of machine (e.g., "document-review") |
 | **initialState** | The state where sessions start |
-| **defaultState** | The state where sessions are complete |
+| **goalState** | The rest state where no action is needed; the session is at rest when it reaches this state |
 | **states** | A record of state names to their configuration |
 
 ### State Configuration
@@ -92,11 +92,13 @@ Examples: `"document-review"`, `"code-review"`, `"support-ticket"`
 
 ## Best Practices
 
-### 1. Design Clear Default States
+### 1. Design Clear Goal States
 
-The default state should represent "done" or "stable":
-- Good: `approved`, `completed`, `resolved`
+The goal state should represent "at rest" or "stable"—a state where no action is needed:
+- Good: `approved`, `completed`, `resolved`, `idle`
 - Avoid: `processing`, `in_progress`, `waiting`
+
+For cyclical workflows, the goal state and initial state can be the same (e.g., an agent that starts in `idle`, does work, and returns to `idle`).
 
 ### 2. Name Transitions Clearly
 

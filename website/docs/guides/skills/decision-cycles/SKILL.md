@@ -104,7 +104,9 @@ Configure max cycles to prevent infinite loops:
 
 ## Session Completion
 
-The session ends when:
-- Current state equals `defaultState` (success)
+The session is at rest when:
+- Current state equals `goalState` (at rest)
 - Max cycles exceeded (failure)
 - No valid transitions available (stuck)
+
+Note: "goal" does not mean "over"—for cyclical workflows, the session may transition out of the goal state when new work arrives.

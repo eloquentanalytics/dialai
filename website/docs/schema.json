@@ -4,7 +4,7 @@
   "title": "DIAL Machine Definition",
   "description": "Schema for DIAL state machine definitions",
   "type": "object",
-  "required": ["machineName", "initialState", "defaultState", "states"],
+  "required": ["machineName", "initialState", "goalState", "states"],
   "properties": {
     "machineName": {
       "type": "string",
@@ -14,9 +14,9 @@
       "type": "string",
       "description": "The state a session starts in"
     },
-    "defaultState": {
+    "goalState": {
       "type": "string",
-      "description": "The state where the session is complete"
+      "description": "The rest state where no action is needed; sessions are at rest in this state"
     },
     "states": {
       "type": "object",

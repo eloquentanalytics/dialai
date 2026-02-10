@@ -16,7 +16,7 @@ cat > machine.json << 'EOF'
 {
   "machineName": "simple-task",
   "initialState": "pending",
-  "defaultState": "done",
+  "goalState": "done",
   "states": {
     "pending": {
       "prompt": "Should we complete this task?",
@@ -52,7 +52,7 @@ import type { MachineDefinition } from "dialai";
 const machine: MachineDefinition = {
   machineName: "simple-task",
   initialState: "pending",
-  defaultState: "done",
+  goalState: "done",
   states: {
     pending: {
       prompt: "Should we complete this task?",
@@ -74,7 +74,7 @@ A 3-state machine that requires 2 cycles to reach the goal:
 const pipeline: MachineDefinition = {
   machineName: "pipeline",
   initialState: "queued",
-  defaultState: "complete",
+  goalState: "complete",
   states: {
     queued: {
       prompt: "Start processing?",
@@ -116,7 +116,7 @@ clear();
 const machine: MachineDefinition = {
   machineName: "review",
   initialState: "pending",
-  defaultState: "approved",
+  goalState: "approved",
   states: {
     pending: {
       prompt: "Review this item. Approve or reject?",
@@ -333,7 +333,7 @@ await registerVoter({
 {
   "machineName": "document-review",
   "initialState": "submitted",
-  "defaultState": "published",
+  "goalState": "published",
   "states": {
     "submitted": {
       "prompt": "Review the document. Approve, request revisions, or reject?",
@@ -363,7 +363,7 @@ await registerVoter({
 {
   "machineName": "support-ticket",
   "initialState": "new",
-  "defaultState": "resolved",
+  "goalState": "resolved",
   "states": {
     "new": {
       "prompt": "Triage this ticket: escalate, assign, or resolve?",
@@ -398,7 +398,7 @@ await registerVoter({
 {
   "machineName": "coding-agent",
   "initialState": "operating",
-  "defaultState": "done",
+  "goalState": "done",
   "states": {
     "operating": {
       "prompt": "Agent is working. Continue, use tool, replan, or finalize?",
@@ -438,9 +438,9 @@ describe("MyMachine", () => {
     clear(); // Reset all state between tests
   });
 
-  it("reaches default state", async () => {
+  it("reaches goal state", async () => {
     const session = await runSession(machine);
-    expect(session.currentState).toBe(machine.defaultState);
+    expect(session.currentState).toBe(machine.goalState);
   });
 
   it("records history", async () => {
