@@ -10,9 +10,75 @@ DIAL provides three built-in consensus strategies for arbiters. Each strategy de
 
 | Strategy | Voting Required | Best For | Threshold Meaning |
 |----------|:---------------:|----------|-------------------|
+| `first_proposal` | No | Testing, single-proposer, bootstrap | -- |
 | `most_similar` | No | States with reliable human gold examples | Minimum semantic similarity (0.0–1.0) |
 | `ahead_by_k` | Yes (ranked) | Fast preference aggregation | Vote lead required (integer) |
 | `pairwise_consensus` | Yes (pairwise) | Nuanced/complex decisions | Agreement percentage (0.0–1.0) |
+
+## `first_proposal`
+
+The simplest arbiter strategy: immediately declares consensus on the first proposal received. No voting phase, no comparison—the first proposal wins.
+
+### When to Use
+
+- Testing and development environments
+- Single-proposer scenarios where voting adds no value
+- Low-stakes decisions where speed matters more than deliberation
+- Bootstrap phase before specialists are trained
+- Baseline comparison for measuring more sophisticated strategies
+
+### Configuration
+
+```typescript
+registerArbiter({
+  specialistId: "fast-arbiter",
+  machineName: "simple-task",
+  strategyFnName: "first_proposal",
+  // No threshold needed
+});
+```
+
+### Algorithm
+
+```
+function first_proposal(ctx: ArbiterContext) -> ConsensusResult:
+    if len(ctx.proposals) == 0:
+        return {
+            consensusReached: false,
+            reasoning: "No proposals received"
+        }
+
+    # Sort by creation timestamp and take the first
+    sorted_proposals = sorted(ctx.proposals, by: createdAt, ascending: true)
+    first = sorted_proposals[0]
+
+    return {
+        consensusReached: true,
+        winningProposalId: first.proposalId,
+        reasoning: f"First proposal received wins (from {first.specialistId})"
+    }
+```
+
+### Trade-offs
+
+**Advantages:**
+- Zero latency: no waiting for votes
+- Deterministic: same proposals always produce same result
+- Simple to reason about
+
+**Disadvantages:**
+- No deliberation: ignores all other proposals
+- Order-dependent: whoever submits first wins
+- No alignment signal: provides no data for measuring specialist quality
+
+### Use with Caution
+
+This strategy bypasses DIAL's core value proposition (measured consensus). Use it only when:
+1. You genuinely don't need deliberation
+2. You're testing/debugging the system
+3. You're measuring baseline performance
+
+For production use cases, prefer `ahead_by_k` (with k=1 for speed) or `most_similar` (for alignment measurement).
 
 ## `most_similar`
 
@@ -295,19 +361,23 @@ Custom strategies must be deterministic—given the same inputs, they must produ
 
 ```mermaid
 graph TD
-    A[Need Consensus Strategy] --> B{Human gold<br/>available?}
-    B -->|Yes| C{Similarity<br/>scores clear?}
-    B -->|No| D{How many<br/>proposals?}
-    C -->|Yes| E[most_similar]
-    C -->|No| D
-    D -->|2| F[ahead_by_k]
-    D -->|3+| G{Need nuance?}
-    G -->|Yes| H[pairwise_consensus]
-    G -->|No| F
+    A[Need Consensus Strategy] --> B{Testing or<br/>single proposer?}
+    B -->|Yes| C[first_proposal]
+    B -->|No| D{Human gold<br/>available?}
+    D -->|Yes| E{Similarity<br/>scores clear?}
+    D -->|No| F{How many<br/>proposals?}
+    E -->|Yes| G[most_similar]
+    E -->|No| F
+    F -->|2| H[ahead_by_k]
+    F -->|3+| I{Need nuance?}
+    I -->|Yes| J[pairwise_consensus]
+    I -->|No| H
 ```
 
 | Scenario | Recommended Strategy |
 |----------|---------------------|
+| Testing, dev, bootstrap | `first_proposal` |
+| Single proposer, no deliberation needed | `first_proposal` |
 | Reliable human gold examples | `most_similar` |
 | Fast triage, clear preferences | `ahead_by_k` |
 | Complex decisions, subtle differences | `pairwise_consensus` |

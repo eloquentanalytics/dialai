@@ -6,7 +6,7 @@ sidebar_position: 2
 
 This guide covers how to register specialists using the `dialai` library. For the conceptual foundation, see [Specialists](/docs/concepts/specialists).
 
-Specialists are registered using one of two functions: `registerProposer` or `registerVoter`. Each function accepts configuration for how the specialist produces its output.
+Specialists are registered using one of three functions: `registerProposer`, `registerVoter`, or `registerArbiter`. Each function accepts configuration for how the specialist produces its output.
 
 ## Proposer Registration
 
@@ -193,20 +193,7 @@ registerArbiter({
 
 Built-in strategies are stored in `src/strategies/` and loaded by name at runtime. The `threshold` parameter is passed to the strategy and its meaning varies by strategy type.
 
-**Available strategies by role:**
-
-| Role | Strategy Name | Description |
-|------|---------------|-------------|
-| Proposer | `first_available` | Proposes the first available transition |
-| Proposer | `random` | Proposes a random available transition |
-| Voter | `prefer_a` | Always votes for proposal A |
-| Voter | `prefer_b` | Always votes for proposal B |
-| Voter | `random` | Votes randomly |
-| Arbiter | `most_similar` | Compares proposals to human gold examples |
-| Arbiter | `ahead_by_k` | Requires k-vote lead for consensus |
-| Arbiter | `pairwise_consensus` | Repeated pairwise testing until consensus |
-
-See [Consensus Strategies](/docs/concepts/consensus-strategies) for detailed documentation on arbiter strategies.
+See [Default Strategies](#default-strategies) below for the complete list and documentation.
 
 **Required parameters:** `strategyFnName`
 **Optional parameters:** `threshold`
@@ -348,3 +335,267 @@ await submitArbitration(
 | `modelId` | `string` | Modes 3, 4 | -- | LLM model identifier (e.g., `"openai/gpt-4o-mini"`) |
 | `webhookTokenName` | `string` | Modes 2, 4 | -- | Env var name holding the webhook auth token |
 | `threshold` | `number` | No | varies | Strategy-specific threshold (see [Consensus Strategies](/docs/concepts/consensus-strategies)) |
+
+## Default Strategies
+
+DIAL provides built-in strategies for all specialist roles. These are referenced by name via `strategyFnName` and stored in `src/strategies/`.
+
+### Proposer Strategies
+
+| Strategy | Description | Threshold |
+|----------|-------------|-----------|
+| `first_available` | Proposes the first available transition (alphabetically) | -- |
+| `last_available` | Proposes the last available transition (alphabetically) | -- |
+| `random` | Proposes a random available transition | -- |
+| `weighted_random` | Proposes randomly with weights from `metaJson.weights` | -- |
+
+#### `first_available`
+
+```
+function first_available(ctx: ProposerContext) -> Proposal:
+    transitions = sorted(ctx.transitions.keys())
+    name = transitions[0]
+    return {
+        transitionName: name,
+        toState: ctx.transitions[name],
+        reasoning: "First available transition"
+    }
+```
+
+#### `last_available`
+
+```
+function last_available(ctx: ProposerContext) -> Proposal:
+    transitions = sorted(ctx.transitions.keys())
+    name = transitions[len(transitions) - 1]
+    return {
+        transitionName: name,
+        toState: ctx.transitions[name],
+        reasoning: "Last available transition"
+    }
+```
+
+#### `random`
+
+```
+function random(ctx: ProposerContext) -> Proposal:
+    transitions = list(ctx.transitions.keys())
+    name = random_choice(transitions)
+    return {
+        transitionName: name,
+        toState: ctx.transitions[name],
+        reasoning: "Randomly selected transition"
+    }
+```
+
+#### `weighted_random`
+
+```
+function weighted_random(ctx: ProposerContext) -> Proposal:
+    weights = ctx.metaJson?.weights or {}
+    transitions = list(ctx.transitions.keys())
+
+    # Default weight is 1.0 for unspecified transitions
+    weighted = [(t, weights.get(t, 1.0)) for t in transitions]
+    name = weighted_random_choice(weighted)
+
+    return {
+        transitionName: name,
+        toState: ctx.transitions[name],
+        reasoning: f"Weighted random selection (weight: {weights.get(name, 1.0)})"
+    }
+```
+
+### Voter Strategies
+
+| Strategy | Description | Threshold |
+|----------|-------------|-----------|
+| `prefer_a` | Always votes for proposal A | -- |
+| `prefer_b` | Always votes for proposal B | -- |
+| `both` | Always votes BOTH (both acceptable) | -- |
+| `neither` | Always votes NEITHER (neither acceptable) | -- |
+| `random` | Votes randomly between A and B | -- |
+| `random_all` | Votes randomly between A, B, BOTH, NEITHER | -- |
+| `prefer_goal` | Prefers whichever proposal leads closer to goalState | -- |
+| `prefer_shorter_path` | Prefers the proposal with fewer hops to goalState | -- |
+
+#### `prefer_a`
+
+```
+function prefer_a(ctx: VoterContext) -> Vote:
+    return {
+        voteFor: "A",
+        reasoning: "Default preference for proposal A"
+    }
+```
+
+#### `prefer_b`
+
+```
+function prefer_b(ctx: VoterContext) -> Vote:
+    return {
+        voteFor: "B",
+        reasoning: "Default preference for proposal B"
+    }
+```
+
+#### `both`
+
+```
+function both(ctx: VoterContext) -> Vote:
+    return {
+        voteFor: "BOTH",
+        reasoning: "Both proposals are acceptable"
+    }
+```
+
+#### `neither`
+
+```
+function neither(ctx: VoterContext) -> Vote:
+    return {
+        voteFor: "NEITHER",
+        reasoning: "Neither proposal is acceptable"
+    }
+```
+
+#### `random`
+
+```
+function random(ctx: VoterContext) -> Vote:
+    choice = random_choice(["A", "B"])
+    return {
+        voteFor: choice,
+        reasoning: f"Random selection: {choice}"
+    }
+```
+
+#### `random_all`
+
+```
+function random_all(ctx: VoterContext) -> Vote:
+    choice = random_choice(["A", "B", "BOTH", "NEITHER"])
+    return {
+        voteFor: choice,
+        reasoning: f"Random selection from all options: {choice}"
+    }
+```
+
+#### `prefer_goal`
+
+```
+function prefer_goal(ctx: VoterContext) -> Vote:
+    # Prefer whichever proposal's toState matches the machine's goalState
+    goalState = ctx.machine.goalState
+
+    if ctx.proposalA.toState == goalState and ctx.proposalB.toState != goalState:
+        return { voteFor: "A", reasoning: "Proposal A reaches goal state" }
+
+    if ctx.proposalB.toState == goalState and ctx.proposalA.toState != goalState:
+        return { voteFor: "B", reasoning: "Proposal B reaches goal state" }
+
+    if ctx.proposalA.toState == goalState and ctx.proposalB.toState == goalState:
+        return { voteFor: "BOTH", reasoning: "Both proposals reach goal state" }
+
+    return { voteFor: "NEITHER", reasoning: "Neither proposal reaches goal state" }
+```
+
+#### `prefer_shorter_path`
+
+```
+function prefer_shorter_path(ctx: VoterContext) -> Vote:
+    # Calculate minimum hops to goalState from each proposal's toState
+    hopsA = calculate_min_hops(ctx.machine, ctx.proposalA.toState, ctx.machine.goalState)
+    hopsB = calculate_min_hops(ctx.machine, ctx.proposalB.toState, ctx.machine.goalState)
+
+    if hopsA < hopsB:
+        return { voteFor: "A", reasoning: f"Proposal A is {hopsB - hopsA} hops closer to goal" }
+
+    if hopsB < hopsA:
+        return { voteFor: "B", reasoning: f"Proposal B is {hopsA - hopsB} hops closer to goal" }
+
+    return { voteFor: "BOTH", reasoning: "Both proposals are equidistant from goal" }
+```
+
+### Arbiter Strategies
+
+| Strategy | Description | Threshold |
+|----------|-------------|-----------|
+| `first_proposal` | Immediately selects the first proposal received | -- |
+| `ahead_by_k` | Requires k-vote lead for consensus | Vote lead (integer) |
+| `most_similar` | Compares proposals to human gold examples | Min similarity (0.0–1.0) |
+| `pairwise_consensus` | Repeated pairwise testing until consensus | Agreement % (0.0–1.0) |
+
+#### `first_proposal`
+
+The simplest arbiter: immediately declares consensus on the first proposal received, with no voting required.
+
+```
+function first_proposal(ctx: ArbiterContext) -> ConsensusResult:
+    if len(ctx.proposals) == 0:
+        return {
+            consensusReached: false,
+            reasoning: "No proposals received"
+        }
+
+    # Sort by creation time and take the first
+    first = sorted(ctx.proposals, by: createdAt)[0]
+
+    return {
+        consensusReached: true,
+        winningProposalId: first.proposalId,
+        reasoning: "First proposal received wins"
+    }
+```
+
+**When to use:**
+- Testing and development
+- Low-stakes decisions where speed matters more than deliberation
+- Single-proposer scenarios where voting adds no value
+- Bootstrap phase before specialists are trained
+
+#### `ahead_by_k`
+
+See [Consensus Strategies](/docs/concepts/consensus-strategies#ahead_by_k) for full documentation.
+
+#### `most_similar`
+
+See [Consensus Strategies](/docs/concepts/consensus-strategies#most_similar) for full documentation.
+
+#### `pairwise_consensus`
+
+See [Consensus Strategies](/docs/concepts/consensus-strategies#pairwise_consensus) for full documentation.
+
+### Strategy Combinations
+
+Common combinations of proposer, voter, and arbiter strategies:
+
+| Use Case | Proposer | Voter | Arbiter |
+|----------|----------|-------|---------|
+| **Testing/Dev** | `first_available` | `prefer_a` | `first_proposal` |
+| **Random baseline** | `random` | `random` | `ahead_by_k` (k=1) |
+| **Goal-oriented** | `random` | `prefer_goal` | `ahead_by_k` (k=2) |
+| **Human-aligned** | (LLM) | (LLM) | `most_similar` |
+| **High-stakes** | (LLM) | (LLM) | `pairwise_consensus` |
+
+### Implementing Custom Strategies
+
+You can implement custom strategies using `strategyFn`:
+
+```typescript
+registerProposer({
+  specialistId: "custom-proposer",
+  machineName: "my-task",
+  strategyFn: async (ctx) => {
+    // Your custom logic
+    const best = analyzeTransitions(ctx.transitions, ctx.history);
+    return {
+      transitionName: best.name,
+      toState: best.target,
+      reasoning: best.explanation,
+    };
+  },
+});
+```
+
+Custom strategies can call external services, use ML models (for proposers/voters), or implement any deterministic logic (for arbiters).
