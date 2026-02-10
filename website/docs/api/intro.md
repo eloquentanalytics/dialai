@@ -17,6 +17,7 @@ The `dialai` library provides functions for creating sessions, registering speci
 | [`registerVoter`](#registervoter) | Register a voter specialist |
 | [`submitProposal`](#submitproposal) | Submit a state transition proposal |
 | [`submitVote`](#submitvote) | Submit a vote comparing proposals |
+| [`registerArbiter`](#registerarbiter) | Register an arbiter specialist |
 | [`submitArbitration`](#submitarbitration) | Evaluate consensus and optionally execute |
 | [`evaluateConsensus`](#evaluateconsensus) | Check if consensus is reached |
 | [`executeTransition`](#executetransition) | Execute a state transition |
@@ -114,6 +115,21 @@ registerProposer(opts: {
 
 See [Registering Specialists](/docs/guides/registering-specialists) for execution mode details.
 
+**Human Specialists:**
+
+```typescript
+// Register a human specialist
+const humanReviewer = await registerProposer({
+  specialistId: "human-reviewer",
+  machineName: "my-task",
+  isHuman: true,  // Enables forced arbitration
+});
+```
+
+Human specialists are identified by `isHuman: true`, which grants:
+- Vote priority in consensus evaluation
+- Ability to force transitions via `submitArbitration`
+
 ### registerVoter
 
 Registers a voter specialist for a machine.
@@ -146,20 +162,51 @@ registerVoter(opts: {
 }): Promise<Voter>
 ```
 
+### registerArbiter
+
+Registers an arbiter specialist for a machine. Arbiters evaluate consensus among proposals.
+
+```typescript
+import { registerArbiter } from "dialai";
+
+const arbiter = await registerArbiter({
+  specialistId: "consensus-arbiter",
+  machineName: "my-task",
+  strategyFnName: "aheadByK",
+  threshold: 2,
+});
+```
+
+**Signature:**
+
+```typescript
+registerArbiter(opts: {
+  specialistId: string;
+  machineName: string;
+  strategyFn?: (ctx: ArbiterContext) => Promise<ConsensusResult>;
+  strategyFnName?: string;
+  strategyWebhookUrl?: string;
+  webhookTokenName?: string;
+  threshold?: number;
+}): Promise<Arbiter>
+```
+
+See [registerArbiter](./registerArbiter.md) for full documentation including built-in strategies.
+
 ## Decision Functions
 
 ### submitProposal
 
-Creates and stores a proposal. If `transitionName` and `toState` are omitted, invokes the specialist's registered strategy.
+Creates and stores a proposal. If `transitionName` is omitted, invokes the specialist's registered strategy.
 
 ```typescript
 import { submitProposal } from "dialai";
 
-// Strategy invocation (AI specialists) - roundId ensures freshness
+// Strategy invocation (AI specialists)
 const proposal = await submitProposal(
   session.sessionId,
   "ai-proposer-1",
-  session.currentRoundId  // roundId - omit to skip staleness check
+  session.currentRoundId  // roundId - omit to use current round; provide to target a specific round
 );
 
 // Direct submission with all parameters
@@ -168,7 +215,6 @@ const proposal = await submitProposal(
   "ai-proposer-1",
   session.currentRoundId, // roundId
   "approve",              // transitionName
-  "approved",             // toState
   "Looks good to me",     // reasoning
   { source: "review" },   // metaJson
   0.003,                  // costUSD
@@ -186,7 +232,6 @@ submitProposal(
   specialistId: string,
   roundId?: string,
   transitionName?: string,
-  toState?: string,
   reasoning?: string,
   metaJson?: Record<string, unknown>,
   costUSD?: number,
@@ -200,9 +245,8 @@ submitProposal(
 |-------|------|----------|-------------|
 | `sessionId` | `string` | Yes | Session identifier |
 | `specialistId` | `string` | Yes | Who is submitting |
-| `roundId` | `string` | No | Current round ID for staleness check |
+| `roundId` | `string` | No | Omit to use current round; provide to target a specific round (enables staleness detection) |
 | `transitionName` | `string` | No | Transition to propose (invokes strategy if omitted) |
-| `toState` | `string` | No | Target state |
 | `reasoning` | `string` | No | Explanation for the proposal |
 | `metaJson` | `object` | No | Arbitrary client metadata |
 | `costUSD` | `number` | No | Cost in USD to generate this proposal |
@@ -219,11 +263,11 @@ Creates and stores a vote comparing two proposals. If `voteFor` is omitted, invo
 ```typescript
 import { submitVote } from "dialai";
 
-// Strategy invocation - roundId ensures freshness
+// Strategy invocation
 const vote = await submitVote(
   session.sessionId,
   "ai-voter-1",
-  session.currentRoundId,  // roundId - omit to skip staleness check
+  session.currentRoundId,  // roundId - omit to use current round; provide to target a specific round
   proposalA.proposalId,
   proposalB.proposalId
 );
@@ -268,7 +312,7 @@ submitVote(
 |-------|------|----------|-------------|
 | `sessionId` | `string` | Yes | Session identifier |
 | `specialistId` | `string` | Yes | Who is voting |
-| `roundId` | `string` | No | Current round ID for staleness check |
+| `roundId` | `string` | No | Omit to use current round; provide to target a specific round (enables staleness detection) |
 | `proposalIdA` | `string` | Yes | First proposal to compare |
 | `proposalIdB` | `string` | Yes | Second proposal to compare |
 | `voteFor` | `VoteChoice` | No | Vote choice (invokes strategy if omitted) |
@@ -364,7 +408,7 @@ submitArbitration(
 | Param | Type | Required | Description |
 |-------|------|----------|-------------|
 | `sessionId` | `string` | Yes | Session identifier |
-| `roundId` | `string` | Yes | Current round ID (stale check) |
+| `roundId` | `string` | Yes | Must match current round (enables staleness detection) |
 | `specialistId` | `string` | No | Who is calling (required for override) |
 | `transitionName` | `string` | No | Force this transition (human only) |
 | `reasoning` | `string` | No | Explanation for the decision |

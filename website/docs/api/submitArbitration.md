@@ -1,5 +1,5 @@
 ---
-sidebar_position: 9
+sidebar_position: 10
 ---
 
 # `submitArbitration(sessionId, roundId, specialistId?, transitionName?, reasoning?, metaJson?, costUSD?, latencyMsec?, numInputTokens?, numOutputTokens?): Promise<ArbitrationResult>`
