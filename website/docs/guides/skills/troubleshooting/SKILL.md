@@ -28,7 +28,7 @@ echo $ANTHROPIC_API_KEY
 
 **Causes**:
 - Malformed JSON syntax
-- Missing required fields (`id`, `defaultState`, `states`)
+- Missing required fields (`id`, `goalState`, `states`)
 - State references non-existent target
 
 **Fix**:

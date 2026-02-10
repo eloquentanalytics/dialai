@@ -4,7 +4,7 @@ sidebar_position: 4
 
 # Decision Cycle
 
-When a session is not in its default state, the system progresses through a repeating cycle until it reaches the goal.
+When a session is not in its goal state, the system progresses through a repeating cycle until it reaches the goal.
 
 ## Asynchronous by Design
 
@@ -57,7 +57,7 @@ If consensus is reached, the winning proposal's transition executes:
 - All proposals and votes for that round are cleared
 - A new round begins
 
-The cycle repeats until the session reaches its **default state** (the completion state).
+The cycle repeats until the session reaches its **goal state** (the rest state).
 
 ```mermaid
 stateDiagram-v2
@@ -67,7 +67,7 @@ stateDiagram-v2
     Vote --> Arbitrate
     Arbitrate --> Execute: Consensus
     Arbitrate --> [*]: No Consensus (Human Required)
-    Execute --> [*]: Default State Reached
+    Execute --> [*]: Goal State Reached
     Execute --> Propose: Continue
 ```
 

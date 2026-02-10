@@ -105,6 +105,6 @@ Configure max cycles to prevent infinite loops:
 ## Session Completion
 
 The session ends when:
-- Current state equals `defaultState` (success)
+- Current state equals `goalState` (success)
 - Max cycles exceeded (failure)
 - No valid transitions available (stuck)

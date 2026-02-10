@@ -13,7 +13,7 @@ Define a state machine for a decision process.
 {
   "machineName": "unique-machine-id",
   "initialState": "start-state",
-  "defaultState": "end-state",
+  "goalState": "end-state",
   "states": {
     "start-state": {
       "prompt": "Decision prompt?",
@@ -30,7 +30,7 @@ Define a state machine for a decision process.
 |-------|------|-------------|
 | `machineName` | string | Unique identifier for the machine |
 | `initialState` | string | The state where sessions begin |
-| `defaultState` | string | The state where sessions are complete |
+| `goalState` | string | The rest state where the session is headed; no action needed when reached |
 | `states` | object | State definitions with transitions |
 
 ## Transition Definition
@@ -52,7 +52,7 @@ Transitions map action names to target states:
 {
   "machineName": "document-approval",
   "initialState": "draft",
-  "defaultState": "approved",
+  "goalState": "approved",
   "states": {
     "draft": {
       "prompt": "Submit this document for review?",

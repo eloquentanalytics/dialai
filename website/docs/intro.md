@@ -53,7 +53,7 @@ graph LR
 1. **Model the task as a state machine**: Define states, transitions, and decision prompts
 2. **Register proposers and voters**: AI and human specialists that propose transitions and vote on them
 3. **Run decision cycles**: Propose → Vote → Arbitrate → Execute
-4. **Reach completion**: The session completes when it reaches its default state
+4. **Reach rest**: The session is at rest when it reaches its goal state
 
 ## Documentation Structure
 
@@ -83,4 +83,4 @@ How to use the `dialai` library:
 | **Specialist** | A pluggable actor (AI or human) that proposes transitions or votes |
 | **Decision Cycle** | The repeating process: Propose → Vote → Arbitrate → Execute |
 | **Arbiter** | The built-in logic that evaluates consensus and determines when a proposal wins |
-| **Default State** | The state where the session is complete |
+| **Goal State** | The rest state where the session is headed; no action needed when reached |

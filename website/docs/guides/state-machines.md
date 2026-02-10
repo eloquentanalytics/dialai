@@ -14,7 +14,7 @@ This doesn't limit what you can model; it clarifies *where decisions happen* so 
 
 Open-ended tasks fit naturally:
 - **Document generation**: Proposals *are* the candidate documents. Specialists propose drafts, voters compare them, the human picks or edits the winner.
-- **Agentic workflows**: The default state is the agent's normal operating mode. It transitions out for decisions that need deliberation and back when resolved.
+- **Agentic workflows**: The goal state is the agent's normal operating mode. It transitions out for decisions that need deliberation and back when resolved.
 - **Research and exploration**: Model as a loop—the agent explores, then a decision determines whether findings are sufficient or more exploration is needed.
 
 ## Defining a Machine
@@ -23,7 +23,7 @@ A `MachineDefinition` defines:
 
 - `machineName`: identifies the type
 - `initialState`: where sessions start
-- `defaultState`: the state where the session is complete
+- `goalState`: the rest state where the session is headed; no action needed when reached
 - `states`: a record of state names to their configuration
 
 For a complete JSON Schema definition, see [schema.json](../schema.json).
@@ -36,7 +36,7 @@ import type { MachineDefinition } from "dialai";
 const myMachine: MachineDefinition = {
   machineName: "my-task",
   initialState: "idle",
-  defaultState: "done",
+  goalState: "done",
   states: {
     idle: {
       prompt: "The system is idle. What should happen next?",
@@ -72,7 +72,7 @@ Machines can also be defined as plain JSON files, useful with the CLI:
 {
   "machineName": "simple-task",
   "initialState": "pending",
-  "defaultState": "done",
+  "goalState": "done",
   "states": {
     "pending": {
       "prompt": "Should we complete this task?",
@@ -139,7 +139,7 @@ Machines can include embedded AI specialist and arbiter configuration at the sta
 {
   "machineName": "example-task",
   "initialState": "pending",
-  "defaultState": "done",
+  "goalState": "done",
   "states": {
     "pending": {
       "prompt": "Should we complete this task?",
@@ -229,7 +229,7 @@ Higher `aheadByK` values require stronger consensus. See [Arbitration](../concep
 const linear: MachineDefinition = {
   machineName: "pipeline",
   initialState: "step1",
-  defaultState: "complete",
+  goalState: "complete",
   states: {
     step1: { transitions: { next: "step2" } },
     step2: { transitions: { next: "step3" } },
@@ -245,7 +245,7 @@ const linear: MachineDefinition = {
 const reviewLoop: MachineDefinition = {
   machineName: "review",
   initialState: "draft",
-  defaultState: "published",
+  goalState: "published",
   states: {
     draft: {
       prompt: "Review the draft. Approve or request revisions?",
@@ -269,7 +269,7 @@ const reviewLoop: MachineDefinition = {
 const branching: MachineDefinition = {
   machineName: "triage",
   initialState: "incoming",
-  defaultState: "resolved",
+  goalState: "resolved",
   states: {
     incoming: {
       prompt: "Triage this ticket: escalate, handle directly, or close?",
@@ -292,13 +292,13 @@ const branching: MachineDefinition = {
 
 ### Agentic Workflow
 
-An agent's operating loop modeled as a DIAL machine. The default state is the agent running normally: it transitions out when a decision needs deliberation, and back when resolved.
+An agent's operating loop modeled as a DIAL machine. The goal state is the agent running normally: it transitions out when a decision needs deliberation, and back when resolved.
 
 ```typescript
 const agentLoop: MachineDefinition = {
   machineName: "coding-agent",
   initialState: "operating",
-  defaultState: "done",
+  goalState: "done",
   states: {
     operating: {
       prompt:
@@ -330,7 +330,7 @@ For open-ended generation tasks, the specialist proposals *are* the candidate ou
 const docGen: MachineDefinition = {
   machineName: "report-generation",
   initialState: "drafting",
-  defaultState: "published",
+  goalState: "published",
   states: {
     drafting: {
       prompt:

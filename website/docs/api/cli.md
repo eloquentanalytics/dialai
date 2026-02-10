@@ -40,7 +40,7 @@ On success, the CLI prints:
 ```
 Machine:       <machineName>
 Initial state: <initialState>
-Goal state:    <defaultState>
+Goal state:    <goalState>
 Final state:   <currentState>
 Session ID:    <sessionId>
 ```
@@ -64,7 +64,7 @@ cat > task.json << 'EOF'
 {
   "machineName": "simple-task",
   "initialState": "pending",
-  "defaultState": "done",
+  "goalState": "done",
   "states": {
     "pending": {
       "prompt": "Should we complete this task?",
@@ -106,7 +106,7 @@ cat > pipeline.json << 'EOF'
 {
   "machineName": "pipeline",
   "initialState": "queued",
-  "defaultState": "complete",
+  "goalState": "complete",
   "states": {
     "queued": {
       "prompt": "Ready to start?",
@@ -141,7 +141,7 @@ cat > review.json << 'EOF'
 {
   "machineName": "code-review",
   "initialState": "pending",
-  "defaultState": "approved",
+  "goalState": "approved",
   "states": {
     "pending": {
       "prompt": "Review the code. Approve or request changes?",
@@ -183,7 +183,7 @@ The CLI accepts JSON files conforming to the `MachineDefinition` type:
 {
   "machineName": "string (required)",
   "initialState": "string (required)",
-  "defaultState": "string (required)",
+  "goalState": "string (required)",
   "states": {
     "<state-name>": {
       "prompt": "string (optional)",
@@ -218,7 +218,7 @@ The CLI:
 1. Loads the machine definition from the JSON file
 2. Creates a session in the initial state
 3. Registers a built-in deterministic proposer (picks the first available transition)
-4. Loops until the session reaches the default state:
+4. Loops until the session reaches the goal state:
    - Solicits proposals from all registered proposers
    - If 2+ proposals, solicits pairwise votes from all voters
    - Evaluates consensus

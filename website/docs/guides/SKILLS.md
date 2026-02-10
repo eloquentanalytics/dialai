@@ -46,7 +46,7 @@ Each skill below is available as a standalone file that agents can download:
 ### The Decision Cycle
 
 ```
-Propose -> Vote -> Arbitrate -> Execute -> (repeat until defaultState)
+Propose -> Vote -> Arbitrate -> Execute -> (repeat until goalState)
 ```
 
 1. **Propose**: Proposers submit transition proposals
@@ -72,7 +72,7 @@ When consensus cannot be reached, only a specialist registered with `isHuman: tr
 {
   "machineName": "my-task",
   "initialState": "pending",
-  "defaultState": "done",
+  "goalState": "done",
   "states": {
     "pending": {
       "prompt": "Should we complete this task?",

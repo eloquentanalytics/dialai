@@ -181,9 +181,11 @@ const proposal = await submitProposal(
 submitProposal(
   sessionId: string,
   specialistId: string,
+  roundId?: string,
   transitionName?: string,
   toState?: string,
   reasoning?: string,
+  metaJson?: Record<string, unknown>,
   costUSD?: number,
   latencyMsec?: number,
   numInputTokens?: number,
@@ -195,13 +197,17 @@ submitProposal(
 |-------|------|----------|-------------|
 | `sessionId` | `string` | Yes | Session identifier |
 | `specialistId` | `string` | Yes | Who is submitting |
+| `roundId` | `string` | No | Current round ID for staleness check |
 | `transitionName` | `string` | No | Transition to propose (invokes strategy if omitted) |
 | `toState` | `string` | No | Target state |
 | `reasoning` | `string` | No | Explanation for the proposal |
+| `metaJson` | `object` | No | Arbitrary client metadata |
 | `costUSD` | `number` | No | Cost in USD to generate this proposal |
 | `latencyMsec` | `number` | No | Time in milliseconds to generate |
 | `numInputTokens` | `number` | No | Input tokens used |
 | `numOutputTokens` | `number` | No | Output tokens used |
+
+Cost tracking fields enable measuring the economic cost of AI delegation.
 
 ### submitVote
 
@@ -239,10 +245,12 @@ const vote = await submitVote(
 submitVote(
   sessionId: string,
   specialistId: string,
+  roundId?: string,
   proposalIdA: string,
   proposalIdB: string,
   voteFor?: VoteChoice,
   reasoning?: string,
+  metaJson?: Record<string, unknown>,
   costUSD?: number,
   latencyMsec?: number,
   numInputTokens?: number,
@@ -254,14 +262,18 @@ submitVote(
 |-------|------|----------|-------------|
 | `sessionId` | `string` | Yes | Session identifier |
 | `specialistId` | `string` | Yes | Who is voting |
+| `roundId` | `string` | No | Current round ID for staleness check |
 | `proposalIdA` | `string` | Yes | First proposal to compare |
 | `proposalIdB` | `string` | Yes | Second proposal to compare |
 | `voteFor` | `VoteChoice` | No | Vote choice (invokes strategy if omitted) |
 | `reasoning` | `string` | No | Explanation for the vote |
+| `metaJson` | `object` | No | Arbitrary client metadata |
 | `costUSD` | `number` | No | Cost in USD to generate this vote |
 | `latencyMsec` | `number` | No | Time in milliseconds to generate |
 | `numInputTokens` | `number` | No | Input tokens used |
 | `numOutputTokens` | `number` | No | Output tokens used |
+
+Cost tracking fields enable measuring the economic cost of AI delegation.
 
 ### evaluateConsensus
 
@@ -393,13 +405,13 @@ Throws if the transition is invalid from the current state.
 
 ### runSession
 
-Runs a machine to completion. Creates a session, registers a built-in proposer, and loops through the decision cycle until the default state is reached.
+Runs a machine to its goal state. Creates a session, registers a built-in proposer, and loops through the decision cycle until the goal state is reached.
 
 ```typescript
 import { runSession } from "dialai";
 
 const session = await runSession(machine);
-// session.currentState === machine.defaultState
+// session.currentState === machine.goalState
 ```
 
 **Signature:**
@@ -412,7 +424,7 @@ runSession(machine: MachineDefinition): Promise<Session>
 
 1. Creates a session in the initial state
 2. Registers a built-in deterministic proposer (picks the first transition)
-3. Loops until `currentState === defaultState`:
+3. Loops until `currentState === goalState`:
    - Solicits proposals from all proposers
    - If 2+ proposals, solicits pairwise votes
    - Evaluates consensus
