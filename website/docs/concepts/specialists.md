@@ -20,14 +20,7 @@ Proposers analyze the current state and suggest what transition should happen ne
 
 ### Voters
 
-Voters evaluate proposals and express preferences between them. They compare pairs of proposals and vote:
-
-| Vote | Meaning |
-|------|---------|
-| **A** | Prefer proposal A |
-| **B** | Prefer proposal B |
-| **BOTH** | Both proposals are acceptable |
-| **NEITHER** | Neither proposal is acceptable |
+Voters evaluate proposals and express preferences between them. For strategies that use voting, voters compare pairs of proposals and express a preference: **A**, **B**, **BOTH**, or **NEITHER**. See [Decision Cycle — Vote](./decision-cycle.md#2-vote-strategy-dependent) for details.
 
 ### Arbiters
 
@@ -66,8 +59,8 @@ This flexibility allows specialists to range from simple deterministic logic to 
 
 DIAL supports any number of specialists per role:
 
-- **Multiple proposers**: Each may propose a different transition. Voting determines which wins.
-- **Multiple voters**: More voters can provide stronger consensus signals. The ahead-by-k threshold determines when consensus is reached.
+- **Multiple proposers**: Each may propose a different transition. The [arbitration strategy](./consensus-strategies.md) determines which wins—through voting, similarity scoring, or other mechanisms.
+- **Multiple voters**: For strategies that use voting, more voters can provide stronger consensus signals.
 
 This design enables:
 - **Redundancy**: Multiple perspectives on the same decision

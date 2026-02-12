@@ -153,17 +153,7 @@ Your workflow involves making alignment decisions **state by state**. This is co
 
 ## Progressive Collapse
 
-Both approaches support progressive collapse (the system simplifying as alignment improves):
-
-**Direct Alignment:**
-- As models improve, alignment scores increase
-- Eventually, one model consistently wins → use only that model
-- Human involvement reduces as alignment approaches 1.0
-
-**Voting:**
-- As models improve, their weights increase
-- Eventually, high-weight models dominate → fewer votes needed
-- System collapses to deterministic execution
+Both approaches support progressive collapse. See [Consensus Strategies — Progressive Collapse](./consensus-strategies.md#progressive-collapse) for the full progression.
 
 ## Recommendation
 
@@ -246,4 +236,4 @@ function selectBestModel(
 - [Consensus Strategies](./consensus-strategies.md): Built-in strategies for arbiters
 - [Human Primacy](./human-primacy.md): Why human gold examples are the ground truth
 - [Specialists](./specialists.md): How models participate as proposers and voters
-- [Decision Cycle](./decision-cycle.md): The PVAE cycle (includes voting phase)
+- [Decision Cycle](./decision-cycle.md): The decision cycle (voting phase depends on strategy)

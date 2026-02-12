@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Introduction to DIAL
 
-**DIAL** (Dynamic Integration between AI and Labor) is a coordination framework for AI and human specialists making decisions together within state machines.
+**DIAL** (Dynamic Integration between AI and Labor) is a task-oriented coordination framework for AI and human specialists making decisions together within state machines.
 
 ## Why DIAL?
 
@@ -12,7 +12,7 @@ The promise of AI is efficiency: faster, cheaper execution of narrow tasks. But 
 
 > **How do you know, in dollars, time, and quality, exactly what it would cost to turn any task over to a minimally competent AI decision-maker? And how involved should humans remain as quality control?**
 
-DIAL provides the answer through **empirical measurement**, not speculation.
+DIAL provides the answer through **empirical measurement**.
 
 ## The Core Insight
 
@@ -22,7 +22,7 @@ An AI model operates on a bounded context window. A human operates on a **lifeti
 
 ### 1. Human Primacy
 
-The human is always right, not because humans are infallible, but because humans have context that AI cannot access.
+Humans have context that AI cannot access.
 
 An AI specialist is judged on alignment with human choices. The standard is distributional: output should match the distribution a population of competent humans would produce for the same decision.
 
@@ -30,15 +30,15 @@ An AI specialist is judged on alignment with human choices. The standard is dist
 
 Over repeated decision cycles, measuring how well AI predicts human choices causes the multi-agent deliberation structure to **progressively collapse into deterministic execution**.
 
-This collapse is emergent, not designed. As AI specialists prove their alignment with human judgment through accumulated data, the expensive deliberation process naturally simplifies.
+As AI specialists prove their alignment with human judgment through accumulated data, the expensive deliberation process simplifies.
 
 ### 3. Empirical Trust
 
 Trust is earned through demonstrated alignment with human decisions and through continued sampling of human preferences. Specialists prove their value one decision at a time.
 
-## What DIAL Is Not
+## Scope
 
-DIAL is not about AI replacing humans. It targets decisions that humans already make well and measures whether AI specialists can replicate those decisions cheaply enough to justify delegation, with precise cost data on ongoing human quality-control. The value of AI is not superiority. **It is efficiency.** AI is faster and cheaper at narrow tasks where the required context fits within the model's window.
+DIAL targets decisions that humans already make well and measures whether AI specialists can replicate those decisions cheaply enough to justify delegation, with precise cost data on ongoing human quality-control. **The value of AI is efficiency.** AI is faster and cheaper at narrow tasks where the required context fits within the model's window.
 
 ## How It Works
 

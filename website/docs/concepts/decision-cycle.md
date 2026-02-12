@@ -15,7 +15,7 @@ This design accommodates:
 - **Distributed specialists**: Webhook-based specialists may be across networks with variable latency
 - **Late arrivals**: A slow specialist's contribution doesn't block progress if consensus forms first
 
-## The Four Phases
+## The Phases
 
 ### 1. Propose
 
@@ -24,11 +24,13 @@ Proposals arrive asynchronously from registered proposers. Each proposer analyze
 - The target state
 - Reasoning for the proposal
 
-Multiple proposers may submit different proposals for the same decision point. This is expected—the voting phase resolves which proposal wins.
+Multiple proposers may submit different proposals for the same decision point. This is expected—for strategies that use voting, the voting phase resolves which proposal wins.
 
-### 2. Vote
+### 2. Vote *(strategy-dependent)*
 
-With multiple proposals, voters compare them pairwise. Each voter expresses a preference:
+Some [arbitration strategies](./consensus-strategies.md) require voting (e.g., `aheadByK`, `pairwiseConsensus`). Others (e.g., `firstProposal`, `mostSimilar`) evaluate proposals directly and skip the voting phase entirely.
+
+When voting is used, voters compare proposals pairwise. Each voter expresses a preference:
 
 | Vote | Meaning |
 |------|---------|
@@ -41,14 +43,14 @@ Votes arrive asynchronously. The system uses Swiss tournament pairing to efficie
 
 ### 3. Arbitrate
 
-After each proposal and vote, consensus is evaluated. This is not a one-time evaluation—it runs continuously as new contributions arrive. The built-in arbiter checks:
+After each proposal (and each vote, for strategies that use voting), consensus is evaluated. Consensus evaluation runs continuously as new contributions arrive. What the arbiter checks depends on the [consensus strategy](./consensus-strategies.md):
 
-- Do any proposals exist?
-- Does the leading proposal have sufficient support (ahead by k votes)?
+- **`firstProposal`**: Declares consensus on the first proposal received—no voting needed
+- **`mostSimilar`**: Compares proposals to human gold examples via semantic similarity—no voting needed
+- **`aheadByK`**: Requires the leading proposal to be ahead by k votes
+- **`pairwiseConsensus`**: Requires a proposal to win a threshold percentage of pairwise matchups
 
 If consensus is reached, the transition executes automatically.
-
-**Note on single proposals:** A single proposal can achieve consensus with just one supporting vote. Votes are still required—a proposal without any votes has no demonstrated support.
 
 ### 4. Execute
 
@@ -63,7 +65,7 @@ The cycle repeats until the session reaches its **goal state** (the rest state).
 stateDiagram-v2
     [*] --> Propose
     Propose --> Arbitrate: after each proposal
-    Arbitrate --> Vote: no consensus yet
+    Arbitrate --> Vote: no consensus yet (if strategy uses voting)
     Vote --> Arbitrate: after each vote
     Arbitrate --> Execute: consensus reached
     Arbitrate --> [*]: no consensus (human required)
@@ -73,15 +75,7 @@ stateDiagram-v2
 
 ## When Consensus Fails
 
-It is entirely possible—and expected in complex scenarios—that specialists will **not** reach consensus on their own. This is not a failure; it's a feature.
-
-When voters are split or vote NEITHER, the system naturally surfaces the decision to a human. The inability to reach consensus indicates:
-
-- The decision requires human judgment
-- The specialists may need additional training or clearer instructions
-- The problem space has genuine ambiguity that humans should resolve
-
-This is how DIAL implements [Human Primacy](./human-primacy.md) in practice: humans don't need to monitor every decision, only the ones where AI specialists genuinely disagree.
+When specialists cannot reach consensus, the system surfaces the decision to a human. See [Arbitration — When Consensus Fails](./arbitration.md#when-consensus-fails) for details.
 
 ## Related Concepts
 

@@ -20,13 +20,11 @@ graph LR
     W --> V
 ```
 
-The key insight is that it's not a specific point in time that decides consensus—it's the mathematics of the algorithm applied to the current state of proposals and votes.
+Consensus is determined by the mathematics of the algorithm applied to the current state of proposals and votes, evaluated continuously rather than at a single point in time.
 
 ## The Arbiter
 
-The arbiter is always a **fully deterministic, built-in component**—never an AI model or a human. This is a deliberate safety constraint: the mechanism that decides whether consensus has been reached must be predictable and auditable.
-
-The arbiter evaluates two things:
+The arbiter is a fully deterministic, built-in component (see [Specialists — Arbiters](./specialists.md#arbiters)). It evaluates two things:
 
 ### 1. Guards (Deterministic)
 
@@ -40,22 +38,24 @@ Guards are pure logic—no LLM calls, no latency, no stochastic behavior.
 
 ### 2. Reasoning Synthesis (Optional)
 
-When guards pass, the arbiter can optionally synthesize reasoning to explain the consensus decision. This reasoning is recorded in the transition history but does not affect the consensus determination.
+When guards pass, the arbiter can optionally synthesize reasoning to explain the consensus decision. This reasoning is recorded in the transition history. It is informational and has no effect on the consensus determination.
 
-## The Built-in Strategy: Ahead-by-K
+## Built-in Strategies
 
-DIAL ships with a built-in arbitration strategy that implements **ahead-by-k voting**.
+DIAL ships with multiple [consensus strategies](./consensus-strategies.md). Some require voting (`aheadByK`, `pairwiseConsensus`), while others evaluate proposals directly (`firstProposal`, `mostSimilar`). The choice of strategy determines whether a voting phase occurs in the decision cycle.
 
-### Rules
+### Ahead-by-K (Voting)
+
+The default strategy implements **ahead-by-k voting**.
+
+#### Rules
 
 1. **Zero proposals**: No consensus
 
 2. **One or more proposals**: Evaluate votes:
    - Tally votes per proposal (all votes count equally, including human votes)
    - The leading proposal must be ahead by `k` votes
-   - A single proposal with no votes has no consensus—votes are still required
-
-The number of proposals (1 vs. N) doesn't change the fundamental requirement: sufficient support must be demonstrated through voting. A lone proposal doesn't automatically win.
+   - A single proposal with no votes has no consensus—votes are still required for this strategy
 
 ### Vote Tallying
 
@@ -83,13 +83,7 @@ With k = 1: Consensus is reached (margin of 1 meets the threshold)
 
 ## Human Override
 
-When consensus isn't reached through normal voting, a human can force a decision. This is the mechanism for [Human Primacy](./human-primacy.md):
-
-- Humans participate in voting like anyone else during normal operation
-- When AI specialists cannot reach consensus, humans break the deadlock
-- Only humans can force a decision—AI cannot override the process
-
-If an AI specialist attempts to force a transition, it is rejected. This ensures that the ultimate authority rests with humans.
+When consensus cannot be reached, only a human can force a decision. AI specialists cannot override the process. See [Human Primacy](./human-primacy.md) and [Specialists — Human vs AI](./specialists.md#human-vs-ai-specialists) for details.
 
 ## Configuring the Threshold
 
@@ -103,9 +97,7 @@ The threshold can be configured at the machine level (applies to all states) or 
 
 ## When Consensus Fails
 
-It is entirely possible—and expected in complex scenarios—that specialists will **not** reach consensus. This is not a failure; it's a feature.
-
-When voters are split or vote NEITHER, the system naturally surfaces the decision to a human. The inability to reach consensus indicates:
+Specialists may not reach consensus, especially in complex scenarios. When this happens, the system surfaces the decision to a human. The inability to reach consensus indicates:
 
 - The decision requires human judgment
 - The specialists may need additional training or clearer instructions

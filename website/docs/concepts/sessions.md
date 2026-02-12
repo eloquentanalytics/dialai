@@ -38,7 +38,7 @@ A session starts in its **initial state**—the starting point defined in the ma
 When a session is **not in its goal state**, the decision cycle activates:
 
 1. Specialists propose transitions
-2. Proposals are compared through voting (if 2+ exist)
+2. If the [arbitration strategy](./consensus-strategies.md) requires it, proposals are compared through voting
 3. Consensus is evaluated
 4. The winning transition executes
 5. The session moves to a new state

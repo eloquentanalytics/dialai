@@ -4,7 +4,7 @@ sidebar_position: 6
 
 # Human Primacy
 
-**The human is always right**, not because humans are infallible, but because humans have context that AI cannot access.
+**Humans have context that AI cannot access.** Human decisions are the best available ground truth for calibrating AI specialists.
 
 ## The Context Argument
 
@@ -20,9 +20,7 @@ A human operates on:
 
 The human knows things they **cannot tell the machine**.
 
-## Why "Always Right"?
-
-This isn't a claim about human infallibility. Humans make mistakes constantly. The claim is about **information asymmetry**.
+## Information Asymmetry
 
 When a human's decision looks wrong from the AI's perspective, there are two possibilities:
 
@@ -31,15 +29,15 @@ When a human's decision looks wrong from the AI's perspective, there are two pos
 
 The machine, trained on human works and operating on a compressed subset of human knowledge, **cannot determine when the human is wrong**, because what looks like an error from the AI's limited vantage point may reflect context the AI simply doesn't have.
 
-Because the AI cannot reliably distinguish human errors from human context it lacks, human decisions are the best available ground truth for calibration, not because they're perfect, but because no better signal is available from the AI's position. Any attempt by the AI to "correct" human judgment requires the AI to be confident it has the full picture, which is precisely the assumption DIAL rejects.
+The AI cannot reliably distinguish human errors from human context it lacks. Human decisions are the best available ground truth for calibration because no better signal is available from the AI's position. Any attempt by the AI to "correct" human judgment requires the AI to be confident it has the full picture, which is precisely the assumption DIAL rejects.
 
 ### The Parent Analogy
 
-It is always safer for the AI to assume the human had reasons, just as it is safer for a child to defer to a parent, not because the parent is infallible, but because the parent has context the child cannot access.
+It is always safer for the AI to assume the human had reasons, just as it is safer for a child to defer to a parent who has context the child cannot access.
 
 ## The Distributional Standard
 
-The goal of a DIAL specialist is not to match a single human's idiosyncratic choices. It is to match the **probability distribution** a population of competent humans would produce for the same decision.
+The goal of a DIAL specialist is to match the **probability distribution** a population of competent humans would produce for the same decision.
 
 If you gave 1,000 competent humans the same state and transition options, their choices would form a distribution, clustered around the most common answer with some spread across alternatives.
 
@@ -47,13 +45,13 @@ A well-calibrated specialist's output probabilities should look like that human 
 
 ### Why Distribution Matching Matters
 
-**Overconfidence is a signal, not a virtue.** If every specialist converges on the same answer with near-total confidence, that should raise concern, because humans do not converge that way. Real human decisions have variance. A specialist that eliminates that variance isn't more accurate; it's miscalibrated.
+**Overconfidence is a signal of miscalibration.** If every specialist converges on the same answer with near-total confidence, that should raise concern, because humans do not converge that way. Real human decisions have variance. A specialist that eliminates that variance is miscalibrated.
 
 **The improvement path is principled.** To push the specialist's accuracy beyond the human distribution, you must first tighten the human distribution itself through better training, clearer decision prompts, and improved context provided at the point of decision.
 
 ### The Specialist Reflects the Humans It Learns From
 
-DIAL does not assume the humans are average. It calibrates to whatever the humans actually are. The specialist will approach the capability level of the humans it observes:
+DIAL calibrates to whatever the humans actually are. The specialist will approach the capability level of the humans it observes:
 
 - **If the humans are all experts**, the distribution is tight and centered on expert-quality decisions. The specialist converges toward expert performance.
 - **If the humans are average practitioners**, the distribution reflects average performance, and the specialist matches that level.
@@ -65,11 +63,11 @@ The specialist's ceiling is the quality of the human signal. The framework makes
 
 ### 1. Predict, Don't Judge
 
-An AI specialist should choose what the human **would** choose, even if its own reasoning disagrees. The specialist's role is to model human behavior, not to substitute its own judgment.
+An AI specialist should choose what the human **would** choose, even if its own reasoning disagrees. The specialist's role is to model human behavior.
 
 ### 2. Judgment Criteria
 
-AI specialists are judged on **alignment with human choices**, not on their independent correctness:
+AI specialists are judged on **alignment with human choices**:
 
 | Metric | Good | Bad |
 |--------|------|-----|
@@ -102,7 +100,7 @@ When we say both humans are right, we mean two things:
 
 ### What About Multi-Stakeholder Decisions?
 
-When a domain genuinely requires multiple humans to agree (e.g., two reviewers must both approve a PR), this is modeled as **separate states in the machine**, not as competing votes at the same state. Each reviewer's decision is its own decision point, and each advances the machine independently:
+When a domain genuinely requires multiple humans to agree (e.g., two reviewers must both approve a PR), this is modeled as **separate states in the machine**. Each reviewer's decision is its own decision point, and each advances the machine independently:
 
 ```mermaid
 graph LR
@@ -111,35 +109,29 @@ graph LR
     S3 -->|"Merge / Request Changes"| S4[Resolved]
 ```
 
-Human disagreement between reviewers is resolved by human mechanisms (escalation, authority structures, negotiation), at the process design level, not inside DIAL arbitration. The framework does not pretend to solve organizational disagreement; it identifies it as outside the scope of AI-human calibration.
+Human disagreement between reviewers is resolved by human mechanisms (escalation, authority structures, negotiation) at the process design level. Organizational disagreement is outside the scope of AI-human calibration.
 
 ## Human Activity as Ground Truth
 
 Human primacy in DIAL means that **human activity is the reference for evaluating AI specialists**. When measuring how well an AI specialist performs, the question is: how closely does it match what humans would decide?
 
-The key distinction:
-
-- **AI specialists** are evaluated against human choices—they must predict what humans would decide
-- **Human specialists** provide the ground truth that AI specialists are measured against
-- **Only humans** can force a decision when AI specialists cannot reach consensus
-
-This ensures that when humans participate, their decisions are recorded as ground truth. AI specialists are then evaluated on how well their decisions align with human decisions.
+When humans participate, their decisions are recorded as ground truth. AI specialists are evaluated on how well their decisions align with human decisions. See [Specialists — Human vs AI](./specialists.md#human-vs-ai-specialists) for the specific privileges and constraints of each.
 
 ## Common Objections
 
 ### "But this optimizes the AI to reproduce human errors"
 
-The baseline isn't perfection; it's the human already making those decisions. If a specialist reproduces human behavior including human mistakes, the outcome is no worse than the status quo. What's changed is the cost: the decision is now faster and cheaper.
+The baseline is the human already making those decisions. If a specialist reproduces human behavior including human mistakes, the outcome matches the status quo at lower cost.
 
 More precisely, the specialist optimizes to match the **distribution** a population of competent humans would produce. Individual errors are noise in that distribution; the distribution clusters around the correct answer. To push accuracy beyond it, the path runs through the humans: better training, clearer decision prompts, tighter process design.
 
-Human primacy does not prevent error correction; it defines *who* corrects. Humans can curate which past decisions serve as reference points, excluding recognized mistakes. Nothing in DIAL prevents a review step where AI surfaces patterns that *may* indicate systematic errors. The constraint is that the human decides whether to act on those observations, not the AI.
+Human primacy defines *who* corrects errors. Humans can curate which past decisions serve as reference points, excluding recognized mistakes. AI can surface patterns that *may* indicate systematic errors, but the human decides whether to act on those observations.
 
 ### "But what about systematic bias?"
 
-If you are concerned that human decisions at a particular state exhibit a systematic bias (for example, demographic bias in a hiring decision), the answer is not to let the AI override the human. The answer is to **add a state to the machine** that explicitly checks for that bias.
+If human decisions at a particular state exhibit a systematic bias (for example, demographic bias in a hiring decision), **add a state to the machine** that explicitly checks for that bias.
 
-State machines are designed, not discovered. If your domain has known failure modes, you design states that address them: a fairness review step, a compliance check, a second-opinion gate. The framework provides the mechanism (state machine design) to incorporate whatever checks the organization requires. The bias correction happens in the process architecture, not in an AI silently second-guessing the human at runtime.
+If your domain has known failure modes, you design states that address them: a fairness review step, a compliance check, a second-opinion gate. The bias correction happens in the process architecture through state machine design, where it is explicit and auditable.
 
 ### "But sometimes the AI is objectively right"
 
@@ -151,17 +143,17 @@ The AI operates on a subset of reality. When it seems "objectively right," that 
 
 Progressive collapse assumes stationary conditions: that the human distribution stays stable long enough for specialists to converge on it. In practice, human preferences shift constantly (new employees, changing strategies, evolving markets, policy updates).
 
-Non-stationarity is not a failure mode; it is what the system is designed to detect. The human who participates periodically provides ongoing ground truth. When the population distribution shifts, agreement rates between specialists and human references visibly decline. When agreement drops, the system's response is mechanical: the ahead-by-k consensus threshold becomes harder to reach, the system re-expands (soliciting more proposals, more votes, more human participation), and then re-converges on the new distribution through the same measurement process that produced the original collapse.
+The system is designed to detect non-stationarity. The human who participates periodically provides ongoing ground truth. When the population distribution shifts, agreement rates between specialists and human references visibly decline. When agreement drops, the system's response is mechanical: the ahead-by-k consensus threshold becomes harder to reach, the system re-expands (soliciting more proposals, more votes, more human participation), and then re-converges on the new distribution through the same measurement process that produced the original collapse.
 
 Organizations in genuinely non-stationary environments will see shorter periods of collapsed execution and more frequent re-calibration cycles. DIAL makes that cost visible rather than hiding it.
 
 ### "This slows down automation"
 
-Yes, initially. But measuring AI alignment with human judgment over time can inform when to reduce human involvement. Human primacy ensures that automation is earned, not assumed.
+Yes, initially. Measuring AI alignment with human judgment over time informs when to reduce human involvement. Automation is earned through demonstrated alignment.
 
 ### "What about clear AI advantages (calculation, etc.)?"
 
-For tasks where AI has clear advantages (arithmetic, data lookup, pattern matching on defined criteria), those are deterministic computations, not judgment calls. Human primacy applies to **judgment calls**, not computation.
+Tasks where AI has clear advantages (arithmetic, data lookup, pattern matching on defined criteria) are deterministic computations. Human primacy applies to **judgment calls**.
 
 ## Related Concepts
 

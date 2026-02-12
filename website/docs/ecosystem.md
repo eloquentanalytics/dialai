@@ -14,7 +14,7 @@ For conceptual comparisons (agent frameworks, RLHF, MoE), see [Related Work](./c
 
 **[github.com/stanfordnlp/dspy](https://github.com/stanfordnlp/dspy)** · Stanford NLP · MIT
 
-A framework for *programming*, not prompting, language models. Optimizers like MIPROv2 automatically search over instructions, demonstrations, and weights to maximize a metric. The closest philosophical match to DIAL: both treat LLM behavior as tunable against measurable objectives, with DSPy optimizing at the prompt level and DIAL at the decision level.
+A framework for *programming*, not prompting, language models. Optimizers like MIPROv2 automatically search over instructions, demonstrations, and weights to maximize a metric. The closest philosophical match to DIAL: both treat LLM behavior as tunable against measurable objectives, with DSPy optimizing at the prompt level and DIAL at the task level.
 
 ### TensorZero
 

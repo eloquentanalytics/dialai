@@ -4,13 +4,13 @@ sidebar_position: 6
 
 # Related Work
 
-DIAL solves a different problem than most AI frameworks. Understanding the distinction helps clarify what DIAL is, and what it isn't.
+DIAL solves a different problem than most AI frameworks. Understanding the distinction helps clarify what DIAL does.
 
 ## What DIAL Is
 
 DIAL is a **measurement and delegation harness**. It answers the question: *can this AI specialist reliably predict what this human would choose, in this specific context?* When the answer is yes (empirically demonstrated over repeated decisions), DIAL progressively delegates. When alignment degrades, it reverts.
 
-DIAL is not an agent framework, an alignment technique, or a model architecture. It can **wrap** any of them.
+DIAL can **wrap** any agent framework, alignment technique, or model architecture.
 
 ## How DIAL Relates to Other Approaches
 
@@ -46,7 +46,7 @@ MoE architectures route inputs to specialized sub-networks via a learned gating 
 
 ## Using DIAL with Other Systems
 
-DIAL is designed to be wrapped around existing AI systems, not to replace them:
+DIAL wraps existing AI systems:
 
 - **Your agent framework** handles task execution, tool calls, and control flow
 - **Your model** handles reasoning, generation, and tool use

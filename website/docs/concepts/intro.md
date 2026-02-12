@@ -8,7 +8,17 @@ DIAL provides a structured approach to AI-human collaboration built around a few
 
 ## The Big Picture
 
-DIAL coordinates **specialists** (both AI and human) to navigate **state machines** through **decision cycles**.
+DIAL orchestrates **specialists** (both AI and human) that compete and collaborate to navigate **state machines** through **decision cycles**.
+
+### Task Specialists, Not Agents
+
+DIAL does not guide a single agent toward completing a task. It simultaneously solicits proposals from an arbitrary number of models, prompts, and strategies — all competing at the same decision point, at the same time. Each registered proposer independently analyzes the current state and suggests a transition. When the arbitration strategy calls for it, a separate set of specialists evaluates those proposals through voting. The arbiter then determines consensus.
+
+This is mass simultaneous solicitation, not sequential A/B testing. Every specialist registered for a machine participates in every decision cycle. The machine definition holds the full field of possible specialists in abstraction — any model, API, webhook, or local function can fill a role, and the set can change between cycles. DIAL materializes the field into a single concrete transition through the consensus mechanism.
+
+A DIAL "specialist" is scoped to a specific role in a specific decision. A proposer suggests the best transition; a voter evaluates which proposal is strongest. The orchestration layer (the state machine and decision cycle) handles sequencing. Specialists are interchangeable and compete on the quality of their contributions, measured against human ground truth.
+
+[Learn more about Specialists →](./specialists.md)
 
 ```mermaid
 graph TB
@@ -34,6 +44,7 @@ graph TB
     H --> P
     AI --> P
     P --> V
+    P --> A
     V --> A
     A --> E
     E --> CS
@@ -47,15 +58,7 @@ A **session** is an instance of a state machine. It starts in an initial state a
 
 ### Specialists
 
-**Specialists** are the pluggable actors that participate in sessions:
-
-| Role | Description | Can be AI? | Can be Human? |
-|------|-------------|------------|---------------|
-| **Proposer** | Analyzes state, suggests transitions | Yes | Yes |
-| **Voter** | Compares proposals, expresses preferences | Yes | Yes |
-| **Arbiter** | Evaluates consensus (built-in) | No | No |
-
-The Arbiter is always a fully deterministic, built-in component—never an AI model or a human. This is a deliberate safety constraint: the mechanism that decides whether consensus has been reached must be predictable and auditable.
+**Specialists** are the pluggable actors that participate in sessions. They fill three roles: **Proposers** suggest transitions, **Voters** compare proposals, and **Arbiters** evaluate consensus. Both proposers and voters can be AI or human; arbiters are always built-in deterministic components.
 
 [Learn more about Specialists →](./specialists.md)
 
@@ -64,18 +67,17 @@ The Arbiter is always a fully deterministic, built-in component—never an AI mo
 When a session needs to progress, DIAL runs a repeating cycle:
 
 1. **Propose**: Specialists suggest transitions
-2. **Vote**: Voters compare and evaluate proposals
+2. **Vote** *(if required by strategy)*: Voters compare and evaluate proposals
 3. **Arbitrate**: Consensus is evaluated
 4. **Execute**: The winning transition advances the session
+
+Whether voting occurs depends on the [arbitration strategy](./consensus-strategies.md). Some strategies (like `aheadByK` and `pairwiseConsensus`) require votes; others (like `firstProposal` and `mostSimilar`) determine consensus directly from proposals.
 
 [Learn more about the Decision Cycle →](./decision-cycle.md)
 
 ### Arbitration
 
-**Arbitration** is how DIAL decides when a proposal has won. The built-in strategy uses ahead-by-k voting:
-
-- **0 proposals**: No consensus
-- **1+ proposals**: The leading proposal must be ahead by k votes
+**Arbitration** is how DIAL decides when a proposal has won. DIAL ships with multiple [consensus strategies](./consensus-strategies.md)—some use voting (e.g., `aheadByK`), while others evaluate proposals directly (e.g., `mostSimilar`).
 
 [Learn more about Arbitration →](./arbitration.md)
 
@@ -83,9 +85,7 @@ When a session needs to progress, DIAL runs a repeating cycle:
 
 The fundamental principle underlying DIAL:
 
-> **The human is always right, not because humans are infallible, but because humans have context that AI cannot access.**
-
-AI specialists are judged on their ability to predict what humans would choose. When consensus cannot be reached, only a human can force a decision.
+> **Humans have context that AI cannot access.** AI specialists are judged on their ability to predict what humans would choose. When consensus cannot be reached, only a human can force a decision.
 
 [Learn more about Human Primacy →](./human-primacy.md)
 
@@ -93,7 +93,7 @@ AI specialists are judged on their ability to predict what humans would choose. 
 
 ### Vote Options
 
-When comparing proposals A and B, specialists vote:
+For strategies that use voting, when comparing proposals A and B, specialists vote:
 
 | Vote | Meaning |
 |------|---------|
@@ -106,7 +106,7 @@ When comparing proposals A and B, specialists vote:
 
 - [Sessions](./sessions.md): State machine instances
 - [Specialists](./specialists.md): AI and human actors
-- [Decision Cycle](./decision-cycle.md): The Propose → Vote → Arbitrate → Execute process
+- [Decision Cycle](./decision-cycle.md): The Propose → (Vote) → Arbitrate → Execute process
 - [Arbitration](./arbitration.md): The arbiter's role in the decision cycle
 - [Consensus Strategies](./consensus-strategies.md): Built-in strategies for determining consensus
 - [Human Primacy](./human-primacy.md): The foundational principle

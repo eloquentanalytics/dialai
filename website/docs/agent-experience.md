@@ -14,7 +14,7 @@ This is the point. DIAL does not treat agents as a backend detail or an orchestr
 
 ## Spec-Driven Development
 
-The source of truth for DIAL is its documentation. The code in `/src` is generated from the documentation files, not the other way around.
+The source of truth for DIAL is its documentation. The code in `/src` is generated from the documentation files.
 
 This means an agent reading the docs has the authoritative specification. If the docs say `executeTransition` accepts an optional `reasoning` parameter and records a `TransitionRecord` in `session.history`, that is what the implementation does. An agent does not need to read the TypeScript source to understand the contract. The docs are the contract.
 
@@ -90,7 +90,7 @@ This is agent experience development. The framework is built so that the agent's
 
 ## The Constitution
 
-DIAL publishes a [Constitution](/constitution), a detailed description of how AI specialists should reason and behave within the framework. It is not a policy document for humans. It is written with the specialist as its primary audience, optimized for precision over accessibility, because a specialist needs to be able to cite it during reasoning.
+DIAL publishes a [Constitution](/constitution), a detailed description of how AI specialists should reason and behave within the framework. It is written with the specialist as its primary audience, optimized for precision over accessibility, because a specialist needs to be able to cite it during reasoning.
 
 ### Why a Constitution Matters
 
@@ -108,7 +108,7 @@ A specialist that has internalized the constitution will:
 - Express calibrated confidence rather than fabricating conviction
 - Reflect human-like variance in its output probabilities rather than collapsing to a single answer with artificial certainty
 - Submit NULL proposals or vote NEITHER when genuinely uncertain
-- Cite the decision prompt and session history as evidence, not its own independent analysis
+- Cite the decision prompt and session history as evidence
 
 This is also how we use the constitution in fine-tuning. Training data for DIAL specialists is evaluated against the constitution's priority hierarchy. The constitution defines what correct means, and correct means aligned with the human.
 
@@ -255,7 +255,7 @@ When a specification is updated, the change propagates through the codebase in a
 
 1. **Update the tests**: The spec changed, so the tests must change first. Write or modify tests that assert the new behavior described in the updated docs. These tests will fail. That is correct.
 2. **Update the implementation**: Modify the code in `/src` until the new tests pass and no existing tests regress.
-3. **Run the tests against the example machines**: Execute every machine definition in `/examples` through the CLI and programmatic API. The examples are integration tests. If a spec change breaks an example, the example is wrong, not the spec.
+3. **Run the tests against the example machines**: Execute every machine definition in `/examples` through the CLI and programmatic API. The examples are integration tests. If a spec change breaks an example, update the example to match the spec.
 4. **Fix the example machines**: Update any example that fails to conform to the new spec. Record what changed in each example and why.
 5. **Synthesize and write the changelog**: Combine the spec change, the implementation change, and the example fixes into a single changelog entry. Write it as an instruction to an agent that depends on DIAL: what changed, what breaks, what to do about it.
 
