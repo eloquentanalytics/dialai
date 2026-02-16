@@ -1,7 +1,9 @@
 /**
  * DIAL AI Engine
  *
- * The runSession function that drives machines to completion.
+ * The runSession function that drives machines through one decision cycle.
+ * Implements full solicitation cascade, champion mode, trip line,
+ * and self-healing.
  */
 
 import {
@@ -12,15 +14,86 @@ import {
   getProposers,
   getArbiter,
   getVoters,
+  getEnabledProposers,
+  getEnabledVoters,
+  enableSpecialist,
   submitProposal,
   submitVote,
+  submitSelectionVote,
   submitArbitration,
+  evaluateConsensus,
   getProposalsForRound,
 } from "./api.js";
-import type { MachineDefinition, Session, Proposal } from "./types.js";
+import { getAlignmentScore } from "./alignment.js";
+import type {
+  MachineDefinition,
+  Session,
+  Proposal,
+} from "./types.js";
 
-/** Maximum iterations to prevent infinite loops */
-const MAX_ITERATIONS = 1000;
+/** Default champion threshold */
+const CHAMPION_THRESHOLD = 0.8;
+
+/**
+ * Gets the effective consensus threshold for a session's current state.
+ * Priority: state > machine > arbiter > 0.5
+ */
+export function getEffectiveThreshold(session: Session): number {
+  const stateDef = session.machine.states[session.currentState];
+  if (stateDef?.consensusThreshold !== undefined) {
+    return stateDef.consensusThreshold;
+  }
+  if (session.machine.consensusThreshold !== undefined) {
+    return session.machine.consensusThreshold;
+  }
+  const arbiter = getArbiter(session.machineName);
+  if (arbiter?.threshold !== undefined) {
+    return arbiter.threshold;
+  }
+  return 0.5;
+}
+
+/**
+ * Selects a champion proposer — the highest-alignment proposer above threshold.
+ * Returns undefined if no proposer qualifies.
+ */
+export function selectChampion(
+  machineName: string,
+  threshold: number
+): string | undefined {
+  const proposers = getEnabledProposers(machineName);
+  let bestId: string | undefined;
+  let bestScore = -1;
+
+  for (const p of proposers) {
+    const score = getAlignmentScore(p.specialistId, machineName);
+    if (score >= threshold && score > bestScore) {
+      bestScore = score;
+      bestId = p.specialistId;
+    }
+  }
+
+  return bestId;
+}
+
+/**
+ * Self-healing: re-enable all disabled specialists for a machine.
+ */
+function selfHeal(machineName: string): void {
+  const allProposers = getProposers(machineName);
+  const allVoters = getVoters(machineName);
+
+  for (const p of allProposers) {
+    if (p.enabled === false) {
+      enableSpecialist(p.specialistId);
+    }
+  }
+  for (const v of allVoters) {
+    if (v.enabled === false) {
+      enableSpecialist(v.specialistId);
+    }
+  }
+}
 
 /**
  * Runs a machine to completion.
@@ -29,10 +102,22 @@ const MAX_ITERATIONS = 1000;
  * built-in defaults), and loops through the decision cycle until
  * currentState === goalState.
  *
+ * Full solicitation cascade:
+ * 1. Solicit proposals from enabled proposers -> check consensus
+ * 2. Solicit selection voters -> check after each vote
+ * 3. Solicit pairwise voters -> check after each vote
+ * 4. If no consensus: return session in current state (exhausted, waiting for human)
+ *
+ * Champion mode: if one proposer's alignment > threshold, fast path.
+ * Trip line: if champion's alignment degrades below threshold, revert to full cascade.
+ *
  * @param machine - The machine definition to run
- * @returns The completed session
+ * @returns The session (completed or waiting for human)
  */
-export async function runSession(machine: MachineDefinition): Promise<Session> {
+export async function runSession(
+  machine: MachineDefinition
+): Promise<Session> {
+
   // Create session (this normalizes the machine)
   const session = await createSession(machine);
   // Use the normalized machine from the session
@@ -54,7 +139,6 @@ export async function runSession(machine: MachineDefinition): Promise<Session> {
           threshold: spec.threshold,
         });
       } else if (spec.role === "voter") {
-        // Import registerVoter is already done above
         const { registerVoter } = await import("./api.js");
         await registerVoter({
           specialistId: spec.specialistId,
@@ -88,7 +172,7 @@ export async function runSession(machine: MachineDefinition): Promise<Session> {
     });
   }
 
-  // Register default arbiter if none specified
+  // Register default arbiter if none specified (always firstProposal)
   let arbiter = getArbiter(normalizedMachine.machineName);
   if (!arbiter) {
     await registerArbiter({
@@ -100,20 +184,62 @@ export async function runSession(machine: MachineDefinition): Promise<Session> {
   }
 
   // Main decision loop
-  let iterations = 0;
   let currentSession = await getSession(session.sessionId);
 
   while (currentSession.currentState !== normalizedMachine.goalState) {
-    iterations++;
-    if (iterations > MAX_ITERATIONS) {
-      throw new Error(`Max iterations (${MAX_ITERATIONS}) exceeded`);
+    const machineName = normalizedMachine.machineName;
+    let consensusReached = false;
+
+    // === Champion mode check ===
+    const championId = selectChampion(machineName, CHAMPION_THRESHOLD);
+
+    if (championId) {
+      // Fast path: only solicit from champion
+      await submitProposal(
+        currentSession.sessionId,
+        championId,
+        currentSession.currentRoundId
+      );
+
+      // Check consensus immediately
+      const consensusResult = await evaluateConsensus(currentSession.sessionId);
+      if (consensusResult.consensusReached) {
+        const result = await submitArbitration(
+          currentSession.sessionId,
+          currentSession.currentRoundId
+        );
+        if (result.executed) {
+          // Trip line check: verify champion still above threshold
+          const currentScore = getAlignmentScore(championId, machineName);
+          if (currentScore < CHAMPION_THRESHOLD) {
+            // Champion degraded, self-heal for next iteration
+            selfHeal(machineName);
+          }
+          currentSession = await getSession(session.sessionId);
+          continue;
+        }
+      }
+
+      // Champion fast path didn't reach consensus, fall through to full cascade
+      // Trip line: revert to full cascade
+      selfHeal(machineName);
     }
 
-    // Get all proposers for this machine
-    const allProposers = getProposers(normalizedMachine.machineName);
+    // === Full solicitation cascade ===
 
-    // Solicit proposals from all proposers
-    for (const proposer of allProposers) {
+    // Step 1: Solicit proposals from all enabled proposers
+    const enabledProposers = getEnabledProposers(machineName);
+    for (const proposer of enabledProposers) {
+      // Skip if champion already submitted in fast path above
+      if (championId === proposer.specialistId) {
+        const existing = getProposalsForRound(
+          currentSession.sessionId,
+          currentSession.currentRoundId
+        );
+        if (existing.some((p) => p.specialistId === championId)) {
+          continue;
+        }
+      }
       await submitProposal(
         currentSession.sessionId,
         proposer.specialistId,
@@ -121,15 +247,55 @@ export async function runSession(machine: MachineDefinition): Promise<Session> {
       );
     }
 
-    // Get proposals for this round
+    // Check consensus after proposals
+    const postProposalConsensus = await evaluateConsensus(currentSession.sessionId);
+    if (postProposalConsensus.consensusReached) {
+      const result = await submitArbitration(
+        currentSession.sessionId,
+        currentSession.currentRoundId
+      );
+      if (result.executed) {
+        currentSession = await getSession(session.sessionId);
+        continue;
+      }
+    }
+
+    // Step 2: Solicit selection voters
+    const selectionVoters = getEnabledVoters(machineName, "selection");
+    for (const voter of selectionVoters) {
+      await submitSelectionVote(
+        currentSession.sessionId,
+        voter.specialistId,
+        currentSession.currentRoundId
+      );
+
+      // Check consensus after each selection vote
+      const result = await evaluateConsensus(currentSession.sessionId);
+      if (result.consensusReached) {
+        consensusReached = true;
+        break;
+      }
+    }
+
+    if (consensusReached) {
+      const result = await submitArbitration(
+        currentSession.sessionId,
+        currentSession.currentRoundId
+      );
+      if (result.executed) {
+        currentSession = await getSession(session.sessionId);
+        continue;
+      }
+    }
+
+    // Step 3: Solicit pairwise voters
     const roundProposals = getProposalsForRound(
       currentSession.sessionId,
       currentSession.currentRoundId
     );
 
-    // If 2+ proposals, solicit pairwise votes
     if (roundProposals.length >= 2) {
-      const voters = getVoters(normalizedMachine.machineName);
+      const pairwiseVoters = getEnabledVoters(machineName, "pairwise");
 
       // Create all pairwise combinations
       const pairs: [Proposal, Proposal][] = [];
@@ -139,8 +305,8 @@ export async function runSession(machine: MachineDefinition): Promise<Session> {
         }
       }
 
-      // Have each voter vote on each pair
-      for (const voter of voters) {
+      // Have each voter vote on each pair, check consensus after each
+      for (const voter of pairwiseVoters) {
         for (const [propA, propB] of pairs) {
           await submitVote(
             currentSession.sessionId,
@@ -150,22 +316,40 @@ export async function runSession(machine: MachineDefinition): Promise<Session> {
             propB.proposalId
           );
         }
+
+        // Check consensus after each voter
+        const result = await evaluateConsensus(currentSession.sessionId);
+        if (result.consensusReached) {
+          consensusReached = true;
+          break;
+        }
       }
     }
 
-    // Submit arbitration (evaluate consensus and execute if reached)
-    const result = await submitArbitration(
+    if (consensusReached) {
+      const result = await submitArbitration(
+        currentSession.sessionId,
+        currentSession.currentRoundId
+      );
+      if (result.executed) {
+        currentSession = await getSession(session.sessionId);
+        continue;
+      }
+    }
+
+    // Step 4: Try final arbitration
+    const finalResult = await submitArbitration(
       currentSession.sessionId,
       currentSession.currentRoundId
     );
 
-    if (!result.executed) {
-      // If no consensus reached, try human override or throw
-      throw new Error(`No consensus reached: ${result.guardReason}`);
+    if (finalResult.executed) {
+      currentSession = await getSession(session.sessionId);
+      continue;
     }
 
-    // Refresh session state
-    currentSession = await getSession(session.sessionId);
+    // Exhausted — no consensus reached, waiting for human
+    return currentSession;
   }
 
   return currentSession;

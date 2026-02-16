@@ -10,6 +10,7 @@ import {
   specialists,
   proposals,
   votes,
+  selectionVotes as selectionVotesStore,
 } from "./store.js";
 import {
   proposerStrategies,
@@ -17,6 +18,12 @@ import {
   arbiterStrategies,
 } from "./strategies.js";
 import { generateUUID, normalizeMachine } from "./utils.js";
+import {
+  isHumanSpecialist,
+  updateAlignmentAfterHumanDecision,
+  getAllAlignmentRecords,
+} from "./alignment.js";
+import { createExemplar } from "./exemplars.js";
 import type {
   MachineDefinition,
   Session,
@@ -27,6 +34,8 @@ import type {
   Voter,
   Arbiter,
   Specialist,
+  SelectionVote,
+  SelectionVoterContext,
   RegisterProposerOptions,
   RegisterVoterOptions,
   RegisterArbiterOptions,
@@ -201,7 +210,14 @@ export async function registerVoter(
     throw new Error(`Specialist already exists: ${opts.specialistId}`);
   }
 
-  validateExecutionMode(opts, "voter");
+  const voterType = opts.voterType ?? "pairwise";
+
+  // Selection voters can use selectionStrategyFn instead of pairwise strategyFn
+  if (voterType === "selection" && opts.selectionStrategyFn) {
+    // Valid execution mode for selection voter
+  } else {
+    validateExecutionMode(opts, "voter");
+  }
 
   if (opts.strategyFnName && !voterStrategies[opts.strategyFnName]) {
     throw new Error(`Unknown voter strategy: ${opts.strategyFnName}`);
@@ -212,7 +228,9 @@ export async function registerVoter(
     specialistId: opts.specialistId,
     machineName: opts.machineName,
     isHuman: opts.isHuman,
+    voterType,
     strategyFn: opts.strategyFn,
+    selectionStrategyFn: opts.selectionStrategyFn,
     strategyFnName: opts.strategyFnName,
     strategyWebhookUrl: opts.strategyWebhookUrl,
     contextFn: opts.contextFn,
@@ -295,6 +313,62 @@ export function getArbiter(machineName: string): Arbiter | undefined {
 }
 
 // ============================================================================
+// Enable/Disable
+// ============================================================================
+
+/**
+ * Enables a specialist (sets enabled = true).
+ */
+export function enableSpecialist(specialistId: string): void {
+  const specialist = specialists.get(specialistId);
+  if (!specialist) {
+    throw new Error(`Specialist not found: ${specialistId}`);
+  }
+  (specialist as Proposer | Voter | Arbiter).enabled = true;
+}
+
+/**
+ * Disables a specialist (sets enabled = false).
+ */
+export function disableSpecialist(specialistId: string): void {
+  const specialist = specialists.get(specialistId);
+  if (!specialist) {
+    throw new Error(`Specialist not found: ${specialistId}`);
+  }
+  (specialist as Proposer | Voter | Arbiter).enabled = false;
+}
+
+/**
+ * Gets enabled proposers for a machine (enabled is true or undefined).
+ */
+export function getEnabledProposers(machineName: string): Proposer[] {
+  return getProposers(machineName).filter((p) => p.enabled !== false);
+}
+
+/**
+ * Gets enabled voters for a machine, optionally filtered by voterType.
+ */
+export function getEnabledVoters(
+  machineName: string,
+  voterType?: "pairwise" | "selection"
+): Voter[] {
+  let voters = getVoters(machineName).filter((v) => v.enabled !== false);
+  if (voterType) {
+    voters = voters.filter((v) => (v.voterType ?? "pairwise") === voterType);
+  }
+  return voters;
+}
+
+/**
+ * Gets the enabled arbiter for a machine.
+ */
+export function getEnabledArbiter(machineName: string): Arbiter | undefined {
+  const arbiter = getArbiter(machineName);
+  if (arbiter && arbiter.enabled === false) return undefined;
+  return arbiter;
+}
+
+// ============================================================================
 // Decision Cycle Functions
 // ============================================================================
 
@@ -346,6 +420,7 @@ function buildArbiterContext(
     roundId: session.currentRoundId,
     currentState: session.currentState,
     prompt: currentStateDef?.prompt ?? "",
+    machineName: session.machineName,
     proposals: roundProposals,
     votes: roundVotes,
     history: session.history,
@@ -373,13 +448,29 @@ async function invokeProposerStrategy(
   }
 
   if (proposer.strategyWebhookUrl) {
-    // Webhook invocation would go here
-    throw new Error("Webhook strategies not yet implemented");
+    const { executeProposerWebhook } = await import("./llm.js");
+    return executeProposerWebhook(
+      proposer.strategyWebhookUrl,
+      ctx,
+      proposer.machineName,
+      proposer.webhookTokenName
+    );
   }
 
   if (proposer.contextFn && proposer.modelId) {
-    // LLM invocation would go here
-    throw new Error("LLM-based strategies not yet implemented");
+    const { executeProposerLlm } = await import("./llm.js");
+    return executeProposerLlm(proposer.contextFn, proposer.modelId, ctx);
+  }
+
+  if (proposer.contextWebhookUrl && proposer.modelId) {
+    const { executeContextWebhookProposer } = await import("./llm.js");
+    return executeContextWebhookProposer(
+      proposer.contextWebhookUrl,
+      proposer.modelId,
+      ctx,
+      proposer.machineName,
+      proposer.webhookTokenName
+    );
   }
 
   throw new Error(`No valid execution mode for proposer: ${proposer.specialistId}`);
@@ -405,11 +496,29 @@ async function invokeVoterStrategy(
   }
 
   if (voter.strategyWebhookUrl) {
-    throw new Error("Webhook strategies not yet implemented");
+    const { executeVoterWebhook } = await import("./llm.js");
+    return executeVoterWebhook(
+      voter.strategyWebhookUrl,
+      ctx,
+      voter.machineName,
+      voter.webhookTokenName
+    );
   }
 
   if (voter.contextFn && voter.modelId) {
-    throw new Error("LLM-based strategies not yet implemented");
+    const { executeVoterLlm } = await import("./llm.js");
+    return executeVoterLlm(voter.contextFn, voter.modelId, ctx);
+  }
+
+  if (voter.contextWebhookUrl && voter.modelId) {
+    const { executeContextWebhookVoter } = await import("./llm.js");
+    return executeContextWebhookVoter(
+      voter.contextWebhookUrl,
+      voter.modelId,
+      ctx,
+      voter.machineName,
+      voter.webhookTokenName
+    );
   }
 
   throw new Error(`No valid execution mode for voter: ${voter.specialistId}`);
@@ -435,7 +544,13 @@ async function invokeArbiterStrategy(
   }
 
   if (arbiter.strategyWebhookUrl) {
-    throw new Error("Webhook strategies not yet implemented");
+    const { executeWebhook } = await import("./llm.js");
+    return executeWebhook<ConsensusResult>(
+      arbiter.strategyWebhookUrl,
+      ctx,
+      arbiter.machineName,
+      arbiter.webhookTokenName
+    );
   }
 
   throw new Error(`No valid execution mode for arbiter: ${arbiter.specialistId}`);
@@ -595,6 +710,104 @@ export async function submitVote(
 }
 
 /**
+ * Builds context for a selection voter.
+ */
+function buildSelectionVoterContext(
+  session: Session,
+  roundProposals: Proposal[]
+): SelectionVoterContext {
+  const currentStateDef = session.machine.states[session.currentState];
+  return {
+    sessionId: session.sessionId,
+    currentState: session.currentState,
+    prompt: currentStateDef?.prompt ?? "",
+    machineName: session.machineName,
+    proposals: roundProposals,
+    history: session.history,
+  };
+}
+
+/**
+ * Creates and stores a selection vote (voter picks one proposal from all).
+ * If selectedProposalId is omitted, invokes the voter's selection strategy.
+ */
+export async function submitSelectionVote(
+  sessionId: string,
+  specialistId: string,
+  roundId?: string,
+  selectedProposalId?: string,
+  reasoning?: string,
+  metaJson?: Record<string, unknown>,
+  costUSD?: number,
+  latencyMsec?: number,
+  numInputTokens?: number,
+  numOutputTokens?: number
+): Promise<SelectionVote> {
+  const session = await getSession(sessionId);
+  const specialist = specialists.get(specialistId);
+
+  if (!specialist) {
+    throw new Error(`Specialist not found: ${specialistId}`);
+  }
+
+  if (specialist.role !== "voter") {
+    throw new Error(`Specialist ${specialistId} is not a voter`);
+  }
+
+  const voter: Voter = specialist;
+  const effectiveRoundId = roundId ?? session.currentRoundId;
+  const isHuman = voter.isHuman ?? false;
+
+  let finalSelectedId = selectedProposalId;
+  let finalReasoning = reasoning;
+
+  if (!finalSelectedId) {
+    const roundProposals = getProposalsForRound(sessionId, effectiveRoundId);
+    const ctx = buildSelectionVoterContext(session, roundProposals);
+
+    if (voter.selectionStrategyFn) {
+      const result = await voter.selectionStrategyFn(ctx);
+      finalSelectedId = result.selectedProposalId;
+      finalReasoning = finalReasoning ?? result.reasoning;
+    } else if (voter.strategyFnName) {
+      const { selectionVoterStrategies } = await import("./strategies.js");
+      const strategyFn = selectionVoterStrategies[voter.strategyFnName];
+      if (strategyFn) {
+        const result = await strategyFn(ctx);
+        finalSelectedId = result.selectedProposalId;
+        finalReasoning = finalReasoning ?? result.reasoning;
+      } else {
+        throw new Error(`No selection voter strategy: ${voter.strategyFnName}`);
+      }
+    } else {
+      throw new Error(`No selection strategy for voter: ${specialistId}`);
+    }
+  }
+
+  if (!finalSelectedId) {
+    throw new Error("No proposal selected");
+  }
+
+  const selectionVote: SelectionVote = {
+    selectionVoteId: generateUUID(),
+    sessionId,
+    roundId: effectiveRoundId,
+    specialistId,
+    isHuman,
+    selectedProposalId: finalSelectedId,
+    reasoning: finalReasoning ?? "",
+    metaJson,
+    costUSD,
+    latencyMsec,
+    numInputTokens,
+    numOutputTokens,
+  };
+
+  selectionVotesStore.set(selectionVote.selectionVoteId, selectionVote);
+  return selectionVote;
+}
+
+/**
  * Gets all proposals for a session's current round.
  */
 export function getProposalsForRound(
@@ -616,8 +829,23 @@ export function getVotesForRound(sessionId: string, roundId: string): Vote[] {
 }
 
 /**
+ * Gets all selection votes for a session's current round.
+ */
+export function getSelectionVotesForRound(
+  sessionId: string,
+  roundId: string
+): SelectionVote[] {
+  return [...selectionVotesStore.values()].filter(
+    (v) => v.sessionId === sessionId && v.roundId === roundId
+  );
+}
+
+/**
  * Evaluates whether consensus has been reached for a session.
  * Read-only operation - does not execute any transition.
+ *
+ * Human primacy: if a human has voted (pairwise or selection),
+ * their vote wins immediately.
  */
 export async function evaluateConsensus(
   sessionId: string
@@ -631,6 +859,35 @@ export async function evaluateConsensus(
 
   const roundProposals = getProposalsForRound(sessionId, session.currentRoundId);
   const roundVotes = getVotesForRound(sessionId, session.currentRoundId);
+  const roundSelectionVotes = getSelectionVotesForRound(sessionId, session.currentRoundId);
+
+  // Human primacy: check for human selection votes first
+  for (const sv of roundSelectionVotes) {
+    if (isHumanSpecialist(sv.specialistId)) {
+      return {
+        consensusReached: true,
+        winningProposalId: sv.selectedProposalId,
+        reasoning: `Human selection vote from ${sv.specialistId}`,
+      };
+    }
+  }
+
+  // Human primacy: check for human pairwise votes
+  for (const vote of roundVotes) {
+    if (isHumanSpecialist(vote.specialistId)) {
+      let winningId: string | undefined;
+      if (vote.voteFor === "A") winningId = vote.proposalIdA;
+      else if (vote.voteFor === "B") winningId = vote.proposalIdB;
+
+      if (winningId) {
+        return {
+          consensusReached: true,
+          winningProposalId: winningId,
+          reasoning: `Human pairwise vote from ${vote.specialistId}`,
+        };
+      }
+    }
+  }
 
   const ctx = buildArbiterContext(
     session,
@@ -638,6 +895,15 @@ export async function evaluateConsensus(
     roundVotes,
     arbiter.threshold ?? 1
   );
+  ctx.selectionVotes = roundSelectionVotes;
+
+  // Build alignment scores for context
+  const records = getAllAlignmentRecords(session.machineName);
+  const alignmentScores: Record<string, number> = {};
+  for (const r of records) {
+    alignmentScores[r.specialistId] = r.alignmentScore;
+  }
+  ctx.alignmentScores = alignmentScores;
 
   return invokeArbiterStrategy(arbiter, ctx);
 }
@@ -729,6 +995,33 @@ export async function submitArbitration(
     }
 
     const toState = currentStateDef.transitions[transitionName];
+
+    // Gather round data for exemplar and alignment
+    const roundProposals = getProposalsForRound(sessionId, effectiveRoundId);
+    const roundVotes = getVotesForRound(sessionId, effectiveRoundId);
+    const roundSelectionVotes = getSelectionVotesForRound(sessionId, effectiveRoundId);
+
+    // Create exemplar from human decision
+    const proposerCtx = buildProposerContext(session);
+    createExemplar(
+      session.machineName,
+      session.currentState,
+      proposerCtx,
+      transitionName,
+      toState,
+      roundProposals,
+      roundVotes,
+      roundSelectionVotes
+    );
+
+    // Update alignment for all specialists
+    updateAlignmentAfterHumanDecision(
+      session.machineName,
+      transitionName,
+      roundProposals,
+      roundVotes,
+      roundSelectionVotes
+    );
 
     // Execute the forced transition
     await executeTransition(sessionId, transitionName, toState, reasoning);
@@ -893,7 +1186,7 @@ export async function executeTransition(
   session.history.push(record);
   session.currentRoundId = generateUUID();
 
-  // Clear proposals and votes for this session
+  // Clear proposals, votes, and selection votes for this session
   for (const [id, proposal] of proposals.entries()) {
     if (proposal.sessionId === sessionId) {
       proposals.delete(id);
@@ -902,6 +1195,11 @@ export async function executeTransition(
   for (const [id, vote] of votes.entries()) {
     if (vote.sessionId === sessionId) {
       votes.delete(id);
+    }
+  }
+  for (const [id, sv] of selectionVotesStore.entries()) {
+    if (sv.sessionId === sessionId) {
+      selectionVotesStore.delete(id);
     }
   }
 

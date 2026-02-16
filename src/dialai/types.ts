@@ -22,6 +22,8 @@ export interface MachineDefinition {
   states: Record<string, StateDefinition>;
   /** Optional specialists to register when running this machine */
   specialists?: SpecialistDefinition[];
+  /** Default consensus threshold for the machine (risk dial) */
+  consensusThreshold?: number;
 }
 
 /**
@@ -32,6 +34,8 @@ export interface StateDefinition {
   prompt?: string;
   /** Map of transition names to target states */
   transitions?: Record<string, string>;
+  /** Consensus threshold override for this state (risk dial) */
+  consensusThreshold?: number;
 }
 
 /**
@@ -104,6 +108,8 @@ export interface Proposer {
   machineName: string;
   /** If true, can force arbitration decisions */
   isHuman?: boolean;
+  /** Whether this specialist is enabled (default true) */
+  enabled?: boolean;
   /** Local strategy function */
   strategyFn?: (ctx: ProposerContext) => Promise<ProposerStrategyResult>;
   /** Built-in strategy name */
@@ -140,8 +146,14 @@ export interface Voter {
   machineName: string;
   /** If true, can force arbitration decisions */
   isHuman?: boolean;
-  /** Local strategy function */
+  /** Whether this specialist is enabled (default true) */
+  enabled?: boolean;
+  /** Type of voter: "pairwise" compares two proposals, "selection" picks one from all */
+  voterType?: "pairwise" | "selection";
+  /** Local strategy function (for pairwise voters) */
   strategyFn?: (ctx: VoterContext) => Promise<VoterStrategyResult>;
+  /** Local strategy function (for selection voters) */
+  selectionStrategyFn?: (ctx: SelectionVoterContext) => Promise<SelectionVoterStrategyResult>;
   /** Built-in strategy name */
   strategyFnName?: string;
   /** External webhook URL */
@@ -173,6 +185,8 @@ export interface Arbiter {
   role: "arbiter";
   specialistId: string;
   machineName: string;
+  /** Whether this specialist is enabled (default true) */
+  enabled?: boolean;
   /** Local strategy function */
   strategyFn?: (ctx: ArbiterContext) => Promise<ArbiterStrategyResult>;
   /** Built-in strategy name */
@@ -256,10 +270,16 @@ export interface ArbiterContext {
   currentState: string;
   /** Decision prompt for this state */
   prompt: string;
+  /** Machine name */
+  machineName: string;
   /** All proposals in this round */
   proposals: Proposal[];
   /** All votes in this round */
   votes: Vote[];
+  /** Selection votes in this round */
+  selectionVotes?: SelectionVote[];
+  /** Alignment scores by specialistId */
+  alignmentScores?: Record<string, number>;
   /** Human gold examples (for mostSimilar) */
   humanGoldExamples?: HumanGoldExample[];
   /** All previous transitions */
@@ -400,6 +420,156 @@ export interface ArbitrationResult {
 }
 
 // ============================================================================
+// Selection Voter Types
+// ============================================================================
+
+/**
+ * Context provided to selection voter strategy functions.
+ */
+export interface SelectionVoterContext {
+  /** Current session ID */
+  sessionId: string;
+  /** Current state name */
+  currentState: string;
+  /** Decision prompt for this state */
+  prompt: string;
+  /** Machine name */
+  machineName: string;
+  /** All proposals in this round */
+  proposals: Proposal[];
+  /** All previous transitions */
+  history: TransitionRecord[];
+}
+
+/**
+ * Result from a selection voter strategy function.
+ */
+export interface SelectionVoterStrategyResult {
+  /** The proposalId selected */
+  selectedProposalId: string;
+  /** Reasoning for this selection */
+  reasoning: string;
+}
+
+/**
+ * A selection vote where a voter picks one proposal from all proposals.
+ */
+export interface SelectionVote {
+  /** UUID generated on creation */
+  selectionVoteId: string;
+  /** Session this vote belongs to */
+  sessionId: string;
+  /** Round this vote belongs to */
+  roundId: string;
+  /** Who cast this vote */
+  specialistId: string;
+  /** Whether cast by a human specialist */
+  isHuman: boolean;
+  /** The selected proposal ID */
+  selectedProposalId: string;
+  /** Why this selection was made */
+  reasoning: string;
+  /** Arbitrary client metadata */
+  metaJson?: Record<string, unknown>;
+  /** Cost in USD */
+  costUSD?: number;
+  /** Time in milliseconds */
+  latencyMsec?: number;
+  /** Input tokens used */
+  numInputTokens?: number;
+  /** Output tokens used */
+  numOutputTokens?: number;
+}
+
+// ============================================================================
+// Alignment Types
+// ============================================================================
+
+/**
+ * Tracks how well a specialist aligns with human decisions.
+ */
+export interface AlignmentRecord {
+  /** The specialist being tracked */
+  specialistId: string;
+  /** The machine this alignment is for */
+  machineName: string;
+  /** Number of times specialist matched human choice */
+  matchingChoices: number;
+  /** Total number of comparisons */
+  totalComparisons: number;
+  /** Calculated alignment score (matchingChoices / totalComparisons) */
+  alignmentScore: number;
+  /** When this record was last updated */
+  lastUpdated: Date;
+}
+
+/**
+ * A snapshot of context when a human forces a decision.
+ */
+export interface Exemplar {
+  /** UUID for this exemplar */
+  exemplarId: string;
+  /** Machine name */
+  machineName: string;
+  /** The state when the decision was made */
+  state: string;
+  /** The session context at decision time */
+  context: ProposerContext;
+  /** The transition the human chose */
+  humanTransitionName: string;
+  /** The state the human transitioned to */
+  humanToState: string;
+  /** All proposals that were available */
+  proposals: Proposal[];
+  /** All pairwise votes that were cast */
+  votes: Vote[];
+  /** All selection votes that were cast */
+  selectionVotes: SelectionVote[];
+  /** When this exemplar was created */
+  createdAt: Date;
+}
+
+// ============================================================================
+// Evaluation Types
+// ============================================================================
+
+/**
+ * Result of evaluating a specialist's alignment with human decisions.
+ */
+export interface AlignmentEvaluationResult {
+  /** The specialist evaluated */
+  specialistId: string;
+  /** Machine name */
+  machineName: string;
+  /** Total exemplars evaluated against */
+  totalExemplars: number;
+  /** Number of matching decisions */
+  matchingDecisions: number;
+  /** Alignment score (matchingDecisions / totalExemplars) */
+  alignmentScore: number;
+}
+
+/**
+ * Result of evaluating a specialist's accuracy metrics.
+ */
+export interface AccuracyEvaluationResult {
+  /** The specialist evaluated */
+  specialistId: string;
+  /** Machine name */
+  machineName: string;
+  /** Number of decisions evaluated */
+  totalDecisions: number;
+  /** Rate of matching transitions */
+  transitionMatchRate: number;
+  /** Rate of matching target states */
+  stateMatchRate: number;
+  /** Total cost in USD */
+  totalCostUSD: number;
+  /** Average latency in milliseconds */
+  avgLatencyMsec: number;
+}
+
+// ============================================================================
 // Registration Options
 // ============================================================================
 
@@ -447,10 +617,14 @@ export interface RegisterVoterOptions {
   machineName: string;
   /** If true, can force arbitration decisions */
   isHuman?: boolean;
+  /** Type of voter: "pairwise" (default) or "selection" */
+  voterType?: "pairwise" | "selection";
 
   // Execution mode (exactly one required):
-  /** Local async strategy function */
+  /** Local async strategy function (for pairwise voters) */
   strategyFn?: (ctx: VoterContext) => Promise<VoterStrategyResult>;
+  /** Local async strategy function (for selection voters) */
+  selectionStrategyFn?: (ctx: SelectionVoterContext) => Promise<SelectionVoterStrategyResult>;
   /** Built-in strategy name */
   strategyFnName?: string;
   /** External webhook URL */

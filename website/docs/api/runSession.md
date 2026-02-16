@@ -104,7 +104,7 @@ See [MachineDefinition](./types.md#machinedefinition) for the complete type defi
 Returns the completed `Session` object. See [Session](./types.md#session) for the complete type definition.
 
 The returned session will have:
-- `currentState` equal to `machine.goalState`
+- `currentState` equal to `machine.goalState` if consensus was reached, or the state where the cascade was exhausted
 - `history` containing all transitions that occurred
 - Cost tracking totals (if specialists reported costs)
 
@@ -113,17 +113,16 @@ The returned session will have:
 1. Creates a session in `machine.initialState`
 2. If `machine.specialists` is provided, registers those specialists
 3. Otherwise, registers a built-in deterministic proposer (picks first transition)
-4. Loops until `currentState === goalState`:
-   - Solicits proposals from all proposers
-   - If 2+ proposals exist, solicits pairwise votes
-   - Evaluates consensus using the registered arbiter
-   - Executes the winning transition
-5. Returns the completed session
+4. Runs the solicitation cascade:
+   - Solicits proposals from all enabled proposers, checks consensus
+   - Solicits selection voters, checks consensus after each vote
+   - Solicits pairwise voters, checks consensus after each vote
+   - If no consensus: returns session (exhausted, waiting for human)
+   - If consensus: executes the winning transition
+5. Returns the session (completed or waiting for human)
 
 ## Error Cases
 
 | Error | Cause |
 |-------|-------|
 | `Invalid machine definition` | Missing required fields |
-| `Stuck in loop` | No valid transitions or consensus cannot be reached |
-| `Max iterations exceeded` | Safety limit to prevent infinite loops |

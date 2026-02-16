@@ -5,7 +5,7 @@
  * All API functions read from and write to these maps.
  */
 
-import type { Session, Specialist, Arbiter, Proposal, Vote } from "./types.js";
+import type { Session, Specialist, Arbiter, Proposal, Vote, AlignmentRecord, Exemplar, SelectionVote } from "./types.js";
 
 /** All sessions by ID */
 export const sessions: Map<string, Session> = new Map();
@@ -19,6 +19,15 @@ export const proposals: Map<string, Proposal> = new Map();
 /** All votes by ID */
 export const votes: Map<string, Vote> = new Map();
 
+/** Alignment records keyed by "specialistId:machineName" */
+export const alignmentRecords: Map<string, AlignmentRecord> = new Map();
+
+/** All exemplars by ID */
+export const exemplars: Map<string, Exemplar> = new Map();
+
+/** All selection votes by ID */
+export const selectionVotes: Map<string, SelectionVote> = new Map();
+
 /**
  * Clears all in-memory state.
  * Useful for testing and resetting between runs.
@@ -28,4 +37,7 @@ export function clear(): void {
   specialists.clear();
   proposals.clear();
   votes.clear();
+  alignmentRecords.clear();
+  exemplars.clear();
+  selectionVotes.clear();
 }

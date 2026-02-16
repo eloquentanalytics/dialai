@@ -11,6 +11,8 @@ import type {
   VoterStrategyResult,
   ArbiterContext,
   ArbiterStrategyResult,
+  SelectionVoterContext,
+  SelectionVoterStrategyResult,
   VoteChoice,
   Proposal,
   Vote,
@@ -227,6 +229,68 @@ export const voterStrategies: Record<
   randomAll,
   preferGoal,
   preferShorterPath,
+};
+
+// ============================================================================
+// Selection Voter Strategies
+// ============================================================================
+
+/**
+ * Select the first proposal by timestamp.
+ */
+export async function preferFirst(
+  ctx: SelectionVoterContext
+): Promise<SelectionVoterStrategyResult> {
+  if (ctx.proposals.length === 0) {
+    throw new Error("No proposals to select from");
+  }
+  const sorted = [...ctx.proposals].sort(
+    (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
+  );
+  return {
+    selectedProposalId: sorted[0].proposalId,
+    reasoning: `Selected first proposal: ${sorted[0].transitionName}`,
+  };
+}
+
+/**
+ * Select the proposal from the specialist with highest alignment score.
+ * Falls back to first proposal if no alignment data.
+ */
+export async function preferHighestAlignment(
+  ctx: SelectionVoterContext
+): Promise<SelectionVoterStrategyResult> {
+  if (ctx.proposals.length === 0) {
+    throw new Error("No proposals to select from");
+  }
+
+  // Import alignment dynamically to avoid circular dependency
+  const { getAlignmentScore } = await import("./alignment.js");
+
+  let bestProposal = ctx.proposals[0];
+  let bestScore = -1;
+
+  for (const proposal of ctx.proposals) {
+    const score = getAlignmentScore(proposal.specialistId, ctx.machineName);
+    if (score > bestScore) {
+      bestScore = score;
+      bestProposal = proposal;
+    }
+  }
+
+  return {
+    selectedProposalId: bestProposal.proposalId,
+    reasoning: `Selected proposal from ${bestProposal.specialistId} (alignment: ${bestScore.toFixed(2)})`,
+  };
+}
+
+/** Map of built-in selection voter strategy names to functions */
+export const selectionVoterStrategies: Record<
+  string,
+  (ctx: SelectionVoterContext) => Promise<SelectionVoterStrategyResult>
+> = {
+  preferFirst,
+  preferHighestAlignment,
 };
 
 // ============================================================================
@@ -525,6 +589,148 @@ export async function pairwiseConsensus(
   };
 }
 
+/**
+ * Alignment-weighted margin consensus strategy.
+ *
+ * 1. Group proposals by transition, score each group by summing specialist alignment
+ * 2. Score selection votes by alignment
+ * 3. Score pairwise votes by alignment
+ * 4. margin = (leader - runner_up) / totalAlignment
+ * 5. Consensus when margin >= threshold
+ * 6. Cold start (all alignment = 0): no consensus, blocks for human
+ */
+export async function alignmentWeightedMargin(
+  ctx: ArbiterContext
+): Promise<ArbiterStrategyResult> {
+  const threshold = ctx.threshold ?? 0.5;
+
+  if (ctx.proposals.length === 0) {
+    return {
+      consensusReached: false,
+      reasoning: "No proposals received",
+    };
+  }
+
+  // Import alignment to get scores
+  const { getAlignmentScore } = await import("./alignment.js");
+
+  // Score proposals by grouping by transition and summing alignment
+  const transitionScores = new Map<string, { score: number; proposalId: string }>();
+  let totalAlignment = 0;
+
+  for (const proposal of ctx.proposals) {
+    const alignment = getAlignmentScore(proposal.specialistId, ctx.machineName);
+    totalAlignment += alignment;
+
+    const existing = transitionScores.get(proposal.transitionName);
+    if (existing) {
+      existing.score += alignment;
+    } else {
+      transitionScores.set(proposal.transitionName, {
+        score: alignment,
+        proposalId: proposal.proposalId,
+      });
+    }
+  }
+
+  // Score selection votes by alignment
+  if (ctx.selectionVotes) {
+    for (const sv of ctx.selectionVotes) {
+      const alignment = getAlignmentScore(sv.specialistId, ctx.machineName);
+      totalAlignment += alignment;
+
+      // Find which transition this selection vote maps to
+      const selectedProposal = ctx.proposals.find(
+        (p) => p.proposalId === sv.selectedProposalId
+      );
+      if (selectedProposal) {
+        const existing = transitionScores.get(selectedProposal.transitionName);
+        if (existing) {
+          existing.score += alignment;
+        }
+      }
+    }
+  }
+
+  // Score pairwise votes by alignment
+  for (const vote of ctx.votes) {
+    const alignment = getAlignmentScore(vote.specialistId, ctx.machineName);
+    totalAlignment += alignment;
+
+    const proposalA = ctx.proposals.find((p) => p.proposalId === vote.proposalIdA);
+    const proposalB = ctx.proposals.find((p) => p.proposalId === vote.proposalIdB);
+
+    if (vote.voteFor === "A" && proposalA) {
+      const existing = transitionScores.get(proposalA.transitionName);
+      if (existing) existing.score += alignment;
+    } else if (vote.voteFor === "B" && proposalB) {
+      const existing = transitionScores.get(proposalB.transitionName);
+      if (existing) existing.score += alignment;
+    } else if (vote.voteFor === "BOTH") {
+      if (proposalA && proposalB) {
+        if (proposalA.transitionName === proposalB.transitionName) {
+          // Both proposals target the same transition — full alignment to that transition
+          const existing = transitionScores.get(proposalA.transitionName);
+          if (existing) existing.score += alignment;
+        } else {
+          // Different transitions — split evenly
+          const existingA = transitionScores.get(proposalA.transitionName);
+          if (existingA) existingA.score += alignment * 0.5;
+          const existingB = transitionScores.get(proposalB.transitionName);
+          if (existingB) existingB.score += alignment * 0.5;
+        }
+      }
+    }
+    // NEITHER: no score added
+  }
+
+  // Cold start: if all alignment is 0, no consensus possible
+  if (totalAlignment === 0) {
+    return {
+      consensusReached: false,
+      reasoning: "Cold start: no alignment data available, human input required",
+    };
+  }
+
+  // Sort transitions by score descending
+  const sorted = [...transitionScores.entries()].sort(
+    (a, b) => b[1].score - a[1].score
+  );
+
+  const leaderScore = sorted[0][1].score;
+  const runnerUpScore = sorted.length > 1 ? sorted[1][1].score : 0;
+
+  const margin = (leaderScore - runnerUpScore) / totalAlignment;
+
+  if (margin >= threshold) {
+    // Find the best proposal for the winning transition (highest alignment proposer)
+    const winningTransition = sorted[0][0];
+    const candidateProposals = ctx.proposals.filter(
+      (p) => p.transitionName === winningTransition
+    );
+    let bestProposal = candidateProposals[0];
+    let bestAlignment = -1;
+    for (const p of candidateProposals) {
+      const a = getAlignmentScore(p.specialistId, ctx.machineName);
+      if (a > bestAlignment) {
+        bestAlignment = a;
+        bestProposal = p;
+      }
+    }
+
+    return {
+      consensusReached: true,
+      winningProposalId: bestProposal.proposalId,
+      reasoning: `Alignment-weighted margin ${margin.toFixed(2)} >= threshold ${threshold} (leader: ${winningTransition})`,
+    };
+  }
+
+  return {
+    consensusReached: false,
+    reasoning: `Alignment-weighted margin ${margin.toFixed(2)} below threshold ${threshold}`,
+  };
+}
+
 /** Map of built-in arbiter strategy names to functions */
 export const arbiterStrategies: Record<
   string,
@@ -534,4 +740,5 @@ export const arbiterStrategies: Record<
   aheadByK,
   mostSimilar,
   pairwiseConsensus,
+  alignmentWeightedMargin,
 };

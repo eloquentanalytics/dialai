@@ -99,21 +99,48 @@ See [RegisterArbiterOptions](./types.md#registerarbiteroptions) for the complete
 
 ## Built-in Strategies
 
-Arbiters support three built-in consensus strategies via `strategyFnName`:
+Arbiters support five built-in consensus strategies via `strategyFnName`:
 
 | Strategy | Description | Threshold Usage |
 |----------|-------------|-----------------|
+| `firstProposal` | Accepts the first valid proposal immediately | Not used |
+| `alignmentWeightedMargin` | Alignment-weighted margin of superiority | `threshold` = minimum margin (0-1) |
 | `aheadByK` | Consensus when leading proposal is ahead by K votes | `threshold` = minimum vote lead required |
 | `mostSimilar` | Consensus based on similarity to human gold examples | `threshold` = minimum similarity score (0-1) |
 | `pairwiseConsensus` | Bradley-Terry model ranking from pairwise votes | `threshold` = minimum win probability |
 
-### aheadByK
+### firstProposal
 
-The simplest strategy. Counts votes and declares consensus when one proposal leads by at least `threshold` votes.
+The simplest strategy. Accepts the first valid proposal without voting. Useful as a default or when only one proposer is registered.
 
 ```typescript
 await registerArbiter({
   specialistId: "simple-arbiter",
+  machineName: "my-task",
+  strategyFnName: "firstProposal",
+});
+```
+
+### alignmentWeightedMargin
+
+The alignment-weighted margin of superiority strategy. Groups proposals by transition, scores each with the proposer's alignment score, incorporates selection and pairwise votes weighted by voter alignment, and declares consensus when the leading transition's margin exceeds the threshold.
+
+```typescript
+await registerArbiter({
+  specialistId: "alignment-arbiter",
+  machineName: "my-task",
+  strategyFnName: "alignmentWeightedMargin",
+  threshold: 0.5,  // Margin must exceed 0.5
+});
+```
+
+### aheadByK
+
+Counts votes and declares consensus when one proposal leads by at least `threshold` votes.
+
+```typescript
+await registerArbiter({
+  specialistId: "vote-arbiter",
   machineName: "my-task",
   strategyFnName: "aheadByK",
   threshold: 2,  // Need 2-vote lead

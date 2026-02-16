@@ -474,12 +474,13 @@ runSession(machine: MachineDefinition): Promise<Session>
 
 1. Creates a session in the initial state
 2. Registers a built-in deterministic proposer (picks the first transition)
-3. Loops until `currentState === goalState`:
-   - Solicits proposals from all proposers
-   - If 2+ proposals, solicits pairwise votes
-   - Evaluates consensus
-   - Executes the winning transition
-4. Returns the completed session
+3. Runs one decision cycle:
+   - Solicits proposals from all enabled proposers, checks consensus
+   - Solicits selection voters, checks consensus after each vote
+   - Solicits pairwise voters, checks consensus after each vote
+   - If no consensus: returns session (exhausted, waiting for human)
+   - If consensus: executes the winning transition
+4. Returns the session (completed or waiting for human)
 
 ## Store
 
