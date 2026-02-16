@@ -31,23 +31,23 @@ graph LR
 
 ### 1. Creation
 
-A session starts in its **initial state**—the starting point defined in the machine definition.
+A session starts in its **initial state** — the starting point defined in the machine definition.
 
 ### 2. Progression
 
-When a session is **not in its goal state**, the decision cycle activates:
+When a session is **not in its goal state**, the [arbiter](./arbitration.md) drives a decision cycle:
 
-1. Specialists propose transitions
-2. If the [arbitration strategy](./consensus-strategies.md) requires it, proposals are compared through voting
-3. Consensus is evaluated
-4. The winning transition executes
-5. The session moves to a new state
+1. The arbiter solicits proposals from enabled proposers
+2. If needed, the arbiter solicits selection voters and pairwise voters
+3. The arbiter continuously evaluates the [consensus score](./consensus-strategies.md#alignmentweightedmargin-default)
+4. When consensus is reached (or a human forces a decision), the transition executes
+5. The session moves to a new state and a new round begins
 
-Each time a transition executes, a new round begins with a fresh round ID.
+Each round produces alignment data: every specialist's contribution is compared against the winning transition, updating their alignment scores.
 
 ### 3. Completion
 
-A session is "at rest" when it reaches its **goal state**—the rest state defined in the machine definition. In the goal state, no further decision cycles are needed until something moves the session elsewhere. Note that initialState and goalState can be the same for cyclical workflows.
+A session is "at rest" when it reaches its **goal state** — the rest state defined in the machine definition. In the goal state, no further decision cycles are needed until something moves the session elsewhere. Note that `initialState` and `goalState` can be the same for cyclical workflows.
 
 ## Machine Definition
 
@@ -57,7 +57,7 @@ Each session runs according to a **machine definition** that specifies:
 |-------|-------------|
 | **machineName** | Identifies the type of machine (e.g., "document-review") |
 | **initialState** | The state where sessions start |
-| **goalState** | The rest state where the session is headed; no action needed when reached |
+| **goalState** | The rest state where the session is headed |
 | **states** | A record of state names to their configuration |
 
 ### State Configuration
@@ -66,6 +66,20 @@ Each state can have:
 
 - **prompt**: A description of the decision to be made. This is given to all specialists and guides their proposals.
 - **transitions**: A map of transition names to target states. If omitted, the state is terminal.
+- **consensusThreshold**: The **risk dial** for this state (0.0–1.0). Controls how much margin of superiority is required for autonomous consensus. Higher = more cautious. If omitted, uses the machine default.
+
+### The Risk Dial
+
+Each state has a **consensus threshold** (also called the risk dial) that controls how easily the arbiter can reach autonomous consensus:
+
+| Value | Behavior |
+|-------|----------|
+| **1.0** | Maximum caution — practically requires human participation |
+| **0.5** | Moderate — leader must have ~2× the support of runner-up |
+| **0.1** | Aggressive — a modest lead is sufficient |
+| **0.0** | Any lead counts — fastest delegation |
+
+You can set different thresholds for different states. A high-stakes "approve deployment" state might use 0.9, while a routine "categorize ticket" state might use 0.3.
 
 ## Decision Prompts
 
@@ -87,6 +101,7 @@ The **machine name** identifies which kind of machine a session is running. Diff
 
 - Different definitions (states, transitions, prompts)
 - Different registered specialists
+- Different consensus thresholds
 
 Examples: `"document-review"`, `"code-review"`, `"support-ticket"`
 
@@ -104,11 +119,22 @@ Transition names should describe the action being taken:
 - Good: `approve`, `reject`, `request_changes`
 - Avoid: `next`, `continue`, `option1`
 
+Transition names are what specialists see as tool calls — clear names help LLMs make better decisions.
+
 ### 3. Keep State Machines Focused
 
 Each machine should model one type of decision process. If a workflow has distinct phases, consider whether they should be separate machines or separate states within one machine.
 
+### 4. Start with High Thresholds
+
+Begin with `consensusThreshold` near 1.0. This forces human participation, generating exemplars and calibrating alignment scores. Lower the threshold only after specialists demonstrate reliable human alignment.
+
+### 5. Design for Task Decomposition
+
+If a state's decisions are too complex for cheap models, consider splitting it into sequential steps. A simple two-state machine where each state has a narrow decision is easier for lightweight models to handle than a single state with a complex, multifaceted decision.
+
 ## Next Steps
 
 - [Specialists](./specialists.md): Learn about the actors that navigate sessions
-- [Decision Cycle](./decision-cycle.md): Understand how decisions are made
+- [Decision Cycle](./decision-cycle.md): Understand how the arbiter drives decisions
+- [Arbitration](./arbitration.md): The consensus score algorithm

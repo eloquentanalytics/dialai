@@ -1,0 +1,258 @@
+/**
+ * Process Page Styles
+ * Clean vertical timeline showing the 8 steps of progressive collapse
+ */
+
+/* ========================================
+   HERO
+   ======================================== */
+
+.hero {
+  padding: 4rem 2rem 2rem;
+  background: var(--dial-bg-primary);
+  text-align: center;
+}
+
+.heroTitle {
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin-bottom: 0.75rem;
+  color: var(--dial-slate-50);
+}
+
+.heroSubtitle {
+  font-size: 1.0625rem;
+  color: var(--dial-slate-400);
+  max-width: 640px;
+  margin: 0 auto;
+  line-height: 1.7;
+}
+
+/* ========================================
+   TIMELINE CONTAINER
+   ======================================== */
+
+.timeline {
+  position: relative;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 2rem 4rem;
+}
+
+/* The long vertical line */
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 28px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(
+    to bottom,
+    var(--dial-border) 0%,
+    var(--dial-accent) 15%,
+    var(--dial-accent) 85%,
+    var(--dial-emphasis) 100%
+  );
+}
+
+/* ========================================
+   STAGE (each step on the timeline)
+   ======================================== */
+
+.stage {
+  position: relative;
+  padding-left: 72px;
+  padding-bottom: 3rem;
+}
+
+.stage:last-child {
+  padding-bottom: 0;
+}
+
+/* Circle on the timeline */
+.stageDot {
+  position: absolute;
+  left: 16px;
+  top: 4px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--dial-bg-primary);
+  border: 3px solid var(--dial-accent);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stageDot::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--dial-accent);
+}
+
+/* Last step gets emphasis color */
+.stage:last-child .stageDot {
+  border-color: var(--dial-emphasis);
+}
+
+.stage:last-child .stageDot::after {
+  background: var(--dial-emphasis);
+}
+
+/* Stage number badge */
+.stageNumber {
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-family: var(--ifm-font-family-monospace);
+  color: var(--dial-accent);
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+}
+
+.stage:last-child .stageNumber {
+  color: var(--dial-emphasis);
+}
+
+.stageTitle {
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.5rem;
+  color: var(--dial-slate-100);
+}
+
+.stageBody {
+  color: var(--dial-slate-400);
+  font-size: 0.9375rem;
+  line-height: 1.75;
+}
+
+.stageBody p {
+  margin-bottom: 0.5rem;
+}
+
+.stageBody p:last-child {
+  margin-bottom: 0;
+}
+
+.stageSubtitle {
+  color: var(--dial-slate-300);
+  font-weight: 500;
+  font-size: 0.9375rem;
+  margin-bottom: 0.5rem !important;
+}
+
+.stageBody strong {
+  color: var(--dial-slate-200);
+  font-weight: 600;
+}
+
+/* ========================================
+   CTA SECTION
+   ======================================== */
+
+.ctaSection {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 2rem 2rem;
+}
+
+.ctaCard {
+  background: var(--dial-bg-surface);
+  border: 1px solid var(--dial-border);
+  border-radius: 12px;
+  padding: 2rem 2.5rem;
+  text-align: center;
+}
+
+.ctaTitle {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--dial-slate-100);
+  margin-bottom: 0.75rem;
+}
+
+.ctaDesc {
+  font-size: 0.9375rem;
+  color: var(--dial-slate-400);
+  line-height: 1.7;
+  max-width: 540px;
+  margin: 0 auto 1.25rem;
+}
+
+.ctaLink {
+  display: inline-block;
+  padding: 0.625rem 1.5rem;
+  background: var(--dial-accent);
+  color: #fff;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.ctaLink:hover {
+  background: var(--dial-accent-light);
+  color: #fff;
+  text-decoration: none;
+}
+
+/* ========================================
+   BACK LINK
+   ======================================== */
+
+.backLink {
+  display: inline-block;
+  margin-top: 2rem;
+  padding: 0.5rem 0;
+  color: var(--dial-accent-light);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.backLink:hover {
+  text-decoration: underline;
+  color: var(--dial-accent-light);
+}
+
+/* ========================================
+   RESPONSIVE
+   ======================================== */
+
+@media screen and (max-width: 768px) {
+  .timeline::before {
+    left: 18px;
+  }
+
+  .stage {
+    padding-left: 52px;
+    padding-bottom: 2.5rem;
+  }
+
+  .stageDot {
+    left: 6px;
+    width: 22px;
+    height: 22px;
+  }
+
+  .stageDot::after {
+    width: 6px;
+    height: 6px;
+  }
+
+  .stageTitle {
+    font-size: 1.25rem;
+  }
+
+  .ctaCard {
+    padding: 1.5rem;
+  }
+}

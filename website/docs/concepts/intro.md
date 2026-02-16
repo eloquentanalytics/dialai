@@ -4,80 +4,68 @@ sidebar_position: 1
 
 # Core Concepts
 
-DIAL provides a structured approach to AI-human collaboration built around a few key abstractions. This section explains the conceptual foundations—what DIAL is and why it works the way it does.
+DIAL orchestrates **specialists** — both AI and human — that compete and collaborate to navigate **state machines** through **decision cycles**. An **arbiter** drives each cycle, maintaining a unified **consensus score** that determines when one proposal is clearly superior to the rest.
 
 ## The Big Picture
 
-DIAL orchestrates **specialists** (both AI and human) that compete and collaborate to navigate **state machines** through **decision cycles**.
-
 ### Task Specialists, Not Agents
 
-DIAL does not guide a single agent toward completing a task. It simultaneously solicits proposals from an arbitrary number of models, prompts, and strategies — all competing at the same decision point, at the same time. Each registered proposer independently analyzes the current state and suggests a transition. When the arbitration strategy calls for it, a separate set of specialists evaluates those proposals through voting. The arbiter then determines consensus.
+DIAL does not guide a single agent toward completing a task. It simultaneously solicits proposals from an arbitrary number of models, prompts, and strategies — all competing at the same decision point. Each registered proposer independently analyzes the current state and suggests a transition. Voters evaluate proposals. The arbiter maintains a running consensus score and declares a winner when the margin of superiority crosses the threshold.
 
-This is mass simultaneous solicitation, not sequential A/B testing. Every specialist registered for a machine participates in every decision cycle. The machine definition holds the full field of possible specialists in abstraction — any model, API, webhook, or local function can fill a role, and the set can change between cycles. DIAL materializes the field into a single concrete transition through the consensus mechanism.
+This is mass simultaneous solicitation, not sequential A/B testing. Specialists are interchangeable and compete on the quality of their contributions, measured against human ground truth.
 
-A DIAL "specialist" is scoped to a specific role in a specific decision. A proposer suggests the best transition; a voter evaluates which proposal is strongest. The orchestration layer (the state machine and decision cycle) handles sequencing. Specialists are interchangeable and compete on the quality of their contributions, measured against human ground truth.
+A DIAL "specialist" is scoped to a specific role in a specific decision. A proposer suggests the best transition; a selection voter picks the best proposal from the field; a pairwise voter evaluates head-to-head matchups. The arbiter orchestrates the entire process. Specialists can be AI models, webhooks, local functions, or humans.
 
 [Learn more about Specialists →](./specialists.md)
 
-```mermaid
-graph TB
-    subgraph "Session"
-        SM[Machine Definition]
-        CS[Current State]
-    end
-
-    subgraph "Specialists"
-        H[Human Specialists]
-        AI[AI Specialists]
-    end
-
-    subgraph "Decision Cycle"
-        P[Propose]
-        V[Vote]
-        A[Arbitrate]
-        E[Execute]
-    end
-
-    SM --> CS
-    CS --> P
-    H --> P
-    AI --> P
-    P --> V
-    P --> A
-    V --> A
-    A --> E
-    E --> CS
-```
-
 ### Sessions
 
-A **session** is an instance of a state machine. It starts in an initial state and progresses toward a default (completion) state through decision cycles.
+A **session** is an instance of a state machine. It starts in an initial state and progresses toward a goal state through decision cycles.
 
 [Learn more about Sessions →](./sessions.md)
 
 ### Specialists
 
-**Specialists** are the pluggable actors that participate in sessions. They fill three roles: **Proposers** suggest transitions, **Voters** compare proposals, and **Arbiters** evaluate consensus. Both proposers and voters can be AI or human; arbiters are always built-in deterministic components.
+**Specialists** are the pluggable actors that participate in sessions. They fill four roles:
+
+| Role | Description | Can be AI? | Can be Human? |
+|------|-------------|------------|---------------|
+| **Proposer** | Analyzes state, suggests transitions | Yes | Yes |
+| **Selection Voter** | Sees all proposals, picks the strongest | Yes | Yes |
+| **Pairwise Voter** | Compares two proposals head-to-head | Yes | Yes |
+| **Arbiter** | Orchestrates the cycle, evaluates consensus (built-in) | No | No |
+
+Specialists can be **enabled** or **disabled**. Disabled specialists remain registered (with their alignment history intact) but stop receiving requests. The arbiter can re-enable disabled specialists when needed — for example, if an enabled proposer submits an invalid proposal.
 
 [Learn more about Specialists →](./specialists.md)
 
 ### The Decision Cycle
 
-When a session needs to progress, DIAL runs a repeating cycle:
+When a session needs to progress, the **arbiter** works through a sequence of solicitations at a steady pace:
 
-1. **Propose**: Specialists suggest transitions
-2. **Vote** *(if required by strategy)*: Voters compare and evaluate proposals
-3. **Arbitrate**: Consensus is evaluated
-4. **Execute**: The winning transition advances the session
+1. **Solicit Proposals**: Call each enabled proposer. Validate and cluster proposals by transition.
+2. **Solicit Selection Voters** *(if no consensus yet)*: Each voter sees all proposals and picks one.
+3. **Solicit Pairwise Voters** *(if still no consensus)*: Each voter evaluates head-to-head matchups.
+4. **Block for Human** *(if exhausted)*: All specialists have responded, no consensus. Wait for a human-forced decision.
 
-Whether voting occurs depends on the [arbitration strategy](./consensus-strategies.md). Some strategies (like `aheadByK` and `pairwiseConsensus`) require votes; others (like `firstProposal` and `mostSimilar`) determine consensus directly from proposals.
+After every arriving proposal or vote, the arbiter re-evaluates the **consensus score**. If one transition's margin of superiority crosses the threshold, consensus is declared immediately — the arbiter doesn't wait for all responses.
 
 [Learn more about the Decision Cycle →](./decision-cycle.md)
 
-### Arbitration
+### The Consensus Score
 
-**Arbitration** is how DIAL decides when a proposal has won. DIAL ships with multiple [consensus strategies](./consensus-strategies.md)—some use voting (e.g., `aheadByK`), while others evaluate proposals directly (e.g., `mostSimilar`).
+Every contribution — a proposal, a selection vote, a pairwise win — adds the specialist's **alignment score** to the consensus score of the transition it supports. Alignment is a simple measurement: `matching choices / total comparisons` with human ground truth.
+
+The arbiter groups proposals by **transition** (not individual proposal). Two proposers that chose the same transition with similar reasoning are supporting the same outcome — their alignment scores combine.
+
+Consensus is reached when the leading transition's score is sufficiently ahead of the runner-up:
+
+```
+margin = (score(leader) − score(runner_up)) / Σ alignment
+consensus when: margin ≥ threshold
+```
+
+The **risk dial** controls the threshold. At 0.0, the arbiter requires human participation in every round. As the dial is raised, autonomous consensus becomes possible.
 
 [Learn more about Arbitration →](./arbitration.md)
 
@@ -87,13 +75,34 @@ The fundamental principle underlying DIAL:
 
 > **Humans have context that AI cannot access.** AI specialists are judged on their ability to predict what humans would choose. When consensus cannot be reached, only a human can force a decision.
 
+Human alignment is always **1.0** — they are the ground truth. A human vote contributes the maximum possible amount to the consensus score. A human forcing a proposal bypasses the score entirely.
+
+Every human-forced decision creates an **exemplar**: a capture of the full context plus the human's choice. Exemplars are the training data that drive progressive collapse — they improve specialist context through few-shot learning and provide ground truth for alignment measurement.
+
 [Learn more about Human Primacy →](./human-primacy.md)
+
+### Progressive Collapse
+
+As alignment improves, the system naturally collapses:
+
+1. **Cold start**: All alignment = 0. Every contribution is multiplied by 0. System blocks for human.
+2. **Calibration**: Humans decide, exemplars accumulate, alignment scores grow.
+3. **Autonomous consensus**: Aligned specialists' contributions cross the threshold without human participation.
+4. **Pruning**: Low-alignment and redundant specialists are disabled. Cost drops.
+5. **Champion**: One specialist handles decisions alone with periodic human spot-checks.
+6. **Collapsed**: A fine-tuned cheap model runs at a fraction of the original cost.
+
+If alignment degrades, the **trip line** fires: the arbiter reverts to a more deliberative configuration, re-enables disabled specialists, and the calibration loop begins again.
+
+[See the full process →](/process) · [Implementation details →](/docs/guides/progressive-collapse)
 
 ## Quick Reference
 
 ### Vote Options
 
-For strategies that use voting, when comparing proposals A and B, specialists vote:
+**Selection voters** see all proposals and pick one.
+
+**Pairwise voters** compare two proposals and vote:
 
 | Vote | Meaning |
 |------|---------|
@@ -106,9 +115,9 @@ For strategies that use voting, when comparing proposals A and B, specialists vo
 
 - [Sessions](./sessions.md): State machine instances
 - [Specialists](./specialists.md): AI and human actors
-- [Decision Cycle](./decision-cycle.md): The Propose → (Vote) → Arbitrate → Execute process
-- [Arbitration](./arbitration.md): The arbiter's role in the decision cycle
-- [Consensus Strategies](./consensus-strategies.md): Built-in strategies for determining consensus
+- [Decision Cycle](./decision-cycle.md): The arbiter's async solicitation sequence
+- [Arbitration](./arbitration.md): The unified consensus score
+- [Consensus Strategies](./consensus-strategies.md): The default algorithm and alternatives
 - [Human Primacy](./human-primacy.md): The foundational principle
-- [Alignment vs. Voting](./alignment-vs-voting.md): When to use direct alignment measurement vs. voting
+- [Alignment & Consensus](./alignment-vs-voting.md): How alignment scores drive consensus
 - [Related Work](./related-work.md): How DIAL relates to other approaches

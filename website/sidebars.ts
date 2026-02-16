@@ -38,6 +38,7 @@ const sidebars: SidebarsConfig = {
             "guides/registering-specialists",
             "guides/implementing-strategies",
             "guides/proxy-mode",
+            "guides/progressive-collapse",
           ],
         },
         {

@@ -291,26 +291,6 @@ One naming convention has behavioral significance: if the `specialistId` contain
 
 ---
 
-## Weight
-
-Every specialist has a `weight` (default `1.0`) that determines how much its votes count during consensus evaluation.
-
-```typescript
-registerSpecialist({
-  specialistId: "senior-voter",
-  machineName: "document-review",
-  role: "voter",
-  weight: 2.0,
-  strategyFn: async (ctx) => { /* ... */ },
-});
-```
-
-Weight only matters for voter specialists — it affects the vote tally in `evaluateConsensus`. Proposer weight has no effect on proposal selection (proposals are selected by votes, not by proposer weight).
-
-Human vote override ignores weights entirely. If a human votes, their choice wins regardless of any weight configuration.
-
----
-
 ## Human Specialists
 
 A specialist is identified as human if its `specialistId` contains `"human"` (case-insensitive). Examples:
@@ -327,12 +307,12 @@ When `evaluateConsensus` encounters a vote from a human specialist, that vote wi
 
 ```
 Proposal A: "approve"
-  - AI Voter 1 votes A (weight 1.0)
-  - AI Voter 2 votes A (weight 1.0)
-  - AI Voter 3 votes A (weight 1.0)
+  - AI Voter 1 votes A
+  - AI Voter 2 votes A
+  - AI Voter 3 votes A
 
 Proposal B: "request_changes"
-  - Human Voter votes B (weight 1.0)
+  - Human Voter votes B
 
 Result: B wins immediately. AI votes do not matter.
 ```
@@ -353,9 +333,9 @@ After proposals and votes are collected, `evaluateConsensus` determines the outc
 
 3. **Two or more proposals** — Evaluate votes:
    - If any human specialist has voted, their choice wins immediately (human primacy).
-   - Otherwise, tally weighted votes per proposal.
-   - For each vote: `"A"` adds the voter's weight to proposal A, `"B"` to proposal B, `"BOTH"` to both, `"NEITHER"` to neither.
-   - The leading proposal must be ahead of the runner-up by at least `k = 1.0` weighted votes.
+   - Otherwise, tally votes per proposal. Each vote counts as one.
+   - For each vote: `"A"` adds 1 to proposal A, `"B"` adds 1 to proposal B, `"BOTH"` adds 1 to both, `"NEITHER"` adds nothing.
+   - The leading proposal must be ahead of the runner-up by at least `k = 1` votes.
    - If no proposal leads by the required margin, consensus fails.
 
 ### Result Shape
@@ -456,7 +436,6 @@ Any other combination is an error. Examples of invalid configurations and their 
 | `specialistId` | `string` | Yes | — | Unique identifier. Include "human" for human specialists. |
 | `machineName` | `string` | Yes | — | Which session type this specialist participates in |
 | `role` | `"proposer" \| "voter"` | Yes | — | The specialist's role |
-| `weight` | `number` | No | `1.0` | Voting weight used in consensus evaluation |
 | `strategyFn` | `async (context) => result` | Mode 1 | — | Local function that returns a proposal or vote |
 | `strategyWebhookUrl` | `string` | Mode 2 | — | URL to POST context to; expects proposal/vote response |
 | `contextFn` | `async (context) => string` | Mode 3 | — | Local function that returns context for the LLM |

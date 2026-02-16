@@ -4,81 +4,115 @@ sidebar_position: 4
 
 # Decision Cycle
 
-When a session is not in its goal state, the system progresses through a repeating cycle until it reaches the goal.
+When a session is not in its goal state, the **arbiter** drives a decision cycle that orchestrates specialists to find consensus on the next transition.
 
 ## Asynchronous by Design
 
-The decision cycle is **asynchronous**: proposals and votes arrive in an uncontrolled, unbound manner. There is no defined order or timing—specialists submit their contributions whenever they're ready. The cycle concludes once consensus is reached, but proposals and votes may continue to arrive afterward (they are simply ignored for the completed cycle).
+The decision cycle is **asynchronous**: the arbiter solicits contributions from specialists at a steady pace, but contributions arrive on their own schedule. A webhook-based voter might respond in milliseconds; a human might take hours. The arbiter doesn't wait for stragglers — it re-evaluates the **consensus score** after every arriving contribution and declares consensus the moment the threshold is met.
 
 This design accommodates:
 - **Heterogeneous response times**: Fast AI models respond in seconds; humans may take hours or days
 - **Distributed specialists**: Webhook-based specialists may be across networks with variable latency
-- **Late arrivals**: A slow specialist's contribution doesn't block progress if consensus forms first
+- **Early resolution**: If three proposers all choose the same transition with high alignment, consensus may be reached before any voter is even solicited
 
-## The Phases
+## The Arbiter's Sequence
 
-### 1. Propose
-
-Proposals arrive asynchronously from registered proposers. Each proposer analyzes the current state and available transitions, then submits a proposal. Each proposal includes:
-- The proposed transition name
-- The target state
-- Reasoning for the proposal
-
-Multiple proposers may submit different proposals for the same decision point. This is expected—for strategies that use voting, the voting phase resolves which proposal wins.
-
-### 2. Vote *(strategy-dependent)*
-
-Some [arbitration strategies](./consensus-strategies.md) require voting (e.g., `aheadByK`, `pairwiseConsensus`). Others (e.g., `firstProposal`, `mostSimilar`) evaluate proposals directly and skip the voting phase entirely.
-
-When voting is used, voters compare proposals pairwise. Each voter expresses a preference:
-
-| Vote | Meaning |
-|------|---------|
-| **A** | Prefer proposal A |
-| **B** | Prefer proposal B |
-| **BOTH** | Both are acceptable |
-| **NEITHER** | Both are unacceptable |
-
-Votes arrive asynchronously. The system uses Swiss tournament pairing to efficiently compare proposals with similar support levels first.
-
-### 3. Arbitrate
-
-After each proposal (and each vote, for strategies that use voting), consensus is evaluated. Consensus evaluation runs continuously as new contributions arrive. What the arbiter checks depends on the [consensus strategy](./consensus-strategies.md):
-
-- **`firstProposal`**: Declares consensus on the first proposal received—no voting needed
-- **`mostSimilar`**: Compares proposals to human gold examples via semantic similarity—no voting needed
-- **`aheadByK`**: Requires the leading proposal to be ahead by k votes
-- **`pairwiseConsensus`**: Requires a proposal to win a threshold percentage of pairwise matchups
-
-If consensus is reached, the transition executes automatically.
-
-### 4. Execute
-
-If consensus is reached, the winning proposal's transition executes:
-- The session's current state updates to the target state
-- All proposals and votes for that round are cleared
-- A new round begins
-
-The cycle repeats until the session reaches its **goal state** (the rest state).
+The arbiter works through a solicitation sequence at a steady clip. It doesn't wait for one phase to complete before starting the next — it continuously evaluates consensus as contributions arrive.
 
 ```mermaid
-stateDiagram-v2
-    [*] --> Propose
-    Propose --> Arbitrate: after each proposal
-    Arbitrate --> Vote: no consensus yet (if strategy uses voting)
-    Vote --> Arbitrate: after each vote
-    Arbitrate --> Execute: consensus reached
-    Arbitrate --> [*]: no consensus (human required)
-    Execute --> [*]: goal state reached
-    Execute --> Propose: continue
+graph TD
+    A[Solicit Proposers] --> B{Consensus?}
+    B -->|Yes| G[Execute Transition]
+    B -->|No| C[Solicit Selection Voters]
+    C --> D{Consensus?}
+    D -->|Yes| G
+    D -->|No| E[Solicit Pairwise Voters]
+    E --> F{Consensus?}
+    F -->|Yes| G
+    F -->|No| H[Block — Wait for Human]
+    H --> G
+    G --> I{Goal State?}
+    I -->|No| A
+    I -->|Yes| J[Session At Rest]
 ```
 
-## When Consensus Fails
+### Phase 1: Solicit Proposers
 
-When specialists cannot reach consensus, the system surfaces the decision to a human. See [Arbitration — When Consensus Fails](./arbitration.md#when-consensus-fails) for details.
+The arbiter requests proposals from all enabled proposers. Each proposal includes:
+- The **transition name** (which edge in the state machine)
+- **Reasoning** (natural language explanation)
+- **MetaJSON** (structured state description)
+
+The arbiter **validates** each proposal as it arrives — invalid transitions are rejected. Valid proposals are **clustered by transition**: if two proposers both suggest "approve," their contributions support the same transition.
+
+After each valid proposal arrives, the arbiter re-evaluates consensus. If the margin of superiority already crosses the threshold (e.g., one transition is supported by highly-aligned specialists while no other transition has been proposed), execution begins immediately.
+
+### Phase 2: Solicit Selection Voters
+
+If proposals alone don't produce consensus, the arbiter solicits **selection voters**. Each selection voter sees all valid proposals and picks the one they believe is strongest.
+
+Each selection vote adds the voter's alignment score to the chosen proposal's transition score.
+
+### Phase 3: Solicit Pairwise Voters
+
+If selection voting still doesn't produce consensus, the arbiter solicits **pairwise voters**. Each pairwise voter evaluates two proposals head-to-head:
+
+| Vote | Effect on Consensus Score |
+|------|--------------------------|
+| **A** | Adds voter's alignment to proposal A's transition |
+| **B** | Adds voter's alignment to proposal B's transition |
+| **BOTH** | Splits voter's alignment evenly between both |
+| **NEITHER** | Adds nothing |
+
+### Phase 4: Block for Human
+
+If the arbiter has solicited all enabled proposers, selection voters, and pairwise voters — and consensus still hasn't been reached — the system **blocks**. This is not a failure; it means more training data is needed. The task waits for a human to force a decision, which:
+
+1. Immediately advances the session to the next state
+2. Creates an **exemplar** (full context + human choice) for future learning
+3. Updates alignment scores for all specialists who participated
+
+## Consensus Evaluation
+
+The arbiter maintains a **unified consensus score** for each transition that has been proposed. Every contribution adds to the score of the transition it supports, multiplied by the contributing specialist's alignment score.
+
+```
+score(transition) = Σ alignment_i × support_i(transition)
+```
+
+The arbiter calculates the **margin of superiority** — how far the leading transition is ahead of the runner-up, normalized by total alignment:
+
+```
+margin = (score(leader) − score(runner_up)) / Σ alignment_i
+```
+
+Consensus is reached when `margin ≥ consensus_threshold`, where the threshold is controlled by the **risk dial** (a state-level parameter between 0.0 and 1.0).
+
+See [Arbitration](./arbitration.md) for the full algorithm, including proposal clustering and self-healing.
+
+## When Contributions Arrive Late
+
+Because the cycle is asynchronous, contributions may arrive after consensus has been declared or after the round has ended. Late arrivals are ignored for the completed round but still provide useful data:
+
+- **Alignment measurement**: The late specialist's choice can still be compared to the human-chosen outcome to update alignment scores
+- **No harm**: A late vote cannot retroactively change a completed transition
+
+## The Continuous Nature
+
+The arbiter doesn't process phases in strict sequence. It sends solicitations at a steady pace and continuously processes responses:
+
+1. Sends `submitProposal` to Proposer A
+2. Sends `submitProposal` to Proposer B
+3. Proposer A responds → arbiter evaluates consensus
+4. Sends `submitVote` to Selection Voter C
+5. Proposer B responds → arbiter re-evaluates
+6. Selection Voter C responds → arbiter re-evaluates → consensus reached!
+7. Pairwise voters are never solicited because consensus was reached earlier
+
+Meanwhile, humans may be proposing and voting through the UI at any time. Their contributions flow into the same consensus evaluation.
 
 ## Related Concepts
 
-- [Arbitration](./arbitration.md): How consensus is evaluated
+- [Arbitration](./arbitration.md): The consensus score algorithm and self-healing
 - [Specialists](./specialists.md): The actors that propose and vote
 - [Human Primacy](./human-primacy.md): Why humans override when consensus fails

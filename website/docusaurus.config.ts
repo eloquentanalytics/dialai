@@ -68,6 +68,11 @@ const config: Config = {
           label: "Docs",
         },
         {
+          to: "/process",
+          position: "left",
+          label: "Process",
+        },
+        {
           to: "/constitution",
           position: "left",
           label: "Constitution",

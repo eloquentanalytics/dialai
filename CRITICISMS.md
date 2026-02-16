@@ -28,7 +28,7 @@ DIAL requires all tasks to be modeled as finite state machines with defined stat
 
 ## 5. Weight Recalibration Is Naive
 
-`recommended weight = agreement rate = matching votes / total comparisons`. This treats all decisions as equally important. A specialist that agrees with the human on 9 trivial decisions but fails on the 1 critical decision gets weight 0.9. There's no weighting by decision importance, no distinction between easy/hard states, and no consideration of *why* the specialist diverged. The system can't distinguish between "the AI got the hard one wrong" and "the AI got easy ones right by chance."
+`alignment score = matching choices / total comparisons`. This treats all decisions as equally important. A specialist that agrees with the human on 9 trivial decisions but fails on the 1 critical decision gets an alignment score of 90%. There's no distinction between easy/hard states, and no consideration of *why* the specialist diverged. The system can't distinguish between "the AI got the hard one wrong" and "the AI got easy ones right by chance."
 
 ## 6. Progressive Collapse Assumes Stationarity That Doesn't Exist
 
@@ -38,7 +38,7 @@ The monotonicity of collapse is explicitly conditional on "stationary conditions
 
 The paper outline invokes mechanism design, repeated games, information theory, and category theory. But these are applied retrospectively as analogies, not used to derive predictions or constraints. Saying "the collapse is a filtered colimit converging to a single functor" adds no predictive power beyond what the plain-language description already provides. The comparison table against LangGraph, Constitutional AI, and Mixture of Experts is misleading — these solve fundamentally different problems. DIAL isn't a better LangGraph; it's a measurement harness grafted onto a deliberation protocol.
 
-**Counter:** This criticism was fair. The theoretical framings section has been rewritten. Category theory was removed entirely — it provided formal vocabulary without predictive power. The remaining three framings (mechanism design, repeated games, information theory) are now explicitly labeled as retrospective interpretive lenses, not foundational derivations. Each retains a concrete testable prediction that the plain-language description alone does not surface: (1) no stable non-dictatorial equilibrium under monotonic weight update, (2) removing the trip line causes undetected drift, (3) entropy over specialist weights decreases monotonically under stationarity. The comparison table has been reframed as "Related Work" with an explicit caveat that these systems solve different problems and that DIAL is a measurement harness that can wrap any of them, not a competitor.
+**Counter:** This criticism was fair. The theoretical framings section has been rewritten. Category theory was removed entirely — it provided formal vocabulary without predictive power. The remaining three framings (mechanism design, repeated games, information theory) are now explicitly labeled as retrospective interpretive lenses, not foundational derivations. Each retains a concrete testable prediction that the plain-language description alone does not surface: (1) no stable non-dictatorial equilibrium under monotonic alignment improvement, (2) removing the trip line causes undetected drift, (3) entropy over specialist alignment scores decreases monotonically under stationarity. The comparison table has been reframed as "Related Work" with an explicit caveat that these systems solve different problems and that DIAL is a measurement harness that can wrap any of them, not a competitor.
 
 ## 8. The "When Humans Disagree" Problem Is Handwaved
 
@@ -57,7 +57,7 @@ The entire framework is specification and theory. There are no published results
 - The collapse happens within an economically viable number of rounds
 - The cost savings of collapsed execution outweigh the measurement overhead
 - The trip line fires reliably and at the right sensitivity
-- Real specialists achieve meaningful weight above 0.0
+- Real specialists achieve meaningful alignment scores
 
 The theory document reads as a research proposal, not a research result. The framework's core claims are untested.
 

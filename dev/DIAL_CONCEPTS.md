@@ -49,13 +49,12 @@ Each state in the machine carries a prompt describing how to decide what to do n
 
 Consensus is evaluated by **Arbiter** specialists. Like proposers, voters, and tools, arbiters are implemented as pluggable strategies—a strategy name maps to a file that defines the consensus logic.
 
-**Default strategy: weighted ahead-by-k**
+**Default strategy: ahead-by-k**
 
-The default arbiter uses a simple weighted vote comparison:
-- LLMs begin with weight 0.0 (no autonomous authority)
-- Humans begin with weight 1.0 (full authority)
-- If a human votes, that decision wins immediately
-- Otherwise, the leading proposal must be ahead by k weighted votes to reach consensus
+The default arbiter uses a simple vote comparison:
+- Every AI vote counts as one vote (equal)
+- If a human votes, that decision wins immediately (human primacy override)
+- Otherwise, the leading proposal must be ahead by k votes to reach consensus
 
 **Risk dial**
 
@@ -73,6 +72,6 @@ Humans interact through a variety of interface types, possibly including modules
 
 - **Monitor** — See all sessions, their states, pending proposals, and vote status
 - **Participate** — Respond to solicitations by submitting proposals or casting votes guiding the session and the other specialists on what the desired outcomes should be
-- **Optimize** — Adjust the strategies, state machine, specialist teams and other parameters to improve. Evaluate specialist accuracy against human decisions to measure alignment, and recalculate voting weights based on that alignment.
+- **Optimize** — Adjust the strategies, state machine, specialist teams and other parameters to improve. Evaluate specialist accuracy against human decisions to measure alignment scores.
 
 The interface is conceptually generic as all session types share the concept of what humans see and what actions make sense for each state. They can also have their own specialized interface where that makes sense, often in a one-state-per-page or competition architecture.

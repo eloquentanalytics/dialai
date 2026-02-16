@@ -8,7 +8,7 @@ DIAL solves a different problem than most AI frameworks. Understanding the disti
 
 ## What DIAL Is
 
-DIAL is a **measurement and delegation harness**. It answers the question: *can this AI specialist reliably predict what this human would choose, in this specific context?* When the answer is yes (empirically demonstrated over repeated decisions), DIAL progressively delegates. When alignment degrades, it reverts.
+DIAL is a **measurement and delegation harness**. It answers the question: *can this AI specialist reliably predict what this human would choose, in this specific context?* When the answer is yes — empirically demonstrated through alignment scores rising over repeated decisions — DIAL progressively delegates. When alignment degrades, the trip line fires and the system reverts.
 
 DIAL can **wrap** any agent framework, alignment technique, or model architecture.
 
@@ -30,15 +30,15 @@ Agent frameworks define **how** an AI system operates: the graph of states, tool
 
 These are complementary. A DIAL specialist can *be* a LangGraph agent. DIAL wraps the agent and measures whether its decisions match human choices. The agent framework handles execution; DIAL handles trust calibration.
 
-There's a deeper relationship: a DIAL machine can be viewed as an abstraction over many different LangGraph agents executing simultaneously—each specialist proposes a different path through the state space. Through voting and consensus, DIAL materializes the superposition into a single concrete execution path. The machine definition is the shared structure; the specialists are competing interpretations of how to traverse it.
+There's a deeper relationship: a DIAL machine can be viewed as an abstraction over many different agents executing simultaneously — each specialist proposes a different path through the state space. Through the arbiter's unified consensus score, DIAL materializes the superposition into a single concrete execution path. The machine definition is the shared structure; the specialists are competing interpretations of how to traverse it.
 
 ### Multi-Agent Debate
 
-Multi-agent debate uses multiple AI models to argue and a human to judge. DIAL's voting mechanism is superficially similar, but the purpose differs: debate aims to improve answer quality through adversarial argument; DIAL aims to measure which specialist best predicts the human, with the goal of eventually removing the human from routine decisions.
+Multi-agent debate uses multiple AI models to argue and a human to judge. DIAL's selection and pairwise voting are superficially similar, but the purpose differs: debate aims to improve answer quality through adversarial argument; DIAL aims to measure which specialist best predicts the human, with the goal of eventually removing the human from routine decisions entirely.
 
 ### Constitutional AI / RLHF
 
-Constitutional AI and RLHF train models against offline signals: a [constitution](/constitution) document or human preference data collected in advance. The trust relationship is fixed at training time. DIAL's ground truth is the human's live, runtime choices in a specific operational context. Trust evolves continuously, per-specialist, per-state. A constitutionally-trained model can serve as a DIAL specialist; DIAL then measures whether the training generalizes to this particular human's preferences.
+Constitutional AI and RLHF train models against offline signals: a constitution document or human preference data collected in advance. The trust relationship is fixed at training time. DIAL's ground truth is the human's live, runtime choices in a specific operational context. Trust evolves continuously, per-specialist, per-state. A constitutionally-trained model can serve as a DIAL specialist; DIAL then measures whether the training generalizes to this particular human's preferences through alignment scores.
 
 ### Mixture of Experts (MoE)
 
@@ -52,4 +52,4 @@ DIAL wraps existing AI systems:
 - **Your model** handles reasoning, generation, and tool use
 - **DIAL** handles the question: *should this agent/model be trusted to act autonomously here, or does a human need to decide?*
 
-The specialist interface is intentionally minimal: anything that can propose a state transition and compare two proposals can participate in DIAL's decision cycle.
+The specialist interface is intentionally minimal: anything that can propose a state transition and compare two proposals can participate in DIAL's decision cycle. The arbiter orchestrates the rest.

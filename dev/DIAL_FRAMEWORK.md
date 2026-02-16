@@ -44,7 +44,7 @@ These JSON string fields hold arbitrary implementation-specific data:
 These string fields are matched by equality but their meaning is implementation-defined:
 
 - `machineName` - Identifies which state machine definition to use. The framework validates it exists but doesn't understand what it represents.
-- `specialistId` - Identifies a specialist (human or AI agent). The framework routes solicitations and tracks proposals/votes by this ID. **Human specialists are identified by including "human" (case-insensitive) anywhere in their specialistId** (e.g., `specialist.sheep.human`, `human_operator_1`). Human votes have weight 1.0 by default; LLM votes start at weight 0.0 and are scaled by the risk dial.
+- `specialistId` - Identifies a specialist (human or AI agent). The framework routes solicitations and tracks proposals/votes by this ID. **Human specialists are identified by including "human" (case-insensitive) anywhere in their specialistId** (e.g., `specialist.sheep.human`, `human_operator_1`). Human votes override all AI votes immediately.
 - `transitionName` / `toStateName` - Identifies transitions and target states in the state machine.
 
 ---
@@ -258,12 +258,11 @@ Materializations:
 
 Evaluate consensus using the built-in consensus logic. The framework invokes this directly (not via solicitation).
 
-**Default Arbiter: weighted ahead-by-k**
+**Default Arbiter: ahead-by-k**
 
-- LLMs begin with weight 0.0; humans begin with weight 1.0
-- If a human votes, that decision wins immediately
-- Otherwise, leading proposal must be ahead by k weighted votes
-- Risk dial (state-level config) scales LLM weights
+- Every AI vote counts as one vote (equal)
+- If a human votes, that decision wins immediately (human primacy override)
+- Otherwise, leading proposal must be ahead by k votes
 
 API Input:
 - `sessionId` (string, UUID, required)
@@ -297,7 +296,6 @@ API Input:
 - `strategyFunctionKey` (string) - Strategy function identifier (e.g., "proposer" loads `./strategies/{machineName}/proposer.ts`)
 - `modelId` (string) - Model identifier passed to the strategy
 - `displayName` (string) - Human-readable name for UI display
-- `weight` (number, default: 1.0) - Voting weight for consensus calculation
 - `temperature` (number, default: 0.2) - LLM temperature parameter
 - `maxTokens` (number, default: 2000) - LLM max tokens parameter
 - `topP` (number, optional) - LLM top_p parameter
@@ -317,7 +315,7 @@ Validation:
 - **Immutable Fields on Re-registration**: If a specialist with the same `specialistId` already exists:
   - `modelId` cannot be changed (returns 409 Conflict)
   - `strategyFunctionKey` cannot be changed (returns 409 Conflict)
-  - Other fields (weight, displayName, temperature, maxTokens, topP) can be updated
+  - Other fields (displayName, temperature, maxTokens, topP) can be updated
 
 Specialist ID Format:
 - **Recommended format**: `specialist.{sessionType}.{role}.{provider}_{model}_{tier}`
@@ -335,37 +333,14 @@ Test Cases:
 Materializations:
 - `specialists`: Upsert into this table based on the `specialistId`. Stores all registration parameters.
 
-### command.adjust_weight -> event.weight_adjusted
+### command.evaluate_alignment -> event.alignment_evaluated
 
-Adjust a specialist's voting weight. The weight is scoped to the specialist's `fromStateName` (null = applies to all states).
-
-API Input:
-- `specialistId` (string) - The specialist to adjust
-- `weight` (number, 0-10) - New weight value
-
-Stored Command (API input + server-generated):
-- `commandCorrelationId` (string, UUID)
-- All API input fields
-- `receivedAtTimestamp` (string, ISO 8601)
-
-Event Parameters:
-- `specialistId` (string)
-- `commandCorrelationId` (string, UUID)
-- `previousWeight` (number)
-- `newWeight` (number)
-- `adjustedAtTimestamp` (string, ISO 8601)
-
-Materializations:
-- `specialists`: Update the `weight` column for the matching `specialistId`.
-
-### command.recalculate_weight -> event.weight_recalculated
-
-Evaluative command that analyzes a specialist's voting history against human votes and recommends a new weight based on alignment. Does NOT mutate state—caller must issue `adjust_weight` separately to apply.
+Evaluative command that analyzes a specialist's voting and proposal history against human decisions and calculates an alignment score. Does NOT mutate state — the result event is stored in the event stream only.
 
 **Default Strategy: Agreement-based**
 - Finds vote pairs where specialist and human voted on the same `(proposalIdA, proposalIdB)`
-- Calculates agreement rate = matching votes / total comparisons
-- Recommended weight = agreement rate (0.0-1.0)
+- Calculates alignment score = matching votes / total comparisons
+- For proposers: did the specialist choose the same transition the human endorsed?
 
 API Input:
 - `specialistId` (string) - The specialist to evaluate
@@ -373,27 +348,20 @@ API Input:
 - `maxRounds` (number, optional) - Limit to last N transition rounds
 - `maxSeqNum` (number, optional) - Time-travel: only consider events up to this sequence number
 
-Stored Command (API input + server-generated):
-- `commandCorrelationId` (string, UUID)
-- All API input fields
-- `receivedAtTimestamp` (string, ISO 8601)
-
 Event Parameters:
-- `recalculationId` (string, UUID)
+- `evaluationId` (string, UUID)
 - `commandCorrelationId` (string, UUID)
 - `specialistId` (string)
 - `machineName` (string)
-- `recalculatedAtTimestamp` (string, ISO 8601)
+- `evaluatedAtTimestamp` (string, ISO 8601)
 - `fromStateName` (string, nullable) - The specialist's registered state scope
-- `recommendedWeight` (number) - Calculated weight based on alignment
-- `currentWeight` (number) - Specialist's current weight
-- `agreementRate` (number) - Agreement rate (0.0-1.0)
-- `totalComparisons` (number) - Vote pairs compared
-- `matchingVotes` (number) - Vote pairs where specialist agreed with human
+- `alignmentScore` (number) - Calculated alignment score (0.0-1.0)
+- `totalComparisons` (number) - Decisions compared
+- `matchingChoices` (number) - Decisions where specialist agreed with human
 - `reasoning` (string) - Human-readable explanation
 
 Materializations:
-- None. Evaluative command—records the analysis but doesn't update tables.
+- None. Evaluative command — records the analysis but doesn't update tables.
 
 ### command.evaluate_accuracy -> event.accuracy_evaluated
 

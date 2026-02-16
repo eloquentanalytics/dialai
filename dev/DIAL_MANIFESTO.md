@@ -26,7 +26,7 @@ If the human is always right, and there is more than one human, then humans can 
 
 ## AI Starts with Nothing
 
-DIAL is opinionated: it assumes AI will have no role in the process. LLM specialists start with weight zero. The assumption is that the task is too difficult for AI and only humans can navigate it.
+DIAL is opinionated: it assumes AI will have no role in the process. AI specialists start with no demonstrated alignment. The assumption is that the task is too difficult for AI and only humans can navigate it.
 
 DIAL then provides the mechanism to prove otherwise, one decision at a time.
 

@@ -345,16 +345,16 @@ DIAL provides built-in strategies for all specialist roles. These are referenced
 
 | Strategy | Description | Threshold |
 |----------|-------------|-----------|
-| `firstAvailable` | Proposes the first available transition (alphabetically) | -- |
-| `lastAvailable` | Proposes the last available transition (alphabetically) | -- |
+| `firstAvailable` | Proposes the first available transition (by insertion order) | -- |
+| `lastAvailable` | Proposes the last available transition (by insertion order) | -- |
 | `random` | Proposes a random available transition | -- |
-| `weightedRandom` | Proposes randomly with weights from `metaJson.weights` | -- |
+| `weightedRandom` | Proposes randomly, weighted by specialist alignment scores | -- |
 
 #### `firstAvailable`
 
 ```
 function firstAvailable(ctx: ProposerContext) -> Proposal:
-    transitions = sorted(ctx.transitions.keys())
+    transitions = list(ctx.transitions.keys())  // insertion order
     name = transitions[0]
     return {
         transitionName: name,
@@ -367,7 +367,7 @@ function firstAvailable(ctx: ProposerContext) -> Proposal:
 
 ```
 function lastAvailable(ctx: ProposerContext) -> Proposal:
-    transitions = sorted(ctx.transitions.keys())
+    transitions = list(ctx.transitions.keys())  // insertion order
     name = transitions[len(transitions) - 1]
     return {
         transitionName: name,
@@ -393,17 +393,17 @@ function random(ctx: ProposerContext) -> Proposal:
 
 ```
 function weightedRandom(ctx: ProposerContext) -> Proposal:
-    weights = ctx.metaJson?.weights or {}
     transitions = list(ctx.transitions.keys())
 
-    # Default weight is 1.0 for unspecified transitions
-    weighted = [(t, weights.get(t, 1.0)) for t in transitions]
-    name = weightedRandom_choice(weighted)
+    # Weights are derived from specialist alignment scores,
+    # calculated as needed by the orchestrator. Currently
+    # falls back to uniform random selection.
+    name = random_choice(transitions)
 
     return {
         transitionName: name,
         toState: ctx.transitions[name],
-        reasoning: f"Weighted random selection (weight: {weights.get(name, 1.0)})"
+        reasoning: "Weighted random selection"
     }
 ```
 
@@ -520,52 +520,29 @@ function preferShorterPath(ctx: VoterContext) -> Vote:
 
 ### Arbiter Strategies
 
-| Strategy | Description | Threshold |
-|----------|-------------|-----------|
-| `firstProposal` | Immediately selects the first proposal received | -- |
-| `aheadByK` | Requires k-vote lead for consensus | Vote lead (integer) |
-| `mostSimilar` | Compares proposals to human gold examples | Min similarity (0.0–1.0) |
-| `pairwiseConsensus` | Repeated pairwise testing until consensus | Agreement % (0.0–1.0) |
+| Strategy | Description | Key Parameter |
+|----------|-------------|---------------|
+| `alignmentWeightedMargin` | **Default.** Unified consensus score from all contributions | `consensus_threshold` (0.0–1.0) |
+| `firstProposal` | Immediately selects the first proposal received | — |
+| `mostSimilar` | Compares proposals to human exemplars via semantic similarity | Min similarity (0.0–1.0) |
+
+#### `alignmentWeightedMargin` *(Default)*
+
+The default strategy. Every specialist contribution (proposal, selection vote, pairwise vote) adds the specialist's alignment score to the transition it supports. Consensus is reached when one transition's margin of superiority crosses the threshold.
+
+See [Consensus Strategies](/docs/concepts/consensus-strategies#alignmentweightedmargin-default) for full documentation.
 
 #### `firstProposal`
 
 The simplest arbiter: immediately declares consensus on the first proposal received, with no voting required.
 
-```
-function firstProposal(ctx: ArbiterContext) -> ConsensusResult:
-    if len(ctx.proposals) == 0:
-        return {
-            consensusReached: false,
-            reasoning: "No proposals received"
-        }
-
-    # Sort by creation time and take the first
-    first = sorted(ctx.proposals, by: createdAt)[0]
-
-    return {
-        consensusReached: true,
-        winningProposalId: first.proposalId,
-        reasoning: "First proposal received wins"
-    }
-```
-
-**When to use:**
-- Testing and development
-- Low-stakes decisions where speed matters more than deliberation
-- Single-proposer scenarios where voting adds no value
-- Bootstrap phase before specialists are trained
-
-#### `aheadByK`
-
-See [Consensus Strategies](/docs/concepts/consensus-strategies#aheadByK) for full documentation.
+See [Consensus Strategies](/docs/concepts/consensus-strategies#firstproposal) for full documentation.
 
 #### `mostSimilar`
 
-See [Consensus Strategies](/docs/concepts/consensus-strategies#mostSimilar) for full documentation.
+Compares proposals to human exemplars using semantic similarity. No voting required.
 
-#### `pairwiseConsensus`
-
-See [Consensus Strategies](/docs/concepts/consensus-strategies#pairwiseConsensus) for full documentation.
+See [Consensus Strategies](/docs/concepts/consensus-strategies#mostsimilar) for full documentation.
 
 ### Strategy Combinations
 
@@ -574,10 +551,9 @@ Common combinations of proposer, voter, and arbiter strategies:
 | Use Case | Proposer | Voter | Arbiter |
 |----------|----------|-------|---------|
 | **Testing/Dev** | `firstAvailable` | `preferA` | `firstProposal` |
-| **Random baseline** | `random` | `random` | `aheadByK` (k=1) |
-| **Goal-oriented** | `random` | `preferGoal` | `aheadByK` (k=2) |
-| **Human-aligned** | (LLM) | (LLM) | `mostSimilar` |
-| **High-stakes** | (LLM) | (LLM) | `pairwiseConsensus` |
+| **Production** | (LLM) | (LLM) | `alignmentWeightedMargin` |
+| **Model selection** | (LLM) | — | `mostSimilar` |
+| **High-stakes** | (LLM) | (LLM) | `alignmentWeightedMargin` (threshold=0.8+) |
 
 ### Implementing Custom Strategies
 

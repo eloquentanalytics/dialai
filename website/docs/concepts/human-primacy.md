@@ -35,6 +35,56 @@ The AI cannot reliably distinguish human errors from human context it lacks. Hum
 
 It is always safer for the AI to assume the human had reasons, just as it is safer for a child to defer to a parent who has context the child cannot access.
 
+## How Human Primacy Works in DIAL
+
+### Alignment Score = 1.0
+
+Humans always have an **alignment score of 1.0** — they *are* the ground truth by definition. In the [unified consensus score](./arbitration.md), a human's contribution carries the maximum possible multiplier:
+
+- A human proposal adds **1.0** to the transition's score
+- A human vote adds **1.0** to the voted transition's score
+- An AI specialist with alignment 0.7 adds **0.7** for the same action
+
+This means a single human contribution carries more weight than any individual AI contribution. It also means that as AI alignment approaches 1.0, the AI's contributions approach the influence of a human — but never exceed it.
+
+### Forcing Decisions
+
+When the arbiter exhausts all specialists without reaching consensus, it **blocks for a human**. The human can then **force** a decision — bypassing the consensus score entirely:
+
+1. The human selects a transition (or a specific proposal)
+2. The arbiter accepts it immediately — no score evaluation
+3. The session advances to the next state
+
+AI specialists cannot force decisions. They can only contribute to the consensus score.
+
+### Exemplars: Ground Truth for Learning
+
+Every human-forced decision creates an **exemplar** — a snapshot of:
+- The full context that was available to all specialists
+- All proposals that were submitted
+- All votes that were cast
+- **The human's choice**: which transition, which proposal, with what reasoning
+
+Exemplars serve three purposes:
+
+1. **Alignment measurement**: After the human decides, the arbiter compares every specialist's contribution against the human's choice. This updates alignment scores — "did you predict what the human chose?"
+2. **Few-shot learning**: Exemplars are provided to AI specialists as domain-native history in future rounds. The specialist sees: "In this situation, the transition was X, with this reasoning." This is presented without any framework metadata — the specialist sees a decision history, not a DIAL training set.
+3. **Fine-tuning data**: Exemplars can be extracted as training data for model fine-tuning, enabling cheaper models to replicate the decisions of expensive models or humans.
+
+### Semantic Isolation
+
+When exemplars are presented to AI specialists, they are **semantically isolated** from DIAL's internals. The specialist does not see:
+- Consensus scores, alignment scores, or thresholds
+- Who proposed what, or who voted how
+- That it is operating within a framework at all
+
+The specialist sees:
+- The current state (decision prompt)
+- Available transitions (as tool calls)
+- Past decisions at this state ("In this situation, the human chose X because...")
+
+This prevents the specialist from gaming the consensus mechanism or optimizing for framework artifacts.
+
 ## The Distributional Standard
 
 The goal of a DIAL specialist is to match the **probability distribution** a population of competent humans would produce for the same decision.
@@ -55,7 +105,7 @@ DIAL calibrates to whatever the humans actually are. The specialist will approac
 
 - **If the humans are all experts**, the distribution is tight and centered on expert-quality decisions. The specialist converges toward expert performance.
 - **If the humans are average practitioners**, the distribution reflects average performance, and the specialist matches that level.
-- **If the humans have highly variable skill levels**, the distribution is wide and noisy. The specialist has a poor signal to learn from and will likely perform below average, because it cannot distinguish expert decisions from novice decisions within a blurred distribution.
+- **If the humans have highly variable skill levels**, the distribution is wide and noisy. The specialist has a poor signal to learn from and will likely perform below average.
 
 The specialist's ceiling is the quality of the human signal. The framework makes this relationship explicit and measurable.
 
@@ -74,7 +124,7 @@ AI specialists are judged on **alignment with human choices**:
 | Alignment rate | 95% match with human | 60% match with human |
 | Reasoning quality | "Human would prefer X because..." | "The objectively correct answer is..." |
 | Confidence calibration | "High confidence human chooses X" | "I am certain X is correct" |
-| Distribution match | Reflects human-like variance across options | Collapses to a single answer with near-total confidence |
+| Distribution match | Reflects human-like variance | Collapses to single answer |
 
 ### 3. No Standing to Override
 
@@ -88,19 +138,19 @@ If an AI specialist has strong reasoning that the human is wrong, it should:
 
 ### The Architecture Handles Disagreement Through State Design
 
-When a domain genuinely requires multiple humans to participate, this is modeled through the state machine design. Each human's decision can be its own state transition, or multiple humans can vote with the ahead-by-k consensus mechanism determining the outcome.
+When a domain genuinely requires multiple humans to participate, this is modeled through the state machine design. Each human's decision can be its own state transition, or multiple humans can vote with the consensus mechanism determining the outcome.
 
 ### Both Humans Are "Right" in a Distributional Sense
 
 When we say both humans are right, we mean two things:
 
-1. **Humans exist in a distribution.** Human A choosing "approve" and Human B choosing "request changes" are both points in the [distributional standard](#the-distributional-standard) described above. Neither is wrong; they reflect the natural variance in human judgment.
+1. **Humans exist in a distribution.** Human A choosing "approve" and Human B choosing "request changes" are both points in the distributional standard described above. Neither is wrong; they reflect the natural variance in human judgment.
 
 2. **The specialist must assume any human answer is valid.** It cannot distinguish between "this human made an error" and "this human has context I lack," so any individual human response must be treated as a legitimate sample from the distribution.
 
-### What About Multi-Stakeholder Decisions?
+### Multi-Stakeholder Decisions
 
-When a domain genuinely requires multiple humans to agree (e.g., two reviewers must both approve a PR), this is modeled as **separate states in the machine**. Each reviewer's decision is its own decision point, and each advances the machine independently:
+When a domain genuinely requires multiple humans to agree (e.g., two reviewers must both approve a PR), this is modeled as **separate states in the machine**:
 
 ```mermaid
 graph LR
@@ -109,13 +159,13 @@ graph LR
     S3 -->|"Merge / Request Changes"| S4[Resolved]
 ```
 
-Human disagreement between reviewers is resolved by human mechanisms (escalation, authority structures, negotiation) at the process design level. Organizational disagreement is outside the scope of AI-human calibration.
+Human disagreement between reviewers is resolved by human mechanisms (escalation, authority structures, negotiation) at the process design level.
 
 ## Human Activity as Ground Truth
 
 Human primacy in DIAL means that **human activity is the reference for evaluating AI specialists**. When measuring how well an AI specialist performs, the question is: how closely does it match what humans would decide?
 
-When humans participate, their decisions are recorded as ground truth. AI specialists are evaluated on how well their decisions align with human decisions. See [Specialists — Human vs AI](./specialists.md#human-vs-ai-specialists) for the specific privileges and constraints of each.
+When humans participate, their decisions are recorded as exemplars. AI specialists are evaluated on how well their choices align with human decisions over time. The alignment score — a simple fraction of matching choices — is the quantitative expression of this relationship.
 
 ## Common Objections
 
@@ -143,7 +193,7 @@ The AI operates on a subset of reality. When it seems "objectively right," that 
 
 Progressive collapse assumes stationary conditions: that the human distribution stays stable long enough for specialists to converge on it. In practice, human preferences shift constantly (new employees, changing strategies, evolving markets, policy updates).
 
-The system is designed to detect non-stationarity. The human who participates periodically provides ongoing ground truth. When the population distribution shifts, agreement rates between specialists and human references visibly decline. When agreement drops, the system's response is mechanical: the ahead-by-k consensus threshold becomes harder to reach, the system re-expands (soliciting more proposals, more votes, more human participation), and then re-converges on the new distribution through the same measurement process that produced the original collapse.
+The system detects non-stationarity through the **trip line**. The human who participates periodically provides ongoing ground truth. When the population distribution shifts, alignment scores between specialists and the new human references decline. Lower alignment means lower consensus scores, which means the arbiter is less likely to reach consensus autonomously. The system naturally re-expands: more rounds require human participation, which generates new exemplars calibrated to the shifted distribution, and the convergence cycle begins again.
 
 Organizations in genuinely non-stationary environments will see shorter periods of collapsed execution and more frequent re-calibration cycles. DIAL makes that cost visible rather than hiding it.
 
@@ -157,6 +207,6 @@ Tasks where AI has clear advantages (arithmetic, data lookup, pattern matching o
 
 ## Related Concepts
 
-- [Specialists](./specialists.md): How specialists participate
-- [Arbitration](./arbitration.md): Consensus mechanisms
+- [Specialists](./specialists.md): How specialists participate and earn alignment
+- [Arbitration](./arbitration.md): The consensus score and how human contributions carry maximum alignment
 - [Decision Cycle](./decision-cycle.md): The process that implements human primacy

@@ -4,58 +4,215 @@ sidebar_position: 12
 
 # Consensus Strategies
 
-DIAL provides three built-in consensus strategies for arbiters. Each strategy determines when consensus has been reached and which proposal wins. Strategies are stored in `src/strategies/arbiters/` and referenced by name via `strategyFnName`.
+DIAL's default consensus mechanism is the **Alignment-Weighted Margin of Superiority** algorithm — a unified approach where every specialist contribution (proposal, selection vote, pairwise vote) feeds into a single consensus score per transition. DIAL also ships with simpler strategies for specific use cases.
 
 ## Overview
 
-| Strategy | Voting Required | Best For | Threshold Meaning |
-|----------|:---------------:|----------|-------------------|
-| `firstProposal` | No | Testing, single-proposer, bootstrap | -- |
-| `mostSimilar` | No | States with reliable human gold examples | Minimum semantic similarity (0.0–1.0) |
-| `aheadByK` | Yes | Fast preference aggregation | Vote lead required (integer) |
-| `pairwiseConsensus` | Yes | Nuanced/complex decisions | Agreement percentage (0.0–1.0) |
+| Strategy | Voting Required | Best For | Key Parameter |
+|----------|:---------------:|----------|---------------|
+| `alignmentWeightedMargin` | Optional | **Default.** General use, progressive collapse | `consensus_threshold` (0.0–1.0) |
+| `firstProposal` | No | Testing, single-proposer, bootstrap | — |
+| `mostSimilar` | No | States with reliable exemplars | Minimum similarity (0.0–1.0) |
 
-## `firstProposal`
+## `alignmentWeightedMargin` *(Default)*
 
-The simplest arbiter strategy: immediately declares consensus on the first proposal received. No voting phase, no comparison—the first proposal wins.
+The default strategy. Every contribution adds the specialist's alignment score to the transition it supports. Consensus is reached when one transition is sufficiently ahead of the rest.
 
 ### When to Use
 
-- Testing and development environments
-- Single-proposer scenarios where voting adds no value
-- Low-stakes decisions where speed matters more than deliberation
-- Bootstrap phase before specialists are trained
-- Baseline comparison for measuring more sophisticated strategies
+- **Always**, unless you have a specific reason to use a simpler strategy
+- Production systems with multiple specialists
+- Any scenario where progressive collapse is desired
+- When you want the system to naturally adapt as alignment improves
 
-### Configuration
+### How It Works
 
-```typescript
-registerArbiter({
-  specialistId: "fast-arbiter",
-  machineName: "simple-task",
-  strategyFnName: "firstProposal",
-  // No threshold needed
-});
+#### Step 1: Score Each Transition
+
+As proposals and votes arrive, the arbiter accumulates a score for each transition:
+
 ```
+score(T) = Σ alignment_i × support_i(T)
+```
+
+Every type of contribution adds to the transition score:
+
+| Contribution | What it supports |
+|-------------|-----------------|
+| **Proposal** for transition T | Adds `alignment_proposer` to score(T) |
+| **Selection vote** for a proposal targeting T | Adds `alignment_voter` to score(T) |
+| **Pairwise vote A** (where A targets T) | Adds `alignment_voter` to score(T) |
+| **Pairwise vote BOTH** (both target T) | Adds `alignment_voter` to score(T) |
+| **Pairwise vote BOTH** (A targets T, B targets U) | Adds `alignment_voter × 0.5` to score(T) and score(U) |
+| **Pairwise vote NEITHER** | Adds nothing |
+
+#### Step 2: Calculate Margin of Superiority
+
+```
+margin = (score(leader) − score(runner_up)) / Σ alignment_i
+```
+
+The margin is normalized by total alignment in play, so it's always between 0 and 1 regardless of how many specialists participate.
+
+#### Step 3: Check Threshold
+
+```
+consensus when: margin ≥ consensus_threshold
+```
+
+The **consensus threshold** is the **risk dial** — a state-level parameter that controls how much superiority is required.
 
 ### Algorithm
 
 ```
-function firstProposal(ctx: ArbiterContext) -> ConsensusResult:
+function alignmentWeightedMargin(ctx) -> ConsensusResult:
     if len(ctx.proposals) == 0:
+        return { consensusReached: false, reasoning: "No proposals" }
+
+    # Group proposals by transition
+    transition_scores = {}
+    total_alignment = 0
+
+    for proposal in ctx.proposals:
+        T = proposal.transitionName
+        a = alignment(proposal.specialistId)
+        transition_scores[T] = transition_scores.get(T, 0) + a
+        total_alignment += a
+
+    for vote in ctx.selectionVotes:
+        T = voted_proposal.transitionName
+        a = alignment(vote.specialistId)
+        transition_scores[T] = transition_scores.get(T, 0) + a
+        total_alignment += a
+
+    for vote in ctx.pairwiseVotes:
+        a = alignment(vote.specialistId)
+        total_alignment += a
+        if vote.choice == "A":
+            T = vote.proposalA.transitionName
+            transition_scores[T] += a
+        elif vote.choice == "B":
+            T = vote.proposalB.transitionName
+            transition_scores[T] += a
+        elif vote.choice == "BOTH":
+            T_a = vote.proposalA.transitionName
+            T_b = vote.proposalB.transitionName
+            if T_a == T_b:
+                transition_scores[T_a] += a
+            else:
+                transition_scores[T_a] += a * 0.5
+                transition_scores[T_b] += a * 0.5
+        # NEITHER: no score added
+
+    if total_alignment == 0:
+        return { consensusReached: false, reasoning: "No alignment data" }
+
+    # Find leader and runner-up
+    sorted_transitions = sorted(transition_scores.items(), by: value, desc: true)
+    leader_name, leader_score = sorted_transitions[0]
+    runner_up_score = sorted_transitions[1][1] if len(sorted_transitions) > 1 else 0
+
+    margin = (leader_score - runner_up_score) / total_alignment
+
+    if margin >= ctx.consensus_threshold:
+        # Find the best proposal for the winning transition
+        best_proposal = highest_alignment_proposal(ctx.proposals, leader_name)
         return {
-            consensusReached: false,
-            reasoning: "No proposals received"
+            consensusReached: true,
+            winningProposalId: best_proposal.proposalId,
+            reasoning: f"Margin {margin:.2f} ≥ threshold {ctx.consensus_threshold}"
         }
 
-    # Sort by creation timestamp and take the first
-    sorted_proposals = sorted(ctx.proposals, by: createdAt, ascending: true)
-    first = sorted_proposals[0]
+    return {
+        consensusReached: false,
+        reasoning: f"Margin {margin:.2f} < threshold {ctx.consensus_threshold}"
+    }
+```
+
+### Proposal Clustering
+
+When multiple proposers choose the same transition, their alignment scores **combine** rather than compete. This is a natural consequence of scoring by transition: "approve" from Proposer A and "approve" from Proposer B both add to `score("approve")`.
+
+This has important implications:
+- Two moderately-aligned specialists agreeing on a transition can generate more consensus than one highly-aligned specialist alone
+- Agreement among specialists is rewarded — it's a signal that the transition is correct
+- Disagreement is also informative — two highly-aligned specialists proposing different transitions produces a low margin, surfacing genuine ambiguity
+
+### The Cold Start Problem
+
+When all AI specialists have alignment = 0:
+- Every contribution adds 0 to the score
+- `total_alignment = 0`, so the margin is undefined (treated as 0)
+- Consensus is impossible
+- The system blocks for a human decision
+
+This is intentional: the system cannot delegate until humans have provided ground truth.
+
+### Worked Example: Progressive Consensus
+
+**Round 1** (cold start — all alignment = 0):
+
+| Specialist | Action | Alignment | Contribution |
+|-----------|--------|-----------|-------------|
+| Proposer A | propose "approve" | 0.0 | 0.0 |
+| Proposer B | propose "reject" | 0.0 | 0.0 |
+
+Scores: approve = 0, reject = 0. **Blocked.** Human forces "approve."
+
+**Round 5** (after calibration):
+
+| Specialist | Action | Alignment | Contribution |
+|-----------|--------|-----------|-------------|
+| Proposer A | propose "approve" | 0.8 | 0.8 |
+| Proposer B | propose "approve" | 0.6 | 0.6 |
+| Sel. Voter C | picks Proposer A's proposal | 0.7 | 0.7 |
+
+Scores: approve = 0.8 + 0.6 + 0.7 = **2.1**, no runner-up.
+
+```
+margin = (2.1 − 0) / (0.8 + 0.6 + 0.7) = 2.1 / 2.1 = 1.0
+```
+
+With threshold = 0.5: ✅ Consensus reached at selection voting. Pairwise voters never solicited.
+
+**Round 50** (champion mode):
+
+| Specialist | Action | Alignment | Contribution |
+|-----------|--------|-----------|-------------|
+| Proposer A | propose "approve" | 0.95 | 0.95 |
+
+All other proposers and voters have been disabled (pruned).
+
+```
+margin = (0.95 − 0) / 0.95 = 1.0
+```
+
+Consensus reached on proposals alone. No voting at all.
+
+## `firstProposal`
+
+The simplest strategy: immediately declares consensus on the first valid proposal received. No voting, no alignment scoring.
+
+### When to Use
+
+- Testing and development
+- Single-proposer scenarios
+- Bootstrap phase before any specialists are trained
+- Deterministic pipelines where deliberation adds no value
+
+### Algorithm
+
+```
+function firstProposal(ctx) -> ConsensusResult:
+    if len(ctx.proposals) == 0:
+        return { consensusReached: false, reasoning: "No proposals" }
+
+    first = sorted(ctx.proposals, by: createdAt, ascending: true)[0]
 
     return {
         consensusReached: true,
         winningProposalId: first.proposalId,
-        reasoning: f"First proposal received wins (from {first.specialistId})"
+        reasoning: f"First proposal wins (from {first.specialistId})"
     }
 ```
 
@@ -63,61 +220,39 @@ function firstProposal(ctx: ArbiterContext) -> ConsensusResult:
 
 **Advantages:**
 - Zero latency: no waiting for votes
-- Deterministic: same proposals always produce same result
 - Simple to reason about
 
 **Disadvantages:**
 - No deliberation: ignores all other proposals
-- Order-dependent: whoever submits first wins
 - No alignment signal: provides no data for measuring specialist quality
-
-### Use with Caution
-
-This strategy bypasses DIAL's core value proposition (measured consensus). Use it only when:
-1. You genuinely don't need deliberation
-2. You're testing/debugging the system
-3. You're measuring baseline performance
-
-For production use cases, prefer `aheadByK` (with k=1 for speed) or `mostSimilar` (for alignment measurement).
+- Bypasses DIAL's core value proposition
 
 ## `mostSimilar`
 
-Compares each proposal directly to human gold examples using semantic similarity. No voting phase required—the proposal most similar to human gold wins.
+Compares each proposal to human gold examples (exemplars) using semantic similarity. The proposal most similar to past human decisions wins. No voting required.
 
 ### When to Use
 
-- You have reliable human gold examples for this state
+- You have reliable exemplars for this state
 - Semantic similarity provides clear, unambiguous scores
-- Your goal is model selection, not consensus-building
 - You want fast decisions without voting overhead
-
-### Configuration
-
-```typescript
-registerArbiter({
-  specialistId: "similarity-arbiter",
-  machineName: "document-review",
-  strategyFnName: "mostSimilar",
-  threshold: 0.85,  // minimum similarity to declare winner
-});
-```
+- Model selection scenarios (finding the best model for a state)
 
 ### Algorithm
 
 ```
-function mostSimilar(ctx: ArbiterContext) -> ConsensusResult:
-    if ctx.humanGoldExamples is empty:
-        return { consensusReached: false, reasoning: "No human gold examples available" }
+function mostSimilar(ctx) -> ConsensusResult:
+    if ctx.exemplars is empty:
+        return { consensusReached: false, reasoning: "No exemplars" }
 
     scores = []
     for proposal in ctx.proposals:
         similarity = max(
-            semantic_similarity(proposal.reasoning, gold.reasoning)
-            for gold in ctx.humanGoldExamples
+            semantic_similarity(proposal.reasoning, exemplar.reasoning)
+            for exemplar in ctx.exemplars
         )
         scores.append({ proposalId: proposal.proposalId, similarity })
 
-    # Sort by similarity descending
     scores.sort(by: similarity, descending: true)
 
     if scores[0].similarity < ctx.threshold:
@@ -126,10 +261,10 @@ function mostSimilar(ctx: ArbiterContext) -> ConsensusResult:
             reasoning: f"Best similarity {scores[0].similarity} below threshold {ctx.threshold}"
         }
 
-    # Check for clear winner (if multiple proposals)
+    # Check for clear winner
     if len(scores) >= 2:
         gap = scores[0].similarity - scores[1].similarity
-        if gap < 0.05:  # configurable minimum gap
+        if gap < 0.05:
             return {
                 consensusReached: false,
                 reasoning: f"No clear winner: top two within {gap} similarity"
@@ -138,194 +273,9 @@ function mostSimilar(ctx: ArbiterContext) -> ConsensusResult:
     return {
         consensusReached: true,
         winningProposalId: scores[0].proposalId,
-        reasoning: f"Proposal most similar to human gold (similarity: {scores[0].similarity})"
+        reasoning: f"Most similar to exemplar (similarity: {scores[0].similarity})"
     }
 ```
-
-### Semantic Similarity
-
-The `semantic_similarity` function computes similarity between two reasoning strings. Implementation options:
-
-- **Embedding cosine similarity**: Embed both strings, compute cosine distance
-- **LLM-based scoring**: Ask an LLM to rate similarity (deterministic with temperature=0)
-- **Hybrid**: Embedding for speed, LLM for disambiguation
-
-```typescript
-async function semanticSimilarity(a: string, b: string): Promise<number> {
-  const embeddingA = await embed(a);
-  const embeddingB = await embed(b);
-  return cosineSimilarity(embeddingA, embeddingB);
-}
-```
-
-## `aheadByK`
-
-Requires a proposal to be ahead by k votes to win. Specialists vote by ranking all proposals; the top-ranked proposal from each voter gets +1.
-
-### When to Use
-
-- You want fast preference aggregation
-- Voting is acceptable overhead
-- You need a simple, understandable threshold
-- Multi-stakeholder participation
-
-### Configuration
-
-```typescript
-registerArbiter({
-  specialistId: "voting-arbiter",
-  machineName: "triage-task",
-  strategyFnName: "aheadByK",
-  threshold: 2,  // must be ahead by 2 votes
-});
-```
-
-### Algorithm
-
-```
-function aheadByK(ctx: ArbiterContext) -> ConsensusResult:
-    if len(ctx.proposals) == 0:
-        return { consensusReached: false, reasoning: "No proposals" }
-
-    if len(ctx.proposals) == 1:
-        # Single proposal: check if it has enough support
-        support = count_votes_for(ctx.votes, ctx.proposals[0].proposalId)
-        if support >= ctx.threshold:
-            return {
-                consensusReached: true,
-                winningProposalId: ctx.proposals[0].proposalId,
-                reasoning: f"Single proposal with {support} votes"
-            }
-        return { consensusReached: false, reasoning: f"Single proposal needs {ctx.threshold} votes, has {support}" }
-
-    # Multiple proposals: tally votes
-    tallies = {}
-    for proposal in ctx.proposals:
-        tallies[proposal.proposalId] = 0
-
-    for vote in ctx.votes:
-        # In ranked voting, voteFor indicates the preferred proposal
-        if vote.voteFor == "A":
-            tallies[vote.proposalIdA] += 1
-        elif vote.voteFor == "B":
-            tallies[vote.proposalIdB] += 1
-        elif vote.voteFor == "BOTH":
-            tallies[vote.proposalIdA] += 1
-            tallies[vote.proposalIdB] += 1
-        # NEITHER adds nothing
-
-    # Sort by tally descending
-    sorted_tallies = sorted(tallies.items(), by: value, descending: true)
-
-    leader_id, leader_votes = sorted_tallies[0]
-    runner_up_votes = sorted_tallies[1][1] if len(sorted_tallies) > 1 else 0
-
-    lead = leader_votes - runner_up_votes
-
-    if lead >= ctx.threshold:
-        return {
-            consensusReached: true,
-            winningProposalId: leader_id,
-            reasoning: f"Ahead by {lead} votes (threshold: {ctx.threshold})"
-        }
-
-    return {
-        consensusReached: false,
-        reasoning: f"Lead of {lead} below threshold {ctx.threshold}"
-    }
-```
-
-## `pairwiseConsensus`
-
-Performs repeated pairwise comparisons between proposals. Each pair is voted on; the winner of each matchup advances. Consensus is reached when one proposal has won a sufficient percentage of its matchups.
-
-### When to Use
-
-- Decisions are nuanced and require careful comparison
-- You want rich voting data for alignment measurement
-- Stakes are high enough to justify extra voting rounds
-- Proposals may have subtle differences
-
-### Configuration
-
-```typescript
-registerArbiter({
-  specialistId: "consensus-arbiter",
-  machineName: "complex-decision",
-  strategyFnName: "pairwiseConsensus",
-  threshold: 0.75,  // must win 75% of matchups
-});
-```
-
-### Algorithm
-
-```
-function pairwiseConsensus(ctx: ArbiterContext) -> ConsensusResult:
-    if len(ctx.proposals) == 0:
-        return { consensusReached: false, reasoning: "No proposals" }
-
-    if len(ctx.proposals) == 1:
-        return {
-            consensusReached: true,
-            winningProposalId: ctx.proposals[0].proposalId,
-            reasoning: "Single proposal"
-        }
-
-    # Build matchup results from votes
-    # Each vote is a pairwise comparison between proposalIdA and proposalIdB
-    wins = {}
-    matchups = {}
-
-    for proposal in ctx.proposals:
-        wins[proposal.proposalId] = 0
-        matchups[proposal.proposalId] = 0
-
-    for vote in ctx.votes:
-        matchups[vote.proposalIdA] += 1
-        matchups[vote.proposalIdB] += 1
-
-        if vote.voteFor == "A":
-            wins[vote.proposalIdA] += 1
-        elif vote.voteFor == "B":
-            wins[vote.proposalIdB] += 1
-        elif vote.voteFor == "BOTH":
-            wins[vote.proposalIdA] += 0.5
-            wins[vote.proposalIdB] += 0.5
-        # NEITHER: no wins awarded
-
-    # Calculate win rate for each proposal
-    win_rates = {}
-    for proposal_id in wins:
-        if matchups[proposal_id] > 0:
-            win_rates[proposal_id] = wins[proposal_id] / matchups[proposal_id]
-        else:
-            win_rates[proposal_id] = 0
-
-    # Find the proposal with highest win rate
-    sorted_rates = sorted(win_rates.items(), by: value, descending: true)
-
-    leader_id, leader_rate = sorted_rates[0]
-
-    if leader_rate >= ctx.threshold:
-        return {
-            consensusReached: true,
-            winningProposalId: leader_id,
-            reasoning: f"Won {leader_rate*100:.0f}% of matchups (threshold: {ctx.threshold*100:.0f}%)"
-        }
-
-    return {
-        consensusReached: false,
-        reasoning: f"Best win rate {leader_rate*100:.0f}% below threshold {ctx.threshold*100:.0f}%"
-    }
-```
-
-### Pairwise Scheduling
-
-For N proposals, there are N×(N-1)/2 possible pairings. The arbiter can:
-
-1. **Exhaustive**: Run all pairings before evaluating (most data, slowest)
-2. **Early exit**: Evaluate after each vote, stop when threshold reached (faster)
-3. **Round-robin**: Cycle through pairings, evaluate periodically
 
 ## Custom Strategies
 
@@ -336,7 +286,6 @@ registerArbiter({
   specialistId: "custom-arbiter",
   machineName: "my-task",
   strategyFn: async (ctx: ArbiterContext) => {
-    // Your custom logic here
     const winner = myCustomConsensusLogic(ctx.proposals, ctx.votes);
 
     if (winner) {
@@ -355,49 +304,45 @@ registerArbiter({
 });
 ```
 
-Custom strategies must be deterministic—given the same inputs, they must produce the same outputs.
+Custom strategies must be deterministic — given the same inputs, they must produce the same outputs.
 
-## Strategy Selection Guidelines
+## Strategy Selection
 
 ```mermaid
 graph TD
     A[Need Consensus Strategy] --> B{Testing or<br/>single proposer?}
     B -->|Yes| C[firstProposal]
-    B -->|No| D{Human gold<br/>available?}
-    D -->|Yes| E{Similarity<br/>scores clear?}
-    D -->|No| F{How many<br/>proposals?}
+    B -->|No| D{Reliable exemplars<br/>available?}
+    D -->|Yes| E{Want model<br/>selection?}
+    D -->|No| F[alignmentWeightedMargin]
     E -->|Yes| G[mostSimilar]
     E -->|No| F
-    F -->|2| H[aheadByK]
-    F -->|3+| I{Need nuance?}
-    I -->|Yes| J[pairwiseConsensus]
-    I -->|No| H
 ```
 
 | Scenario | Recommended Strategy |
 |----------|---------------------|
+| Production use, general | `alignmentWeightedMargin` |
+| Progressive collapse desired | `alignmentWeightedMargin` |
 | Testing, dev, bootstrap | `firstProposal` |
-| Single proposer, no deliberation needed | `firstProposal` |
-| Reliable human gold examples | `mostSimilar` |
-| Fast triage, clear preferences | `aheadByK` |
-| Complex decisions, subtle differences | `pairwiseConsensus` |
-| Unknown/varying conditions | Start with `pairwiseConsensus`, collapse to simpler |
+| Model selection against exemplars | `mostSimilar` |
+| Unknown/varying conditions | `alignmentWeightedMargin` |
 
 ## Progressive Collapse
 
-As alignment improves, systems naturally collapse toward simpler strategies:
+With `alignmentWeightedMargin`, progressive collapse happens naturally within the same algorithm:
 
-1. **Start**: `pairwiseConsensus` (maximum data collection)
-2. **Improve**: Models learn from voting patterns
-3. **Simplify**: Switch to `aheadByK` (less overhead)
-4. **Optimize**: When gold examples are reliable, use `mostSimilar` (no voting)
-5. **Collapse**: Eventually, a single well-aligned model runs deterministically
+1. **Cold start**: All alignment = 0. Score is always 0. System blocks for human. Human decisions generate exemplars.
+2. **Calibration**: Alignment scores grow. Contributions start adding nonzero amounts to transition scores. The system may still need voters to reach the threshold.
+3. **Autonomous consensus**: High-alignment proposers generate enough score from proposals alone that selection and pairwise voting are never needed.
+4. **Pruning**: Low-alignment and redundant specialists are disabled. Cost drops. Fewer solicitations per round.
+5. **Champion**: One highly-aligned specialist handles the task solo. Consensus is immediate from a single proposal.
+6. **Collapsed**: A fine-tuned, cheap model replaces the original specialist. Same alignment, fraction of the cost.
 
-This progression is a natural outcome of measuring and optimizing alignment over time.
+The strategy never changes — the same `alignmentWeightedMargin` algorithm handles every stage. What changes is the **alignment scores** feeding into it.
 
 ## Related Concepts
 
-- [Arbitration](./arbitration.md): The role of arbiters in the decision cycle
-- [Alignment vs. Voting](./alignment-vs-voting.md): When to use direct alignment vs. voting
+- [Arbitration](./arbitration.md): The arbiter's role in evaluating consensus
+- [Specialists](./specialists.md): How specialists participate
 - [Human Primacy](./human-primacy.md): Why human gold examples are ground truth
-- [Registering Specialists](/docs/guides/registering-specialists): How to register arbiters
+- [Decision Cycle](./decision-cycle.md): Where consensus evaluation fits
