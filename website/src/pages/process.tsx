@@ -46,7 +46,7 @@ const steps = [
     number: "05",
     title: "Assemble the LLM Group",
     subtitle: "Register AI specialists with their prompt strategies",
-    body: "Register a group of LLMs as proposers and voters, each with a prompt strategy. Different models, different prompts, different approaches — all competing at the same decision points. More diversity means better coverage.",
+    body: "Register a group of LLMs as proposers, each with a prompt strategy. Different models, different prompts, different approaches — all competing at the same decision points. More diversity means better coverage.",
     icon: "◈",
   },
   {
@@ -54,7 +54,7 @@ const steps = [
     number: "06",
     title: "Humans Operate, LLMs Shadow",
     subtitle: "Run sessions with humans in the lead",
-    body: "Humans begin operating sessions using the state machine and screens. In parallel, LLMs shadow every decision — submitting proposals and votes managed by an arbiter. At this stage, every decision still requires human approval. The LLMs are learning, not deciding.",
+    body: "Humans begin operating sessions using the state machine and screens. In parallel, LLMs shadow every decision — submitting proposals managed by an arbiter. At this stage, every decision still requires human approval. The LLMs are learning, not deciding.",
     icon: "◎",
   },
   {

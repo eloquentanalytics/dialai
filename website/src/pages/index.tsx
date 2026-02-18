@@ -135,7 +135,7 @@ const outputs = [
     icon: "img/icon-empirical-trust.svg",
     title: "Cost per Decision",
     description:
-      "Exact USD, token count, and latency for every proposal and vote. Know what each AI specialist costs before you trust it.",
+      "Exact USD, token count, and latency for every proposal. Know what each AI specialist costs before you trust it.",
   },
   {
     icon: "img/icon-human-primacy.svg",
@@ -232,7 +232,7 @@ $ npx dialai machine.json
 Machine:       content-review
 Initial state: draft
 Goal state:    published
-Specialists:   3 proposers, 2 voters
+Specialists:   3 proposers
 Final state:   published ✓
 Cost:          $0.018 (6 decisions)
 Alignment:     96.2% (vs. human baseline)
@@ -517,7 +517,7 @@ function MetricsSection() {
                 </div>
               </div>
               <p className={styles.metricsCaption}>
-                Every proposal and vote records cost, latency, tokens, and
+                Every proposal records cost, latency, tokens, and
                 alignment against human ground truth
               </p>
             </div>
