@@ -9,6 +9,7 @@ import {
   sessions,
   specialists,
   proposals,
+  decisionLog,
 } from "./store.js";
 import {
   proposerStrategies,
@@ -35,6 +36,7 @@ import type {
   ArbitrationResult,
   ArbitrationPath,
   TransitionRecord,
+  DecisionRecord,
   SubmitProposalOptions,
   SubmitArbitrationOptions,
 } from "./types.js";
@@ -588,6 +590,51 @@ export function classifyArbitration(
 }
 
 /**
+ * Parses the consensus margin from an aheadByK reasoning string.
+ */
+function parseConsensusMargin(reasoning: string): number | null {
+  const match = reasoning.match(/margin ([\d.]+)/);
+  return match ? parseFloat(match[1]) : null;
+}
+
+/**
+ * Builds and stores a DecisionRecord for monitoring.
+ */
+function emitDecisionRecord(
+  session: Session,
+  roundId: string,
+  transitionName: string,
+  toState: string,
+  isHuman: boolean,
+  roundProposals: Proposal[],
+  consensusReasoning: string | null,
+  threshold: number
+): void {
+  const alignmentSnapshot: Record<string, number> = {};
+  for (const r of getAllAlignmentRecords(session.machineName)) {
+    alignmentSnapshot[r.specialistId] = r.alignmentScore;
+  }
+
+  const record: DecisionRecord = {
+    decisionId: generateUUID(),
+    sessionId: session.sessionId,
+    machineName: session.machineName,
+    roundId,
+    fromState: session.currentState,
+    toState,
+    transitionName,
+    isHuman,
+    proposals: [...roundProposals],
+    alignmentSnapshot,
+    consensusMargin: consensusReasoning ? parseConsensusMargin(consensusReasoning) : null,
+    threshold,
+    timestamp: new Date(),
+  };
+
+  decisionLog.set(record.decisionId, record);
+}
+
+/**
  * Evaluates consensus and optionally executes the winning transition.
  */
 export async function submitArbitration(
@@ -689,6 +736,15 @@ export async function submitArbitration(
         roundProposals
       );
 
+      // Emit decision record before executeTransition deletes proposals
+      const arbiter = getArbiter(session.machineName);
+      emitDecisionRecord(
+        session, effectiveRoundId,
+        path.transitionName, path.toState, true,
+        roundProposals, null,
+        arbiter?.threshold ?? 1
+      );
+
       // Execute the forced transition
       await executeTransition(sessionId, path.transitionName, path.toState, reasoning);
 
@@ -742,6 +798,15 @@ export async function submitArbitration(
           isHuman: false,
         };
       }
+
+      // Emit decision record before executeTransition deletes proposals
+      const evalArbiter = getArbiter(session.machineName);
+      emitDecisionRecord(
+        session, effectiveRoundId,
+        winningProposal.transitionName, winningProposal.toState, false,
+        roundProposals, consensusResult.reasoning,
+        evalArbiter?.threshold ?? 1
+      );
 
       // Execute the transition
       await executeTransition(

@@ -25,6 +25,8 @@ import {
 } from "./api.js";
 import { runSession } from "./engine.js";
 import { validateMachine } from "./utils.js";
+import { decisionLog } from "./store.js";
+import { getCollapseMetrics } from "./index.js";
 import type { MachineDefinition } from "./types.js";
 
 /**
@@ -216,6 +218,29 @@ export function createMcpServer(): Server {
             required: ["machine"],
           },
         },
+        {
+          name: "get_collapse_metrics",
+          description: "Get progressive collapse metrics for a machine",
+          inputSchema: {
+            type: "object",
+            properties: {
+              machineName: { type: "string", description: "Machine name" },
+            },
+            required: ["machineName"],
+          },
+        },
+        {
+          name: "get_decision_log",
+          description: "Get decision log records for a machine",
+          inputSchema: {
+            type: "object",
+            properties: {
+              machineName: { type: "string", description: "Machine name" },
+              limit: { type: "number", description: "Max records to return (default 100)" },
+            },
+            required: ["machineName"],
+          },
+        },
       ],
     };
   });
@@ -384,6 +409,34 @@ export function createMcpServer(): Server {
               {
                 type: "text",
                 text: JSON.stringify(session, null, 2),
+              },
+            ],
+          };
+        }
+
+        case "get_collapse_metrics": {
+          const metrics = getCollapseMetrics(args?.machineName as string);
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(metrics, null, 2),
+              },
+            ],
+          };
+        }
+
+        case "get_decision_log": {
+          const machineName = args?.machineName as string;
+          const limit = (args?.limit as number) ?? 100;
+          const records = [...decisionLog.values()]
+            .filter((d) => d.machineName === machineName)
+            .slice(-limit);
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify(records, null, 2),
               },
             ],
           };

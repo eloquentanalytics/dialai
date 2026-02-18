@@ -417,6 +417,71 @@ export interface AccuracyEvaluationResult {
 }
 
 // ============================================================================
+// Monitoring Types
+// ============================================================================
+
+/**
+ * A record of a single arbitration decision, captured for monitoring.
+ */
+export interface DecisionRecord {
+  decisionId: string;
+  sessionId: string;
+  machineName: string;
+  roundId: string;
+  fromState: string;
+  toState: string;
+  transitionName: string;
+  isHuman: boolean;
+  /** Snapshot of all proposals before they're deleted */
+  proposals: Proposal[];
+  /** Alignment scores at decision time */
+  alignmentSnapshot: Record<string, number>;
+  /** Consensus margin from aheadByK, or null if human-forced */
+  consensusMargin: number | null;
+  /** The arbiter threshold at decision time */
+  threshold: number;
+  timestamp: Date;
+}
+
+/**
+ * Computed metrics for progressive collapse monitoring.
+ */
+export interface CollapseMetrics {
+  machineName: string;
+  totalDecisions: number;
+  humanDecisions: number;
+  aiDecisions: number;
+  collapseRatio: number;
+  recentCollapseRatio: number;
+  averageConsensusMargin: number;
+  alignmentScores: Record<string, number>;
+  specialists: SpecialistMetrics[];
+  signals: Signal[];
+}
+
+/**
+ * Per-specialist performance metrics.
+ */
+export interface SpecialistMetrics {
+  specialistId: string;
+  alignment: number;
+  totalProposals: number;
+  winningProposals: number;
+  winRate: number;
+}
+
+export type SignalLevel = "info" | "warning" | "action";
+
+/**
+ * An actionable signal from monitoring analysis.
+ */
+export interface Signal {
+  level: SignalLevel;
+  code: string;
+  message: string;
+}
+
+// ============================================================================
 // Registration Options
 // ============================================================================
 

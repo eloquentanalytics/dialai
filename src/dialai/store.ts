@@ -5,7 +5,7 @@
  * All API functions read from and write to these maps.
  */
 
-import type { Session, Specialist, Arbiter, Proposal, AlignmentRecord, Exemplar } from "./types.js";
+import type { Session, Specialist, Arbiter, Proposal, AlignmentRecord, Exemplar, DecisionRecord } from "./types.js";
 
 /** All sessions by ID */
 export const sessions: Map<string, Session> = new Map();
@@ -22,6 +22,9 @@ export const alignmentRecords: Map<string, AlignmentRecord> = new Map();
 /** All exemplars by ID */
 export const exemplars: Map<string, Exemplar> = new Map();
 
+/** Decision records for monitoring progressive collapse */
+export const decisionLog: Map<string, DecisionRecord> = new Map();
+
 /**
  * Clears all in-memory state.
  * Useful for testing and resetting between runs.
@@ -32,4 +35,5 @@ export function clear(): void {
   proposals.clear();
   alignmentRecords.clear();
   exemplars.clear();
+  decisionLog.clear();
 }
