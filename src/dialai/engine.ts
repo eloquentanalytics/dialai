@@ -1,14 +1,16 @@
 /**
  * DIAL AI Engine
  *
- * The runSession function that drives machines through one decision cycle.
- * Implements full solicitation cascade, champion mode, trip line,
- * and self-healing.
+ * Tick-based orchestration: one global heartbeat that sweeps all active sessions.
+ * Each tick does exactly one atomic thing per session.
+ *
+ * Also provides runSession for convenience (loops tick() to completion).
  */
 
 import {
   createSession,
   getSession,
+  getSessions,
   registerProposer,
   registerArbiter,
   getProposers,
@@ -24,6 +26,7 @@ import { getAlignmentScore } from "./alignment.js";
 import type {
   MachineDefinition,
   Session,
+  TickResult,
 } from "./types.js";
 
 /** Default champion threshold */
@@ -85,19 +88,125 @@ function selfHeal(machineName: string): void {
 }
 
 /**
- * Runs a machine to completion.
+ * Process one tick for a single session.
+ * Returns a TickResult, or null if the session is terminal.
+ */
+async function tickOneSession(session: Session): Promise<TickResult | null> {
+  const { machineName } = session;
+
+  // Terminal sessions are skipped
+  if (session.currentState === session.machine.goalState) {
+    return null;
+  }
+
+  // Check what's already been submitted this round
+  const roundProposals = getProposalsForRound(
+    session.sessionId,
+    session.currentRoundId
+  );
+  const submitted = new Set(roundProposals.map((p) => p.specialistId));
+
+  // Get enabled proposers, champion-first ordering
+  const enabledProposers = getEnabledProposers(machineName);
+  const championId = selectChampion(machineName, CHAMPION_THRESHOLD);
+
+  const ordered = championId
+    ? [
+        ...enabledProposers.filter((p) => p.specialistId === championId),
+        ...enabledProposers.filter((p) => p.specialistId !== championId),
+      ]
+    : enabledProposers;
+
+  // Find the next proposer that hasn't submitted yet
+  for (const proposer of ordered) {
+    if (!submitted.has(proposer.specialistId)) {
+      await submitProposal({
+        sessionId: session.sessionId,
+        specialistId: proposer.specialistId,
+        roundId: session.currentRoundId,
+      });
+      return {
+        sessionId: session.sessionId,
+        machineName,
+        status: "solicited",
+        currentState: session.currentState,
+        specialistId: proposer.specialistId,
+      };
+    }
+  }
+
+  // All proposals are in → evaluate consensus
+  const consensus = await evaluateConsensus(session.sessionId);
+
+  if (consensus.consensusReached) {
+    const previousState = session.currentState;
+    const result = await submitArbitration({
+      sessionId: session.sessionId,
+      roundId: session.currentRoundId,
+    });
+
+    if (result.executed) {
+      // Trip line: if champion degraded, self-heal
+      if (championId) {
+        const currentScore = getAlignmentScore(championId, machineName);
+        if (currentScore < CHAMPION_THRESHOLD) {
+          selfHeal(machineName);
+        }
+      }
+
+      const updatedSession = await getSession(session.sessionId);
+      return {
+        sessionId: session.sessionId,
+        machineName,
+        status: "advanced",
+        currentState: updatedSession.currentState,
+        previousState,
+        transitionName: result.transitionName,
+        reasoning: result.reasoning,
+      };
+    }
+  }
+
+  // No consensus → needs human
+  return {
+    sessionId: session.sessionId,
+    machineName,
+    status: "needs_human",
+    currentState: session.currentState,
+  };
+}
+
+/**
+ * Global heartbeat. Sweeps all active sessions, performing one atomic step per session.
+ *
+ * Per-session behavior:
+ * - If a proposer hasn't submitted yet → solicit that one proposer (status: 'solicited')
+ * - If all proposers submitted and consensus reached → execute transition (status: 'advanced')
+ * - If all proposers submitted but no consensus → report (status: 'needs_human')
+ * - Terminal sessions are omitted from results
+ *
+ * @returns Array of TickResult for each non-terminal session
+ */
+export async function tick(): Promise<TickResult[]> {
+  const allSessions = await getSessions();
+  const results: TickResult[] = [];
+
+  for (const session of allSessions) {
+    const result = await tickOneSession(session);
+    if (result) {
+      results.push(result);
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Runs a machine to completion using tick-based orchestration.
  *
  * Creates a session, registers specialists (from the machine definition or
- * built-in defaults), and loops through the decision cycle until
- * currentState === goalState.
- *
- * Simplified solicitation cascade:
- * 1. Champion mode check -> solicit -> consensus -> arbitrate
- * 2. Full cascade: solicit all proposers -> consensus -> arbitrate
- * 3. If no consensus: return session in current state (waiting for human)
- *
- * Champion mode: if one proposer's alignment > threshold, fast path.
- * Trip line: if champion's alignment degrades below threshold, revert to full cascade.
+ * built-in defaults), and loops tick() until the session reaches goalState
+ * or needs human intervention.
  *
  * @param machine - The machine definition to run
  * @returns The session (completed or waiting for human)
@@ -160,96 +269,14 @@ export async function runSession(
     arbiter = getArbiter(normalizedMachine.machineName);
   }
 
-  // Main decision loop
-  let currentSession = await getSession(session.sessionId);
-
-  while (currentSession.currentState !== normalizedMachine.goalState) {
-    const machineName = normalizedMachine.machineName;
-
-    // === Champion mode check ===
-    const championId = selectChampion(machineName, CHAMPION_THRESHOLD);
-
-    if (championId) {
-      // Fast path: only solicit from champion
-      await submitProposal({
-        sessionId: currentSession.sessionId,
-        specialistId: championId,
-        roundId: currentSession.currentRoundId,
-      });
-
-      // Check consensus immediately
-      const consensusResult = await evaluateConsensus(currentSession.sessionId);
-      if (consensusResult.consensusReached) {
-        const result = await submitArbitration({
-          sessionId: currentSession.sessionId,
-          roundId: currentSession.currentRoundId,
-        });
-        if (result.executed) {
-          // Trip line check: verify champion still above threshold
-          const currentScore = getAlignmentScore(championId, machineName);
-          if (currentScore < CHAMPION_THRESHOLD) {
-            // Champion degraded, self-heal for next iteration
-            selfHeal(machineName);
-          }
-          currentSession = await getSession(session.sessionId);
-          continue;
-        }
-      }
-
-      // Champion fast path didn't reach consensus, fall through to full cascade
-      // Trip line: revert to full cascade
-      selfHeal(machineName);
-    }
-
-    // === Full solicitation cascade ===
-
-    // Solicit proposals from all enabled proposers
-    const enabledProposers = getEnabledProposers(machineName);
-    for (const proposer of enabledProposers) {
-      // Skip if champion already submitted in fast path above
-      if (championId === proposer.specialistId) {
-        const existing = getProposalsForRound(
-          currentSession.sessionId,
-          currentSession.currentRoundId
-        );
-        if (existing.some((p) => p.specialistId === championId)) {
-          continue;
-        }
-      }
-      await submitProposal({
-        sessionId: currentSession.sessionId,
-        specialistId: proposer.specialistId,
-        roundId: currentSession.currentRoundId,
-      });
-    }
-
-    // Check consensus after proposals
-    const postProposalConsensus = await evaluateConsensus(currentSession.sessionId);
-    if (postProposalConsensus.consensusReached) {
-      const result = await submitArbitration({
-        sessionId: currentSession.sessionId,
-        roundId: currentSession.currentRoundId,
-      });
-      if (result.executed) {
-        currentSession = await getSession(session.sessionId);
-        continue;
-      }
-    }
-
-    // Try final arbitration
-    const finalResult = await submitArbitration({
-      sessionId: currentSession.sessionId,
-      roundId: currentSession.currentRoundId,
-    });
-
-    if (finalResult.executed) {
-      currentSession = await getSession(session.sessionId);
-      continue;
-    }
-
-    // Exhausted — no consensus reached, waiting for human
-    return currentSession;
+  // Tick loop: keep ticking until session is terminal or needs human
+  let done = false;
+  while (!done) {
+    const results = await tick();
+    const mine = results.find((r) => r.sessionId === session.sessionId);
+    if (!mine || mine.status === "needs_human") done = true;
+    // 'solicited' → keep ticking; 'advanced' → check if terminal next tick
   }
 
-  return currentSession;
+  return getSession(session.sessionId);
 }

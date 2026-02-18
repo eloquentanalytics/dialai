@@ -259,18 +259,17 @@ describe("E2E: Champion Mode", () => {
 
     expect(selectChampion(machineName, CHAMPION_THRESHOLD)).toBe("champ");
 
-    // runSession: champion mode -> champ submits -> firstProposal -> consensus -> done
-    // If consensus is reached in champion mode, full cascade doesn't run.
-    // But if it falls through (tested separately), the skip logic is:
-    // in full cascade, champion's proposal already exists -> skip champion
+    // runSession uses tick-based orchestration: all proposers are solicited
+    // one at a time (champion first due to ordering), then consensus is evaluated.
+    // Tick 1: solicit champ (champion ordering)
+    // Tick 2: solicit backup
+    // Tick 3: evaluate → consensus (firstProposal picks champ's proposal) → advance
     const session = await runSession(machine);
     expect(session.currentState).toBe("done");
 
-    // Champion should have been solicited exactly once (in the champion fast path)
-    // firstProposal gives consensus on champion's proposal
+    // Champion should have been solicited exactly once
     expect(champ_submit_count).toBe(1);
-    // Backup should NOT have been solicited since champion mode succeeded
-    // With firstProposal, the champion's single proposal reaches consensus
-    expect(backup_submit_count).toBe(0);
+    // Backup is also solicited once (tick-based: all proposers submit before evaluation)
+    expect(backup_submit_count).toBe(1);
   });
 });

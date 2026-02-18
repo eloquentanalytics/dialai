@@ -7,6 +7,9 @@
  * solves. The key insight — bringing the goat back — defeats greedy
  * heuristics, making human training more dramatic than Hanoi.
  *
+ * Uses tick-based orchestration: each call to tick() does one atomic thing
+ * per session (solicit one proposer, evaluate consensus, or report needs_human).
+ *
  * State encoding: 4-char string "FWGC" where each char is 0 (left) or 1 (right).
  *   F=Farmer, W=Wolf, G=Goat, C=Cabbage.
  *   e.g. "0000" = all on left (start), "1111" = all on right (goal).
@@ -29,6 +32,7 @@
  *
  * Three specialists:
  *   "human-optimal"  — registered as human, forces optimal moves via BFS.
+ *                       Disabled as a proposer so tick() only solicits LLMs.
  *   "llm-cautious"   — learns from exemplars; greedy fallback prefers
  *                       moving items right (fails at bring-goat-back step).
  *   "llm-greedy"     — random valid move every time (never learns).
@@ -41,9 +45,10 @@ import {
   createSession,
   registerProposer,
   registerArbiter,
-  submitProposal,
+  disableSpecialist,
+  getEnabledProposers,
   submitArbitration,
-  evaluateConsensus,
+  tick,
   getAlignmentScore,
   getAllAlignmentRecords,
   getExemplars,
@@ -327,7 +332,7 @@ async function llmGreedyStrategy(
 }
 
 // ============================================================================
-// Solve Loop
+// Solve Loop (tick-based)
 // ============================================================================
 
 interface SolveResult {
@@ -337,82 +342,106 @@ interface SolveResult {
 }
 
 /**
- * Solve the puzzle once.
+ * Solve the puzzle once using tick-based orchestration.
  *
- * @param training - If true, human always forces (cold start training).
- *                   LLMs still propose so alignment is tracked.
- * @param verbose  - Print each step
+ * Each call to tick() does one atomic thing:
+ *   'solicited'  — one LLM proposer submitted a proposal
+ *   'advanced'   — consensus reached, transition executed (AI decision)
+ *   'needs_human' — all proposals in, no consensus (human must force)
+ *
+ * Training mode: after all LLMs are solicited, human forces before tick
+ * evaluates consensus. This ensures exemplars and alignment are tracked.
+ *
+ * Non-training mode: tick handles the full cycle. Human intervenes only
+ * when consensus isn't reached.
  */
 async function solvePuzzle(
   machine: MachineDefinition,
   training: boolean,
   verbose: boolean
 ): Promise<SolveResult> {
+  // Session object is a live reference — stays current after transitions
   const session = await createSession(machine);
+  const proposerCount = getEnabledProposers(MACHINE_NAME).length;
   let humanDecisions = 0;
   let aiDecisions = 0;
   let moves = 0;
+  let solicitedThisRound = 0;
 
   while (session.currentState !== "1111") {
-    moves++;
     if (moves > 30) {
       if (verbose) console.log("      !! safety valve (>30 moves)");
       break;
     }
 
-    const state = session.currentState;
-    const transitions = machine.states[state]?.transitions ?? {};
+    const results = await tick();
+    const r = results.find((t) => t.sessionId === session.sessionId);
+    if (!r) break; // terminal
 
-    // LLMs propose
-    await submitProposal({
-      sessionId: session.sessionId,
-      specialistId: "llm-cautious",
-      roundId: session.currentRoundId,
-    });
-    await submitProposal({
-      sessionId: session.sessionId,
-      specialistId: "llm-greedy",
-      roundId: session.currentRoundId,
-    });
+    if (r.status === "solicited") {
+      solicitedThisRound++;
 
-    // In training mode: skip consensus, human always forces
-    if (!training) {
-      const consensus = await evaluateConsensus(session.sessionId);
-      if (consensus.consensusReached) {
+      // Training: once all LLMs have submitted, human forces
+      if (training && solicitedThisRound >= proposerCount) {
+        const state = session.currentState;
+        const transitions = machine.states[state]?.transitions ?? {};
+        const optimal = getOptimalMove(state, transitions);
         const result = await submitArbitration({
           sessionId: session.sessionId,
           roundId: session.currentRoundId,
+          specialistId: "human-optimal",
+          transitionName: optimal.transitionName,
+          reasoning: optimal.reasoning,
         });
-        if (result.executed) {
-          aiDecisions++;
-          if (verbose) {
-            console.log(
-              `      ${String(moves).padStart(2)}. ${formatState(state)} ` +
-                `─${result.transitionName!}─▸ ${formatState(result.toState!)}  [AI]`
-            );
-          }
-          continue;
+        humanDecisions++;
+        moves++;
+        solicitedThisRound = 0;
+        if (verbose) {
+          console.log(
+            `      ${String(moves).padStart(2)}. ${formatState(state)} ` +
+              `─${optimal.transitionName}─▸ ${formatState(result.toState!)}  [TRAIN]`
+          );
         }
       }
+      continue;
     }
 
-    // Human forces optimal move
-    const optimal = getOptimalMove(state, transitions);
-    const result = await submitArbitration({
-      sessionId: session.sessionId,
-      roundId: session.currentRoundId,
-      specialistId: "human-optimal",
-      transitionName: optimal.transitionName,
-      reasoning: optimal.reasoning,
-    });
+    // Past solicitation phase — reset counter
+    solicitedThisRound = 0;
 
-    humanDecisions++;
-    if (verbose) {
-      const tag = training ? "TRAIN" : "HUMAN";
-      console.log(
-        `      ${String(moves).padStart(2)}. ${formatState(state)} ` +
-          `─${optimal.transitionName}─▸ ${formatState(result.toState!)}  [${tag}]`
-      );
+    if (r.status === "advanced") {
+      // AI consensus reached and transition executed
+      moves++;
+      aiDecisions++;
+      if (verbose) {
+        console.log(
+          `      ${String(moves).padStart(2)}. ${formatState(r.previousState!)} ` +
+            `─${r.transitionName!}─▸ ${formatState(r.currentState)}  [AI]`
+        );
+      }
+      continue;
+    }
+
+    if (r.status === "needs_human") {
+      // No consensus — human forces optimal move
+      const state = session.currentState;
+      const transitions = machine.states[state]?.transitions ?? {};
+      const optimal = getOptimalMove(state, transitions);
+      const result = await submitArbitration({
+        sessionId: session.sessionId,
+        roundId: session.currentRoundId,
+        specialistId: "human-optimal",
+        transitionName: optimal.transitionName,
+        reasoning: optimal.reasoning,
+      });
+      humanDecisions++;
+      moves++;
+      if (verbose) {
+        console.log(
+          `      ${String(moves).padStart(2)}. ${formatState(state)} ` +
+            `─${optimal.transitionName}─▸ ${formatState(result.toState!)}  [HUMAN]`
+        );
+      }
     }
   }
 
@@ -437,12 +466,16 @@ async function main(): Promise<void> {
   const TOTAL_ROUNDS = 10;
 
   // Register specialists (persist across sessions via global store)
+  // Human is registered but disabled — tick() only solicits LLM proposers.
+  // Human forces via submitArbitration when needed.
   await registerProposer({
     specialistId: "human-optimal",
     machineName: MACHINE_NAME,
     isHuman: true,
     strategyFn: async (ctx) => getOptimalMove(ctx.currentState, ctx.transitions),
   });
+  disableSpecialist("human-optimal");
+
   await registerProposer({
     specialistId: "llm-cautious",
     machineName: MACHINE_NAME,

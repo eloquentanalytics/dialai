@@ -33,6 +33,8 @@ export type {
   SpecialistMetrics,
   Signal,
   SignalLevel,
+  TickStatus,
+  TickResult,
   RegisterProposerOptions,
   RegisterArbiterOptions,
   SubmitProposalOptions,
@@ -80,7 +82,7 @@ export {
 } from "./api.js";
 
 // Re-export engine
-export { runSession, getEffectiveThreshold, selectChampion } from "./engine.js";
+export { tick, runSession, getEffectiveThreshold, selectChampion } from "./engine.js";
 
 // Re-export strategies
 export {

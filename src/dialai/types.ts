@@ -482,6 +482,37 @@ export interface Signal {
 }
 
 // ============================================================================
+// Tick Orchestration Types
+// ============================================================================
+
+/**
+ * Status of a single session after one tick.
+ */
+export type TickStatus =
+  | "solicited"    // triggered one proposer to submit
+  | "advanced"     // consensus reached, transition executed
+  | "needs_human"; // all proposals in, no consensus
+
+/**
+ * Result of ticking a single session.
+ * Terminal sessions are omitted from tick results.
+ */
+export interface TickResult {
+  sessionId: string;
+  machineName: string;
+  status: TickStatus;
+  currentState: string;
+  /** Set when status === 'solicited' */
+  specialistId?: string;
+  /** Set when status === 'advanced' */
+  previousState?: string;
+  /** Set when status === 'advanced' */
+  transitionName?: string;
+  /** Set when status === 'advanced' */
+  reasoning?: string;
+}
+
+// ============================================================================
 // Registration Options
 // ============================================================================
 
