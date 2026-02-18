@@ -4,10 +4,8 @@ import {
   sessions,
   specialists,
   proposals,
-  votes,
   alignmentRecords,
   exemplars,
-  selectionVotes,
   createSession,
   registerProposer,
 } from "../../src/dialai/index.js";
@@ -30,7 +28,7 @@ describe("DIAL_268–DIAL_276: Store Operations", () => {
     clear();
   });
 
-  test("DIAL_268: clear() empties all 7 maps", async () => {
+  test("DIAL_268: clear() empties all 5 maps", async () => {
     // Populate some data
     await createSession(simpleMachine());
     await registerProposer({
@@ -46,14 +44,12 @@ describe("DIAL_268–DIAL_276: Store Operations", () => {
     // Clear
     clear();
 
-    // All 7 maps empty
+    // All 5 maps empty
     expect(sessions.size).toBe(0);
     expect(specialists.size).toBe(0);
     expect(proposals.size).toBe(0);
-    expect(votes.size).toBe(0);
     expect(alignmentRecords.size).toBe(0);
     expect(exemplars.size).toBe(0);
-    expect(selectionVotes.size).toBe(0);
   });
 
   test("DIAL_274: alignmentRecords map keyed by specialistId:machineName", async () => {

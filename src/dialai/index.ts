@@ -14,21 +14,13 @@ export type {
   Specialist,
   SpecialistDefinition,
   Proposer,
-  Voter,
   Arbiter,
   ProposerStrategyResult,
-  VoterStrategyResult,
   ArbiterStrategyResult,
-  SelectionVoterContext,
-  SelectionVoterStrategyResult,
-  SelectionVote,
   ProposerContext,
-  VoterContext,
   ArbiterContext,
   HumanGoldExample,
   Proposal,
-  Vote,
-  VoteChoice,
   ConsensusResult,
   ArbitrationResult,
   ArbitrationPath,
@@ -37,11 +29,8 @@ export type {
   AlignmentEvaluationResult,
   AccuracyEvaluationResult,
   RegisterProposerOptions,
-  RegisterVoterOptions,
   RegisterArbiterOptions,
   SubmitProposalOptions,
-  SubmitVoteOptions,
-  SubmitSelectionVoteOptions,
   SubmitArbitrationOptions,
 } from "./types.js";
 
@@ -50,10 +39,8 @@ export {
   sessions,
   specialists,
   proposals,
-  votes,
   alignmentRecords,
   exemplars,
-  selectionVotes,
   clear,
 } from "./store.js";
 
@@ -65,34 +52,25 @@ export {
   getSessions,
   // Specialist registration
   registerProposer,
-  registerVoter,
   registerArbiter,
   getSpecialist,
   getProposers,
-  getVoters,
   getArbiter,
   // Enable/disable
   enableSpecialist,
   disableSpecialist,
   getEnabledProposers,
-  getEnabledVoters,
   getEnabledArbiter,
   // Strategy resolution
   resolveProposerStrategy,
-  resolveVoterStrategy,
   resolveArbiterStrategy,
   // Decision cycle
   submitProposal,
-  submitVote,
-  submitSelectionVote,
-  checkHumanPrimacy,
   evaluateConsensus,
   classifyArbitration,
   submitArbitration,
   executeTransition,
   getProposalsForRound,
-  getVotesForRound,
-  getSelectionVotesForRound,
 } from "./api.js";
 
 // Re-export engine
@@ -106,26 +84,9 @@ export {
   randomProposer,
   weightedRandom,
   proposerStrategies,
-  // Voter strategies
-  preferA,
-  preferB,
-  both,
-  neither,
-  randomVoter,
-  randomAll,
-  preferGoal,
-  preferShorterPath,
-  voterStrategies,
-  // Selection voter strategies
-  preferFirst,
-  preferHighestAlignment,
-  selectionVoterStrategies,
   // Arbiter strategies
   firstProposal,
   aheadByK,
-  mostSimilar,
-  pairwiseConsensus,
-  alignmentWeightedMargin,
   arbiterStrategies,
 } from "./strategies.js";
 
@@ -154,12 +115,9 @@ export {
 export {
   executeWebhook,
   executeProposerWebhook,
-  executeVoterWebhook,
   callLlm,
   executeProposerLlm,
-  executeVoterLlm,
   executeContextWebhookProposer,
-  executeContextWebhookVoter,
 } from "./llm.js";
 
 // Re-export utilities

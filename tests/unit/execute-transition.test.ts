@@ -7,8 +7,6 @@ import {
   executeTransition,
   getSession,
   getProposalsForRound,
-  getVotesForRound,
-  getSelectionVotesForRound,
 } from "../../src/dialai/index.js";
 import type { MachineDefinition } from "../../src/dialai/types.js";
 
@@ -92,24 +90,6 @@ describe("DIAL_104–DIAL_114: Transition Execution", () => {
 
     // Old round's proposals gone
     expect(getProposalsForRound(session.sessionId, session.currentRoundId)).toHaveLength(0);
-  });
-
-  test("DIAL_108: clears votes after transition", async () => {
-    const session = await createSession(threeStateMachine());
-
-    await executeTransition(session.sessionId, "to_b", "b");
-
-    const updated = await getSession(session.sessionId);
-    expect(getVotesForRound(session.sessionId, updated.currentRoundId)).toHaveLength(0);
-  });
-
-  test("DIAL_109: clears selection votes after transition", async () => {
-    const session = await createSession(threeStateMachine());
-
-    await executeTransition(session.sessionId, "to_b", "b");
-
-    const updated = await getSession(session.sessionId);
-    expect(getSelectionVotesForRound(session.sessionId, updated.currentRoundId)).toHaveLength(0);
   });
 
   test("DIAL_110: rejects transition not in current state", async () => {

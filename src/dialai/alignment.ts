@@ -6,7 +6,7 @@
  */
 
 import { specialists, alignmentRecords } from "./store.js";
-import type { AlignmentRecord, Proposal, Vote, SelectionVote } from "./types.js";
+import type { AlignmentRecord, Proposal } from "./types.js";
 
 /**
  * Checks whether a specialist is human by looking at the isHuman flag
@@ -76,8 +76,6 @@ export function updateAlignment(
 export function computeAlignmentUpdates(
   humanTransitionName: string,
   proposals: Proposal[],
-  votes: Vote[],
-  selectionVotes: SelectionVote[],
   humanSpecialistIds: Set<string>
 ): Array<{ specialistId: string; matched: boolean }> {
   const results: Array<{ specialistId: string; matched: boolean }> = [];
@@ -87,36 +85,6 @@ export function computeAlignmentUpdates(
     if (humanSpecialistIds.has(proposal.specialistId)) continue;
     const matched = proposal.transitionName === humanTransitionName;
     results.push({ specialistId: proposal.specialistId, matched });
-  }
-
-  // Check pairwise voters: did they vote for the proposal matching the human choice?
-  for (const vote of votes) {
-    if (humanSpecialistIds.has(vote.specialistId)) continue;
-
-    const proposalA = proposals.find((p) => p.proposalId === vote.proposalIdA);
-    const proposalB = proposals.find((p) => p.proposalId === vote.proposalIdB);
-
-    const aMatches = proposalA?.transitionName === humanTransitionName;
-    const bMatches = proposalB?.transitionName === humanTransitionName;
-
-    let matched = false;
-    if (aMatches && vote.voteFor === "A") matched = true;
-    if (bMatches && vote.voteFor === "B") matched = true;
-    if ((aMatches || bMatches) && vote.voteFor === "BOTH") matched = true;
-    if (!aMatches && !bMatches && vote.voteFor === "NEITHER") matched = true;
-
-    results.push({ specialistId: vote.specialistId, matched });
-  }
-
-  // Check selection voters: did they select the proposal matching the human choice?
-  for (const sv of selectionVotes) {
-    if (humanSpecialistIds.has(sv.specialistId)) continue;
-
-    const selectedProposal = proposals.find(
-      (p) => p.proposalId === sv.selectedProposalId
-    );
-    const matched = selectedProposal?.transitionName === humanTransitionName;
-    results.push({ specialistId: sv.specialistId, matched: matched ?? false });
   }
 
   return results;
@@ -129,15 +97,11 @@ export function computeAlignmentUpdates(
 export function updateAlignmentAfterHumanDecision(
   machineName: string,
   humanTransitionName: string,
-  proposals: Proposal[],
-  votes: Vote[],
-  roundSelectionVotes: SelectionVote[]
+  proposals: Proposal[]
 ): void {
   // Build set of human specialist IDs
   const allSpecialistIds = new Set<string>();
   for (const p of proposals) allSpecialistIds.add(p.specialistId);
-  for (const v of votes) allSpecialistIds.add(v.specialistId);
-  for (const sv of roundSelectionVotes) allSpecialistIds.add(sv.specialistId);
 
   const humanSpecialistIds = new Set<string>();
   for (const id of allSpecialistIds) {
@@ -147,8 +111,6 @@ export function updateAlignmentAfterHumanDecision(
   const updates = computeAlignmentUpdates(
     humanTransitionName,
     proposals,
-    votes,
-    roundSelectionVotes,
     humanSpecialistIds
   );
 

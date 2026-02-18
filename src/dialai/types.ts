@@ -79,13 +79,13 @@ export interface TransitionRecord {
 /**
  * Union type for all specialist roles.
  */
-export type Specialist = Proposer | Voter | Arbiter;
+export type Specialist = Proposer | Arbiter;
 
 /**
  * Specialist definition for machine JSON files.
  */
 export interface SpecialistDefinition {
-  role: "proposer" | "voter" | "arbiter";
+  role: "proposer" | "arbiter";
   specialistId: string;
   machineName?: string;
   isHuman?: boolean;
@@ -134,47 +134,6 @@ export interface Proposer {
 export interface ProposerStrategyResult {
   transitionName: string;
   toState: string;
-  reasoning: string;
-}
-
-/**
- * A specialist that votes on proposals.
- */
-export interface Voter {
-  role: "voter";
-  specialistId: string;
-  machineName: string;
-  /** If true, can force arbitration decisions */
-  isHuman?: boolean;
-  /** Whether this specialist is enabled (default true) */
-  enabled?: boolean;
-  /** Type of voter: "pairwise" compares two proposals, "selection" picks one from all */
-  voterType?: "pairwise" | "selection";
-  /** Local strategy function (for pairwise voters) */
-  strategyFn?: (ctx: VoterContext) => Promise<VoterStrategyResult>;
-  /** Local strategy function (for selection voters) */
-  selectionStrategyFn?: (ctx: SelectionVoterContext) => Promise<SelectionVoterStrategyResult>;
-  /** Built-in strategy name */
-  strategyFnName?: string;
-  /** External webhook URL */
-  strategyWebhookUrl?: string;
-  /** Local context function for LLM mode */
-  contextFn?: (ctx: VoterContext) => Promise<string>;
-  /** Webhook context URL for LLM mode */
-  contextWebhookUrl?: string;
-  /** Model ID for LLM-based modes */
-  modelId?: string;
-  /** Environment variable name for webhook token */
-  webhookTokenName?: string;
-  /** Strategy-specific threshold */
-  threshold?: number;
-}
-
-/**
- * Result from a voter strategy function.
- */
-export interface VoterStrategyResult {
-  voteFor: VoteChoice;
   reasoning: string;
 }
 
@@ -229,24 +188,6 @@ export interface ProposerContext {
 }
 
 /**
- * Context provided to voter strategy functions.
- */
-export interface VoterContext {
-  /** Current session ID */
-  sessionId: string;
-  /** Current state name */
-  currentState: string;
-  /** Decision prompt for this state */
-  prompt: string;
-  /** First proposal to compare */
-  proposalA: Proposal;
-  /** Second proposal to compare */
-  proposalB: Proposal;
-  /** All previous transitions */
-  history: TransitionRecord[];
-}
-
-/**
  * Human gold example for similarity-based arbitration.
  */
 export interface HumanGoldExample {
@@ -274,10 +215,6 @@ export interface ArbiterContext {
   machineName: string;
   /** All proposals in this round */
   proposals: Proposal[];
-  /** All votes in this round */
-  votes: Vote[];
-  /** Selection votes in this round */
-  selectionVotes?: SelectionVote[];
   /** Alignment scores by specialistId */
   alignmentScores?: Record<string, number>;
   /** Human gold examples (for mostSimilar) */
@@ -324,45 +261,6 @@ export interface Proposal {
   numOutputTokens?: number;
   /** When the proposal was created */
   createdAt: Date;
-}
-
-/**
- * The possible vote values.
- */
-export type VoteChoice = "A" | "B" | "BOTH" | "NEITHER";
-
-/**
- * A vote comparing two proposals.
- */
-export interface Vote {
-  /** UUID generated on creation */
-  voteId: string;
-  /** Session this vote belongs to */
-  sessionId: string;
-  /** Round this vote belongs to */
-  roundId: string;
-  /** Who cast this vote */
-  specialistId: string;
-  /** Whether cast by a human specialist */
-  isHuman: boolean;
-  /** First proposal being compared */
-  proposalIdA: string;
-  /** Second proposal being compared */
-  proposalIdB: string;
-  /** The vote choice */
-  voteFor: VoteChoice;
-  /** Why this vote was cast */
-  reasoning: string;
-  /** Arbitrary client metadata */
-  metaJson?: Record<string, unknown>;
-  /** Cost in USD to generate this vote */
-  costUSD?: number;
-  /** Time in milliseconds to generate */
-  latencyMsec?: number;
-  /** Input tokens used */
-  numInputTokens?: number;
-  /** Output tokens used */
-  numOutputTokens?: number;
 }
 
 /**
@@ -435,70 +333,6 @@ export type ArbitrationPath =
   | { type: "evaluate" };
 
 // ============================================================================
-// Selection Voter Types
-// ============================================================================
-
-/**
- * Context provided to selection voter strategy functions.
- */
-export interface SelectionVoterContext {
-  /** Current session ID */
-  sessionId: string;
-  /** Current state name */
-  currentState: string;
-  /** Decision prompt for this state */
-  prompt: string;
-  /** Machine name */
-  machineName: string;
-  /** All proposals in this round */
-  proposals: Proposal[];
-  /** All previous transitions */
-  history: TransitionRecord[];
-  /** Alignment scores by specialistId */
-  alignmentScores?: Record<string, number>;
-}
-
-/**
- * Result from a selection voter strategy function.
- */
-export interface SelectionVoterStrategyResult {
-  /** The proposalId selected */
-  selectedProposalId: string;
-  /** Reasoning for this selection */
-  reasoning: string;
-}
-
-/**
- * A selection vote where a voter picks one proposal from all proposals.
- */
-export interface SelectionVote {
-  /** UUID generated on creation */
-  selectionVoteId: string;
-  /** Session this vote belongs to */
-  sessionId: string;
-  /** Round this vote belongs to */
-  roundId: string;
-  /** Who cast this vote */
-  specialistId: string;
-  /** Whether cast by a human specialist */
-  isHuman: boolean;
-  /** The selected proposal ID */
-  selectedProposalId: string;
-  /** Why this selection was made */
-  reasoning: string;
-  /** Arbitrary client metadata */
-  metaJson?: Record<string, unknown>;
-  /** Cost in USD */
-  costUSD?: number;
-  /** Time in milliseconds */
-  latencyMsec?: number;
-  /** Input tokens used */
-  numInputTokens?: number;
-  /** Output tokens used */
-  numOutputTokens?: number;
-}
-
-// ============================================================================
 // Alignment Types
 // ============================================================================
 
@@ -538,10 +372,6 @@ export interface Exemplar {
   humanToState: string;
   /** All proposals that were available */
   proposals: Proposal[];
-  /** All pairwise votes that were cast */
-  votes: Vote[];
-  /** All selection votes that were cast */
-  selectionVotes: SelectionVote[];
   /** When this exemplar was created */
   createdAt: Date;
 }
@@ -625,44 +455,6 @@ export interface RegisterProposerOptions {
 }
 
 /**
- * Options for registerVoter().
- */
-export interface RegisterVoterOptions {
-  /** Required: unique identifier */
-  specialistId: string;
-  /** Required: which machine to participate in */
-  machineName: string;
-  /** If true, can force arbitration decisions */
-  isHuman?: boolean;
-  /** Type of voter: "pairwise" (default) or "selection" */
-  voterType?: "pairwise" | "selection";
-
-  // Execution mode (exactly one required):
-  /** Local async strategy function (for pairwise voters) */
-  strategyFn?: (ctx: VoterContext) => Promise<VoterStrategyResult>;
-  /** Local async strategy function (for selection voters) */
-  selectionStrategyFn?: (ctx: SelectionVoterContext) => Promise<SelectionVoterStrategyResult>;
-  /** Built-in strategy name */
-  strategyFnName?: string;
-  /** External webhook URL */
-  strategyWebhookUrl?: string;
-
-  // For LLM-based modes:
-  /** Model ID for LLM modes */
-  modelId?: string;
-  /** Local context function */
-  contextFn?: (ctx: VoterContext) => Promise<string>;
-  /** Webhook context URL */
-  contextWebhookUrl?: string;
-  /** Environment variable name for webhook token */
-  webhookTokenName?: string;
-
-  // For built-in strategies:
-  /** Strategy-specific threshold */
-  threshold?: number;
-}
-
-/**
  * Options for registerArbiter().
  */
 export interface RegisterArbiterOptions {
@@ -704,62 +496,6 @@ export interface SubmitProposalOptions {
   roundId?: string;
   /** Transition to propose (optional, invokes strategy) */
   transitionName?: string;
-  /** Explanation */
-  reasoning?: string;
-  /** Arbitrary metadata */
-  metaJson?: Record<string, unknown>;
-  /** Cost in USD */
-  costUSD?: number;
-  /** Time in milliseconds */
-  latencyMsec?: number;
-  /** Input tokens */
-  numInputTokens?: number;
-  /** Output tokens */
-  numOutputTokens?: number;
-}
-
-/**
- * Options for submitVote().
- */
-export interface SubmitVoteOptions {
-  /** Required: session to vote in */
-  sessionId: string;
-  /** Required: who is voting */
-  specialistId: string;
-  /** Round ID (optional, uses current) */
-  roundId?: string;
-  /** First proposal ID */
-  proposalIdA?: string;
-  /** Second proposal ID */
-  proposalIdB?: string;
-  /** Vote choice (optional, invokes strategy) */
-  voteFor?: VoteChoice;
-  /** Explanation */
-  reasoning?: string;
-  /** Arbitrary metadata */
-  metaJson?: Record<string, unknown>;
-  /** Cost in USD */
-  costUSD?: number;
-  /** Time in milliseconds */
-  latencyMsec?: number;
-  /** Input tokens */
-  numInputTokens?: number;
-  /** Output tokens */
-  numOutputTokens?: number;
-}
-
-/**
- * Options for submitSelectionVote().
- */
-export interface SubmitSelectionVoteOptions {
-  /** Required: session to vote in */
-  sessionId: string;
-  /** Required: who is voting */
-  specialistId: string;
-  /** Round ID (optional, uses current) */
-  roundId?: string;
-  /** The selected proposal ID (optional, invokes strategy) */
-  selectedProposalId?: string;
   /** Explanation */
   reasoning?: string;
   /** Arbitrary metadata */

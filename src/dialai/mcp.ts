@@ -17,17 +17,15 @@ import {
   getSession,
   getSessions,
   registerProposer,
-  registerVoter,
   registerArbiter,
   submitProposal,
-  submitVote,
   evaluateConsensus,
   submitArbitration,
   executeTransition,
 } from "./api.js";
 import { runSession } from "./engine.js";
 import { validateMachine } from "./utils.js";
-import type { MachineDefinition, VoteChoice } from "./types.js";
+import type { MachineDefinition } from "./types.js";
 
 /**
  * Create the MCP server with all DIAL tools.
@@ -108,25 +106,6 @@ export function createMcpServer(): Server {
           },
         },
         {
-          name: "register_voter",
-          description: "Register a voter specialist for a machine",
-          inputSchema: {
-            type: "object",
-            properties: {
-              specialistId: { type: "string", description: "Unique identifier" },
-              machineName: { type: "string", description: "Machine to participate in" },
-              isHuman: { type: "boolean", description: "If true, can force arbitration" },
-              strategyFnName: {
-                type: "string",
-                description:
-                  "Built-in strategy: preferA, preferB, both, neither, random, randomAll, preferGoal, preferShorterPath",
-              },
-              threshold: { type: "number", description: "Strategy-specific threshold" },
-            },
-            required: ["specialistId", "machineName"],
-          },
-        },
-        {
           name: "register_arbiter",
           description: "Register an arbiter specialist for a machine",
           inputSchema: {
@@ -137,7 +116,7 @@ export function createMcpServer(): Server {
               strategyFnName: {
                 type: "string",
                 description:
-                  "Built-in strategy: firstProposal, aheadByK, mostSimilar, pairwiseConsensus",
+                  "Built-in strategy: firstProposal, aheadByK",
               },
               threshold: { type: "number", description: "Strategy-specific threshold" },
             },
@@ -165,32 +144,6 @@ export function createMcpServer(): Server {
               numOutputTokens: { type: "number", description: "Output tokens" },
             },
             required: ["sessionId", "specialistId"],
-          },
-        },
-        {
-          name: "submit_vote",
-          description: "Submit a vote comparing two proposals",
-          inputSchema: {
-            type: "object",
-            properties: {
-              sessionId: { type: "string", description: "Session identifier" },
-              specialistId: { type: "string", description: "Who is voting" },
-              roundId: { type: "string", description: "Round ID (optional, uses current)" },
-              proposalIdA: { type: "string", description: "First proposal ID" },
-              proposalIdB: { type: "string", description: "Second proposal ID" },
-              voteFor: {
-                type: "string",
-                enum: ["A", "B", "BOTH", "NEITHER"],
-                description: "Vote choice (optional, invokes strategy)",
-              },
-              reasoning: { type: "string", description: "Explanation" },
-              metaJson: { type: "object", description: "Arbitrary metadata" },
-              costUSD: { type: "number", description: "Cost in USD" },
-              latencyMsec: { type: "number", description: "Time in milliseconds" },
-              numInputTokens: { type: "number", description: "Input tokens" },
-              numOutputTokens: { type: "number", description: "Output tokens" },
-            },
-            required: ["sessionId", "specialistId", "proposalIdA", "proposalIdB"],
           },
         },
         {
@@ -330,24 +283,6 @@ export function createMcpServer(): Server {
           };
         }
 
-        case "register_voter": {
-          const voter = await registerVoter({
-            specialistId: args?.specialistId as string,
-            machineName: args?.machineName as string,
-            isHuman: args?.isHuman as boolean | undefined,
-            strategyFnName: args?.strategyFnName as string | undefined,
-            threshold: args?.threshold as number | undefined,
-          });
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify(voter, null, 2),
-              },
-            ],
-          };
-        }
-
         case "register_arbiter": {
           const arbiter = await registerArbiter({
             specialistId: args?.specialistId as string,
@@ -383,31 +318,6 @@ export function createMcpServer(): Server {
               {
                 type: "text",
                 text: JSON.stringify(proposal, null, 2),
-              },
-            ],
-          };
-        }
-
-        case "submit_vote": {
-          const vote = await submitVote({
-            sessionId: args?.sessionId as string,
-            specialistId: args?.specialistId as string,
-            roundId: args?.roundId as string | undefined,
-            proposalIdA: args?.proposalIdA as string,
-            proposalIdB: args?.proposalIdB as string,
-            voteFor: args?.voteFor as VoteChoice | undefined,
-            reasoning: args?.reasoning as string | undefined,
-            metaJson: args?.metaJson as Record<string, unknown> | undefined,
-            costUSD: args?.costUSD as number | undefined,
-            latencyMsec: args?.latencyMsec as number | undefined,
-            numInputTokens: args?.numInputTokens as number | undefined,
-            numOutputTokens: args?.numOutputTokens as number | undefined,
-          });
-          return {
-            content: [
-              {
-                type: "text",
-                text: JSON.stringify(vote, null, 2),
               },
             ],
           };

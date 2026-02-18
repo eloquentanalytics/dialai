@@ -12,8 +12,6 @@ import type {
   Exemplar,
   ProposerContext,
   Proposal,
-  Vote,
-  SelectionVote,
 } from "./types.js";
 
 /**
@@ -25,9 +23,7 @@ export function createExemplar(
   context: ProposerContext,
   humanTransitionName: string,
   humanToState: string,
-  proposals: Proposal[],
-  votes: Vote[],
-  selectionVotes: SelectionVote[]
+  proposals: Proposal[]
 ): Exemplar {
   const exemplar: Exemplar = {
     exemplarId: generateUUID(),
@@ -37,8 +33,6 @@ export function createExemplar(
     humanTransitionName,
     humanToState,
     proposals: [...proposals],
-    votes: [...votes],
-    selectionVotes: [...selectionVotes],
     createdAt: new Date(),
   };
 

@@ -7,13 +7,12 @@ import {
   clear,
   createSession,
   registerProposer,
-  registerVoter,
   registerArbiter,
   submitProposal,
-  submitVote,
   submitArbitration,
   getSession,
   runSession,
+  updateAlignment,
 } from "../../src/dialai/index.js";
 import type { MachineDefinition } from "../../src/dialai/types.js";
 
@@ -22,9 +21,9 @@ describe("Integration: Decision Cycle", () => {
     clear();
   });
 
-  it("completes a full decision cycle with voting", async () => {
+  it("completes a full decision cycle with alignment-weighted consensus", async () => {
     const machine: MachineDefinition = {
-      machineName: "voting-test",
+      machineName: "consensus-test",
       initialState: "pending",
       goalState: "approved",
       states: {
@@ -46,30 +45,26 @@ describe("Integration: Decision Cycle", () => {
     // Register specialists
     await registerProposer({
       specialistId: "p1",
-      machineName: "voting-test",
+      machineName: "consensus-test",
       strategyFnName: "firstAvailable",
     });
     await registerProposer({
       specialistId: "p2",
-      machineName: "voting-test",
+      machineName: "consensus-test",
       strategyFnName: "lastAvailable",
-    });
-    await registerVoter({
-      specialistId: "v1",
-      machineName: "voting-test",
-      strategyFnName: "preferA",
-    });
-    await registerVoter({
-      specialistId: "v2",
-      machineName: "voting-test",
-      strategyFnName: "preferA",
     });
     await registerArbiter({
       specialistId: "arbiter",
-      machineName: "voting-test",
+      machineName: "consensus-test",
       strategyFnName: "aheadByK",
-      threshold: 1,
+      threshold: 0.5,
     });
+
+    // Seed alignment: p1 has high alignment, p2 has low
+    for (let i = 0; i < 9; i++) updateAlignment("p1", "consensus-test", true);
+    updateAlignment("p1", "consensus-test", false);
+    for (let i = 0; i < 2; i++) updateAlignment("p2", "consensus-test", true);
+    for (let i = 0; i < 8; i++) updateAlignment("p2", "consensus-test", false);
 
     // Submit proposals
     const propA = await submitProposal({
@@ -86,23 +81,7 @@ describe("Integration: Decision Cycle", () => {
     expect(propA.transitionName).toBe("approve");
     expect(propB.transitionName).toBe("reject");
 
-    // Submit votes
-    await submitVote({
-      sessionId: session.sessionId,
-      specialistId: "v1",
-      roundId: session.currentRoundId,
-      proposalIdA: propA.proposalId,
-      proposalIdB: propB.proposalId,
-    });
-    await submitVote({
-      sessionId: session.sessionId,
-      specialistId: "v2",
-      roundId: session.currentRoundId,
-      proposalIdA: propA.proposalId,
-      proposalIdB: propB.proposalId,
-    });
-
-    // Arbitrate
+    // Arbitrate - p1's "approve" should win due to higher alignment
     const result = await submitArbitration({
       sessionId: session.sessionId,
       roundId: session.currentRoundId,

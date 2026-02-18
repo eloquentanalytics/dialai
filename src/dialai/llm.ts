@@ -9,8 +9,6 @@
 import type {
   ProposerContext,
   ProposerStrategyResult,
-  VoterContext,
-  VoterStrategyResult,
 } from "./types.js";
 
 /** Webhook timeout in milliseconds */
@@ -75,23 +73,6 @@ export async function executeProposerWebhook(
   webhookTokenName?: string
 ): Promise<ProposerStrategyResult> {
   return executeWebhook<ProposerStrategyResult>(
-    url,
-    ctx,
-    machineName,
-    webhookTokenName
-  );
-}
-
-/**
- * Executes a voter webhook strategy.
- */
-export async function executeVoterWebhook(
-  url: string,
-  ctx: VoterContext,
-  machineName: string,
-  webhookTokenName?: string
-): Promise<VoterStrategyResult> {
-  return executeWebhook<VoterStrategyResult>(
     url,
     ctx,
     machineName,
@@ -191,26 +172,6 @@ Choose exactly one transition from the available list.`;
 }
 
 /**
- * Assembles a voter prompt for LLM mode.
- */
-function assembleVoterPrompt(ctx: VoterContext, context: string): string {
-  return `Current state: ${ctx.currentState}
-Decision prompt: ${ctx.prompt}
-
-Proposal A: transition "${ctx.proposalA.transitionName}" → "${ctx.proposalA.toState}"
-  Reasoning: ${ctx.proposalA.reasoning}
-
-Proposal B: transition "${ctx.proposalB.transitionName}" → "${ctx.proposalB.toState}"
-  Reasoning: ${ctx.proposalB.reasoning}
-
-Context:
-${context}
-
-Respond with a JSON object: { "voteFor": "A" | "B" | "BOTH" | "NEITHER", "reasoning": "..." }
-Choose which proposal is better, or BOTH if equally good, or NEITHER if both are bad.`;
-}
-
-/**
  * Executes a proposer LLM strategy.
  * Calls contextFn to get context, assembles prompt, calls LLM, parses response.
  */
@@ -237,32 +198,6 @@ export async function executeProposerLlm(
 }
 
 /**
- * Executes a voter LLM strategy.
- * Calls contextFn to get context, assembles prompt, calls LLM, parses response.
- */
-export async function executeVoterLlm(
-  contextFn: (ctx: VoterContext) => Promise<string>,
-  modelId: string,
-  ctx: VoterContext
-): Promise<VoterStrategyResult> {
-  const context = await contextFn(ctx);
-  const systemMessage = "You are a voting specialist in a state machine. You must evaluate two proposals and vote for the better one. Respond only with valid JSON.";
-  const userMessage = assembleVoterPrompt(ctx, context);
-
-  const result = await callLlm(modelId, systemMessage, userMessage);
-
-  try {
-    const parsed = JSON.parse(result.content) as VoterStrategyResult;
-    if (!parsed.voteFor) {
-      throw new Error("Missing voteFor in LLM response");
-    }
-    return parsed;
-  } catch (e) {
-    throw new Error(`Failed to parse LLM voter response: ${result.content}`);
-  }
-}
-
-/**
  * Executes a context webhook for LLM mode.
  * Fetches context from webhook URL, then calls LLM with that context.
  */
@@ -282,25 +217,4 @@ export async function executeContextWebhookProposer(
 
   const contextFn = async () => contextResult.context;
   return executeProposerLlm(contextFn, modelId, ctx);
-}
-
-/**
- * Executes a context webhook for LLM mode (voter).
- */
-export async function executeContextWebhookVoter(
-  contextWebhookUrl: string,
-  modelId: string,
-  ctx: VoterContext,
-  machineName: string,
-  webhookTokenName?: string
-): Promise<VoterStrategyResult> {
-  const contextResult = await executeWebhook<{ context: string }>(
-    contextWebhookUrl,
-    ctx,
-    machineName,
-    webhookTokenName
-  );
-
-  const contextFn = async () => contextResult.context;
-  return executeVoterLlm(contextFn, modelId, ctx);
 }

@@ -3,7 +3,7 @@
  * simple-machine-openrouter.ts
  *
  * Runs the "simple-task" state machine using OpenRouter LLMs for proposing
- * transitions, voting, and synthesizing consensus reasoning.
+ * transitions and synthesizing consensus reasoning.
  *
  * Usage:
  *   OPENROUTER_API_TOKEN=sk-... npx tsx examples/simple-machine-openrouter.ts
@@ -15,7 +15,6 @@
 import {
   createSession,
   submitProposal,
-  submitVote,
   evaluateConsensus,
   executeTransition,
   getSession,
@@ -23,7 +22,6 @@ import {
 import type {
   MachineDefinition,
   Proposal,
-  VoteChoice,
 } from "../src/dialai/index.js";
 import { getCompletion } from "./get-completion-from-openai-compatible-endpoint.js";
 
@@ -42,8 +40,7 @@ const machine: MachineDefinition = {
   },
 };
 
-const NUM_PROPOSERS = 2;
-const NUM_VOTERS = 3;
+const NUM_PROPOSERS = 3;
 
 function parseJsonResponse(text: string): unknown {
   try {
@@ -107,68 +104,13 @@ async function getAIProposal(
   };
 }
 
-async function getAIVote(
-  voterName: string,
-  proposalA: Proposal,
-  proposalB: Proposal
-): Promise<{ voteFor: VoteChoice; reasoning: string }> {
-  const response = await getCompletion(
-    [
-      {
-        role: "system",
-        content:
-          `You are ${voterName}, a voter in a deliberation. ` +
-          `Choose between two proposals. ` +
-          `Respond ONLY with JSON: {"voteFor": "A" or "B" or "BOTH" or "NEITHER", "reasoning": "<why>"}`,
-      },
-      {
-        role: "user",
-        content:
-          `Proposal A: transition "${proposalA.transitionName}" -> ${proposalA.toState}\n` +
-          `  Reasoning: ${proposalA.reasoning}\n\n` +
-          `Proposal B: transition "${proposalB.transitionName}" -> ${proposalB.toState}\n` +
-          `  Reasoning: ${proposalB.reasoning}\n\n` +
-          `Which proposal do you prefer and why?`,
-      },
-    ],
-    { model }
-  );
-
-  const parsed = parseJsonResponse(response) as {
-    voteFor: VoteChoice;
-    reasoning: string;
-  };
-
-  const validChoices: string[] = ["A", "B", "BOTH", "NEITHER"];
-  if (!validChoices.includes(parsed.voteFor)) {
-    throw new Error(`AI returned invalid vote choice: ${parsed.voteFor}`);
-  }
-
-  return { voteFor: parsed.voteFor, reasoning: parsed.reasoning };
-}
-
-interface VoteRecord {
-  voterName: string;
-  proposalIdA: string;
-  proposalIdB: string;
-  voteFor: VoteChoice;
-  reasoning: string;
-}
-
 async function synthesizeReasoning(
   winningProposal: Proposal,
-  voteRecords: VoteRecord[]
+  allProposals: Proposal[]
 ): Promise<string> {
-  const supportingReasoning = voteRecords
-    .filter((v) => {
-      if (v.voteFor === "A" && v.proposalIdA === winningProposal.proposalId)
-        return true;
-      if (v.voteFor === "B" && v.proposalIdB === winningProposal.proposalId)
-        return true;
-      if (v.voteFor === "BOTH") return true;
-      return false;
-    })
-    .map((v) => `  ${v.voterName}: ${v.reasoning}`)
+  const supportingReasoning = allProposals
+    .filter((p) => p.transitionName === winningProposal.transitionName)
+    .map((p) => `  ${p.specialistId}: ${p.reasoning}`)
     .join("\n");
 
   const response = await getCompletion(
@@ -177,7 +119,7 @@ async function synthesizeReasoning(
         role: "system",
         content:
           "You are synthesizing a final reasoning for a state machine transition. " +
-          "Based on the proposal reasoning and supporting voter reasoning, " +
+          "Based on the proposal reasoning and supporting proposer reasoning, " +
           "provide a concise synthesis explaining why this transition should occur. " +
           "Respond with plain text, no JSON.",
       },
@@ -186,7 +128,7 @@ async function synthesizeReasoning(
         content:
           `Winning transition: "${winningProposal.transitionName}" -> ${winningProposal.toState}\n` +
           `Proposal reasoning: ${winningProposal.reasoning}\n\n` +
-          `Supporting voter reasoning:\n` +
+          `Supporting proposer reasoning:\n` +
           `${supportingReasoning || "  (no explicit support reasoning)"}\n\n` +
           `Synthesize the final reasoning for this transition.`,
       },
@@ -248,68 +190,8 @@ async function main(): Promise<void> {
     }
     console.log();
 
-    // Phase 2: Solicit votes from AI voters (if 2+ proposals, in parallel)
-    const allVoteRecords: VoteRecord[] = [];
-    if (proposalResults.length >= 2) {
-      console.log("Phase 2: Soliciting votes...");
-
-      const voteTasks: Array<{
-        promise: Promise<{ voteFor: VoteChoice; reasoning: string }>;
-        voterName: string;
-        proposalIdA: string;
-        proposalIdB: string;
-      }> = [];
-
-      for (let i = 0; i < proposalResults.length; i++) {
-        for (let j = i + 1; j < proposalResults.length; j++) {
-          for (let v = 0; v < NUM_VOTERS; v++) {
-            const voterName = `voter-${v + 1}`;
-            voteTasks.push({
-              promise: getAIVote(
-                voterName,
-                proposalResults[i],
-                proposalResults[j]
-              ),
-              voterName,
-              proposalIdA: proposalResults[i].proposalId,
-              proposalIdB: proposalResults[j].proposalId,
-            });
-          }
-        }
-      }
-
-      const voteResults = await Promise.all(
-        voteTasks.map((vt) => vt.promise)
-      );
-
-      for (let k = 0; k < voteResults.length; k++) {
-        const vr = voteResults[k];
-        const vt = voteTasks[k];
-
-        await submitVote(
-          session.sessionId,
-          `openrouter-${vt.voterName}`,
-          vt.proposalIdA,
-          vt.proposalIdB,
-          vr.voteFor,
-          vr.reasoning
-        );
-
-        allVoteRecords.push({
-          voterName: vt.voterName,
-          proposalIdA: vt.proposalIdA,
-          proposalIdB: vt.proposalIdB,
-          voteFor: vr.voteFor,
-          reasoning: vr.reasoning,
-        });
-
-        console.log(`  ${vt.voterName}: ${vr.voteFor} — ${vr.reasoning}`);
-      }
-      console.log();
-    }
-
-    // Phase 3: Evaluate consensus
-    console.log("Phase 3: Evaluating consensus...");
+    // Phase 2: Evaluate consensus
+    console.log("Phase 2: Evaluating consensus...");
     const consensus = await evaluateConsensus(session.sessionId);
     console.log(
       `  Consensus: ${consensus.consensusReached ? "YES" : "NO"} — ${consensus.reasoning}`
@@ -330,16 +212,16 @@ async function main(): Promise<void> {
     );
     console.log();
 
-    // Phase 4: Synthesize reasoning from proposal + supporting votes
-    console.log("Phase 4: Synthesizing reasoning...");
+    // Phase 3: Synthesize reasoning from proposals
+    console.log("Phase 3: Synthesizing reasoning...");
     const synthesizedReasoning = await synthesizeReasoning(
       winningProposal,
-      allVoteRecords
+      proposalResults
     );
     console.log(`  Reasoning: ${synthesizedReasoning}`);
     console.log();
 
-    // Phase 5: Execute transition with synthesized reasoning
+    // Phase 4: Execute transition with synthesized reasoning
     await executeTransition(
       session.sessionId,
       winningProposal.transitionName,
@@ -363,7 +245,7 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err) => {
+main().catch((err: unknown) => {
   console.error("Error:", err instanceof Error ? err.message : err);
   process.exit(1);
 });

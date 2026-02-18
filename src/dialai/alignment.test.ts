@@ -4,7 +4,7 @@
 
 import { describe, it, expect, beforeEach } from "vitest";
 import { clear } from "./store.js";
-import { registerProposer, registerVoter } from "./api.js";
+import { registerProposer } from "./api.js";
 import {
   isHumanSpecialist,
   getAlignmentScore,
@@ -12,7 +12,7 @@ import {
   updateAlignmentAfterHumanDecision,
   getAllAlignmentRecords,
 } from "./alignment.js";
-import type { Proposal, Vote, SelectionVote } from "./types.js";
+import type { Proposal } from "./types.js";
 
 describe("Alignment System", () => {
   beforeEach(() => {
@@ -164,101 +164,10 @@ describe("Alignment System", () => {
         },
       ];
 
-      updateAlignmentAfterHumanDecision("align-test", "to_b", proposals, [], []);
+      updateAlignmentAfterHumanDecision("align-test", "to_b", proposals);
 
       expect(getAlignmentScore("ai-1", "align-test")).toBe(1.0); // matched
       expect(getAlignmentScore("ai-2", "align-test")).toBe(0); // did not match
-    });
-
-    it("updates alignment for pairwise voters", async () => {
-      await registerVoter({
-        specialistId: "voter-1",
-        machineName: "align-test",
-        strategyFnName: "preferA",
-      });
-
-      const proposals: Proposal[] = [
-        {
-          proposalId: "p1",
-          sessionId: "s1",
-          roundId: "r1",
-          specialistId: "ai-1",
-          isHuman: false,
-          transitionName: "to_b",
-          toState: "b",
-          reasoning: "Go to B",
-          createdAt: new Date(),
-        },
-        {
-          proposalId: "p2",
-          sessionId: "s1",
-          roundId: "r1",
-          specialistId: "ai-2",
-          isHuman: false,
-          transitionName: "to_c",
-          toState: "c",
-          reasoning: "Go to C",
-          createdAt: new Date(),
-        },
-      ];
-
-      const votes: Vote[] = [
-        {
-          voteId: "v1",
-          sessionId: "s1",
-          roundId: "r1",
-          specialistId: "voter-1",
-          isHuman: false,
-          proposalIdA: "p1",
-          proposalIdB: "p2",
-          voteFor: "A",
-          reasoning: "Prefer A",
-        },
-      ];
-
-      // Human chose to_b, voter-1 voted for A which is to_b
-      updateAlignmentAfterHumanDecision("align-test", "to_b", proposals, votes, []);
-
-      expect(getAlignmentScore("voter-1", "align-test")).toBe(1.0);
-    });
-
-    it("updates alignment for selection voters", async () => {
-      await registerVoter({
-        specialistId: "sv-1",
-        machineName: "align-test",
-        strategyFnName: "preferA",
-        voterType: "selection",
-      });
-
-      const proposals: Proposal[] = [
-        {
-          proposalId: "p1",
-          sessionId: "s1",
-          roundId: "r1",
-          specialistId: "ai-1",
-          isHuman: false,
-          transitionName: "to_b",
-          toState: "b",
-          reasoning: "Go to B",
-          createdAt: new Date(),
-        },
-      ];
-
-      const selectionVotes: SelectionVote[] = [
-        {
-          selectionVoteId: "sv1",
-          sessionId: "s1",
-          roundId: "r1",
-          specialistId: "sv-1",
-          isHuman: false,
-          selectedProposalId: "p1",
-          reasoning: "Selected first",
-        },
-      ];
-
-      updateAlignmentAfterHumanDecision("align-test", "to_b", proposals, [], selectionVotes);
-
-      expect(getAlignmentScore("sv-1", "align-test")).toBe(1.0);
     });
   });
 

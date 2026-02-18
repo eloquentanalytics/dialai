@@ -3,7 +3,7 @@ import {
   clear,
   createSession,
   registerProposer,
-  registerVoter,
+  registerArbiter,
   submitProposal,
 } from "../../src/dialai/index.js";
 import type { MachineDefinition } from "../../src/dialai/types.js";
@@ -178,14 +178,14 @@ describe("DIAL_056–DIAL_071: Proposal Submission", () => {
 
   test("DIAL_070: rejects proposal from non-proposer specialist", async () => {
     const session = await createSession(twoOptionMachine());
-    await registerVoter({
-      specialistId: "v1",
+    await registerArbiter({
+      specialistId: "a1",
       machineName: "proposal-test",
-      strategyFnName: "preferA",
+      strategyFnName: "firstProposal",
     });
 
     await expect(
-      submitProposal({ sessionId: session.sessionId, specialistId: "v1" })
+      submitProposal({ sessionId: session.sessionId, specialistId: "a1" })
     ).rejects.toThrow("is not a proposer");
   });
 

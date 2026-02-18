@@ -9,17 +9,13 @@ import {
   sessions,
   specialists,
   proposals,
-  votes,
-  selectionVotes as selectionVotesStore,
 } from "./store.js";
 import {
   proposerStrategies,
-  voterStrategies,
   arbiterStrategies,
 } from "./strategies.js";
 import { generateUUID, normalizeMachine } from "./utils.js";
 import {
-  isHumanSpecialist,
   updateAlignmentAfterHumanDecision,
   getAllAlignmentRecords,
 } from "./alignment.js";
@@ -28,27 +24,18 @@ import type {
   MachineDefinition,
   Session,
   Proposal,
-  Vote,
-  VoteChoice,
   Proposer,
-  Voter,
   Arbiter,
   Specialist,
-  SelectionVote,
-  SelectionVoterContext,
   RegisterProposerOptions,
-  RegisterVoterOptions,
   RegisterArbiterOptions,
   ProposerContext,
-  VoterContext,
   ArbiterContext,
   ConsensusResult,
   ArbitrationResult,
   ArbitrationPath,
   TransitionRecord,
   SubmitProposalOptions,
-  SubmitVoteOptions,
-  SubmitSelectionVoteOptions,
   SubmitArbitrationOptions,
 } from "./types.js";
 
@@ -110,11 +97,10 @@ export async function getSessions(): Promise<Session[]> {
 // ============================================================================
 
 /**
- * Validates that exactly one execution mode is specified for proposer/voter.
+ * Validates that exactly one execution mode is specified for a proposer.
  */
 function validateExecutionMode(
-  opts: RegisterProposerOptions | RegisterVoterOptions,
-  role: "proposer" | "voter"
+  opts: RegisterProposerOptions
 ): void {
   const modes: boolean[] = [
     opts.strategyFn !== undefined,
@@ -128,13 +114,13 @@ function validateExecutionMode(
 
   if (numModes === 0) {
     throw new Error(
-      `No execution mode specified for ${role}. Must provide one of: strategyFn, strategyFnName, strategyWebhookUrl, contextFn+modelId, or contextWebhookUrl+modelId`
+      `No execution mode specified for proposer. Must provide one of: strategyFn, strategyFnName, strategyWebhookUrl, contextFn+modelId, or contextWebhookUrl+modelId`
     );
   }
 
   if (numModes > 1) {
     throw new Error(
-      `Multiple execution modes specified for ${role}. Must provide exactly one.`
+      `Multiple execution modes specified for proposer. Must provide exactly one.`
     );
   }
 }
@@ -177,7 +163,7 @@ export async function registerProposer(
     throw new Error(`Specialist already exists: ${opts.specialistId}`);
   }
 
-  validateExecutionMode(opts, "proposer");
+  validateExecutionMode(opts);
 
   if (opts.strategyFnName && !proposerStrategies[opts.strategyFnName]) {
     throw new Error(`Unknown proposer strategy: ${opts.strategyFnName}`);
@@ -200,53 +186,6 @@ export async function registerProposer(
 
   specialists.set(opts.specialistId, proposer);
   return proposer;
-}
-
-/**
- * Registers a voter specialist for a machine.
- *
- * @param opts - Registration options
- * @returns The registered voter
- */
-export async function registerVoter(
-  opts: RegisterVoterOptions
-): Promise<Voter> {
-  if (specialists.has(opts.specialistId)) {
-    throw new Error(`Specialist already exists: ${opts.specialistId}`);
-  }
-
-  const voterType = opts.voterType ?? "pairwise";
-
-  // Selection voters can use selectionStrategyFn instead of pairwise strategyFn
-  if (voterType === "selection" && opts.selectionStrategyFn) {
-    // Valid execution mode for selection voter
-  } else {
-    validateExecutionMode(opts, "voter");
-  }
-
-  if (opts.strategyFnName && !voterStrategies[opts.strategyFnName]) {
-    throw new Error(`Unknown voter strategy: ${opts.strategyFnName}`);
-  }
-
-  const voter: Voter = {
-    role: "voter",
-    specialistId: opts.specialistId,
-    machineName: opts.machineName,
-    isHuman: opts.isHuman,
-    voterType,
-    strategyFn: opts.strategyFn,
-    selectionStrategyFn: opts.selectionStrategyFn,
-    strategyFnName: opts.strategyFnName,
-    strategyWebhookUrl: opts.strategyWebhookUrl,
-    contextFn: opts.contextFn,
-    contextWebhookUrl: opts.contextWebhookUrl,
-    modelId: opts.modelId,
-    webhookTokenName: opts.webhookTokenName,
-    threshold: opts.threshold,
-  };
-
-  specialists.set(opts.specialistId, voter);
-  return voter;
 }
 
 /**
@@ -300,15 +239,6 @@ export function getProposers(machineName: string): Proposer[] {
 }
 
 /**
- * Gets all voters for a machine.
- */
-export function getVoters(machineName: string): Voter[] {
-  return [...specialists.values()].filter(
-    (s): s is Voter => s.role === "voter" && s.machineName === machineName
-  );
-}
-
-/**
  * Gets the arbiter for a machine.
  */
 export function getArbiter(machineName: string): Arbiter | undefined {
@@ -329,7 +259,7 @@ export function enableSpecialist(specialistId: string): void {
   if (!specialist) {
     throw new Error(`Specialist not found: ${specialistId}`);
   }
-  (specialist as Proposer | Voter | Arbiter).enabled = true;
+  (specialist as Proposer | Arbiter).enabled = true;
 }
 
 /**
@@ -340,7 +270,7 @@ export function disableSpecialist(specialistId: string): void {
   if (!specialist) {
     throw new Error(`Specialist not found: ${specialistId}`);
   }
-  (specialist as Proposer | Voter | Arbiter).enabled = false;
+  (specialist as Proposer | Arbiter).enabled = false;
 }
 
 /**
@@ -348,20 +278,6 @@ export function disableSpecialist(specialistId: string): void {
  */
 export function getEnabledProposers(machineName: string): Proposer[] {
   return getProposers(machineName).filter((p) => p.enabled !== false);
-}
-
-/**
- * Gets enabled voters for a machine, optionally filtered by voterType.
- */
-export function getEnabledVoters(
-  machineName: string,
-  voterType?: "pairwise" | "selection"
-): Voter[] {
-  let voters = getVoters(machineName).filter((v) => v.enabled !== false);
-  if (voterType) {
-    voters = voters.filter((v) => (v.voterType ?? "pairwise") === voterType);
-  }
-  return voters;
 }
 
 /**
@@ -392,31 +308,11 @@ function buildProposerContext(session: Session): ProposerContext {
 }
 
 /**
- * Builds the context for a voter.
- */
-function buildVoterContext(
-  session: Session,
-  proposalA: Proposal,
-  proposalB: Proposal
-): VoterContext {
-  const currentStateDef = session.machine.states[session.currentState];
-  return {
-    sessionId: session.sessionId,
-    currentState: session.currentState,
-    prompt: currentStateDef?.prompt ?? "",
-    proposalA,
-    proposalB,
-    history: session.history,
-  };
-}
-
-/**
  * Builds the context for an arbiter.
  */
 function buildArbiterContext(
   session: Session,
   roundProposals: Proposal[],
-  roundVotes: Vote[],
   threshold: number
 ): ArbiterContext {
   const currentStateDef = session.machine.states[session.currentState];
@@ -427,7 +323,6 @@ function buildArbiterContext(
     prompt: currentStateDef?.prompt ?? "",
     machineName: session.machineName,
     proposals: roundProposals,
-    votes: roundVotes,
     history: session.history,
     threshold,
   };
@@ -444,23 +339,6 @@ export function resolveProposerStrategy(
   if (proposer.strategyFnName) {
     const fn = proposerStrategies[proposer.strategyFnName];
     if (!fn) throw new Error(`Unknown proposer strategy: ${proposer.strategyFnName}`);
-    return fn;
-  }
-
-  return null;
-}
-
-/**
- * Resolves a voter's local strategy function, or null for side-effectful modes.
- */
-export function resolveVoterStrategy(
-  voter: Voter
-): ((ctx: VoterContext) => Promise<{ voteFor: VoteChoice; reasoning: string }>) | null {
-  if (voter.strategyFn) return voter.strategyFn;
-
-  if (voter.strategyFnName) {
-    const fn = voterStrategies[voter.strategyFnName];
-    if (!fn) throw new Error(`Unknown voter strategy: ${voter.strategyFnName}`);
     return fn;
   }
 
@@ -521,45 +399,6 @@ async function invokeProposerStrategy(
   }
 
   throw new Error(`No valid execution mode for proposer: ${proposer.specialistId}`);
-}
-
-/**
- * Invokes a voter's strategy to get a vote.
- */
-async function invokeVoterStrategy(
-  voter: Voter,
-  ctx: VoterContext
-): Promise<{ voteFor: VoteChoice; reasoning: string }> {
-  const localFn = resolveVoterStrategy(voter);
-  if (localFn) return localFn(ctx);
-
-  if (voter.strategyWebhookUrl) {
-    const { executeVoterWebhook } = await import("./llm.js");
-    return executeVoterWebhook(
-      voter.strategyWebhookUrl,
-      ctx,
-      voter.machineName,
-      voter.webhookTokenName
-    );
-  }
-
-  if (voter.contextFn && voter.modelId) {
-    const { executeVoterLlm } = await import("./llm.js");
-    return executeVoterLlm(voter.contextFn, voter.modelId, ctx);
-  }
-
-  if (voter.contextWebhookUrl && voter.modelId) {
-    const { executeContextWebhookVoter } = await import("./llm.js");
-    return executeContextWebhookVoter(
-      voter.contextWebhookUrl,
-      voter.modelId,
-      ctx,
-      voter.machineName,
-      voter.webhookTokenName
-    );
-  }
-
-  throw new Error(`No valid execution mode for voter: ${voter.specialistId}`);
 }
 
 /**
@@ -663,198 +502,6 @@ export async function submitProposal(
 }
 
 /**
- * Creates and stores a vote comparing two proposals.
- * If voteFor is omitted, invokes the specialist's registered strategy.
- */
-export async function submitVote(
-  opts: SubmitVoteOptions
-): Promise<Vote> {
-  const {
-    sessionId,
-    specialistId,
-    roundId,
-    proposalIdA,
-    proposalIdB,
-    voteFor,
-    reasoning,
-    metaJson,
-    costUSD,
-    latencyMsec,
-    numInputTokens,
-    numOutputTokens,
-  } = opts;
-  const session = await getSession(sessionId);
-  const specialist = specialists.get(specialistId);
-
-  if (!specialist) {
-    throw new Error(`Specialist not found: ${specialistId}`);
-  }
-
-  if (specialist.role !== "voter") {
-    throw new Error(`Specialist ${specialistId} is not a voter`);
-  }
-
-  if (!proposalIdA || !proposalIdB) {
-    throw new Error("Both proposalIdA and proposalIdB are required");
-  }
-
-  const proposalA = proposals.get(proposalIdA);
-  const proposalB = proposals.get(proposalIdB);
-
-  if (!proposalA) {
-    throw new Error(`Proposal not found: ${proposalIdA}`);
-  }
-  if (!proposalB) {
-    throw new Error(`Proposal not found: ${proposalIdB}`);
-  }
-
-  const voter = specialist;
-  const effectiveRoundId = roundId ?? session.currentRoundId;
-  const isHuman = voter.isHuman ?? false;
-
-  let finalVoteFor = voteFor;
-  let finalReasoning = reasoning;
-
-  // If voteFor not provided, invoke strategy
-  if (!finalVoteFor) {
-    const ctx = buildVoterContext(session, proposalA, proposalB);
-    const result = await invokeVoterStrategy(voter, ctx);
-    finalVoteFor = result.voteFor;
-    finalReasoning = finalReasoning ?? result.reasoning;
-  }
-
-  const vote: Vote = {
-    voteId: generateUUID(),
-    sessionId,
-    roundId: effectiveRoundId,
-    specialistId,
-    isHuman,
-    proposalIdA,
-    proposalIdB,
-    voteFor: finalVoteFor,
-    reasoning: finalReasoning ?? "",
-    metaJson,
-    costUSD,
-    latencyMsec,
-    numInputTokens,
-    numOutputTokens,
-  };
-
-  votes.set(vote.voteId, vote);
-  return vote;
-}
-
-/**
- * Builds context for a selection voter.
- */
-function buildSelectionVoterContext(
-  session: Session,
-  roundProposals: Proposal[]
-): SelectionVoterContext {
-  const currentStateDef = session.machine.states[session.currentState];
-
-  // Build alignment scores for context
-  const records = getAllAlignmentRecords(session.machineName);
-  const alignmentScores: Record<string, number> = {};
-  for (const r of records) {
-    alignmentScores[r.specialistId] = r.alignmentScore;
-  }
-
-  return {
-    sessionId: session.sessionId,
-    currentState: session.currentState,
-    prompt: currentStateDef?.prompt ?? "",
-    machineName: session.machineName,
-    proposals: roundProposals,
-    history: session.history,
-    alignmentScores,
-  };
-}
-
-/**
- * Creates and stores a selection vote (voter picks one proposal from all).
- * If selectedProposalId is omitted, invokes the voter's selection strategy.
- */
-export async function submitSelectionVote(
-  opts: SubmitSelectionVoteOptions
-): Promise<SelectionVote> {
-  const {
-    sessionId,
-    specialistId,
-    roundId,
-    selectedProposalId,
-    reasoning,
-    metaJson,
-    costUSD,
-    latencyMsec,
-    numInputTokens,
-    numOutputTokens,
-  } = opts;
-  const session = await getSession(sessionId);
-  const specialist = specialists.get(specialistId);
-
-  if (!specialist) {
-    throw new Error(`Specialist not found: ${specialistId}`);
-  }
-
-  if (specialist.role !== "voter") {
-    throw new Error(`Specialist ${specialistId} is not a voter`);
-  }
-
-  const voter: Voter = specialist;
-  const effectiveRoundId = roundId ?? session.currentRoundId;
-  const isHuman = voter.isHuman ?? false;
-
-  let finalSelectedId = selectedProposalId;
-  let finalReasoning = reasoning;
-
-  if (!finalSelectedId) {
-    const roundProposals = getProposalsForRound(sessionId, effectiveRoundId);
-    const ctx = buildSelectionVoterContext(session, roundProposals);
-
-    if (voter.selectionStrategyFn) {
-      const result = await voter.selectionStrategyFn(ctx);
-      finalSelectedId = result.selectedProposalId;
-      finalReasoning = finalReasoning ?? result.reasoning;
-    } else if (voter.strategyFnName) {
-      const { selectionVoterStrategies } = await import("./strategies.js");
-      const strategyFn = selectionVoterStrategies[voter.strategyFnName];
-      if (strategyFn) {
-        const result = await strategyFn(ctx);
-        finalSelectedId = result.selectedProposalId;
-        finalReasoning = finalReasoning ?? result.reasoning;
-      } else {
-        throw new Error(`No selection voter strategy: ${voter.strategyFnName}`);
-      }
-    } else {
-      throw new Error(`No selection strategy for voter: ${specialistId}`);
-    }
-  }
-
-  if (!finalSelectedId) {
-    throw new Error("No proposal selected");
-  }
-
-  const selectionVote: SelectionVote = {
-    selectionVoteId: generateUUID(),
-    sessionId,
-    roundId: effectiveRoundId,
-    specialistId,
-    isHuman,
-    selectedProposalId: finalSelectedId,
-    reasoning: finalReasoning ?? "",
-    metaJson,
-    costUSD,
-    latencyMsec,
-    numInputTokens,
-    numOutputTokens,
-  };
-
-  selectionVotesStore.set(selectionVote.selectionVoteId, selectionVote);
-  return selectionVote;
-}
-
-/**
  * Gets all proposals for a session's current round.
  */
 export function getProposalsForRound(
@@ -867,72 +514,8 @@ export function getProposalsForRound(
 }
 
 /**
- * Gets all votes for a session's current round.
- */
-export function getVotesForRound(sessionId: string, roundId: string): Vote[] {
-  return [...votes.values()].filter(
-    (v) => v.sessionId === sessionId && v.roundId === roundId
-  );
-}
-
-/**
- * Gets all selection votes for a session's current round.
- */
-export function getSelectionVotesForRound(
-  sessionId: string,
-  roundId: string
-): SelectionVote[] {
-  return [...selectionVotesStore.values()].filter(
-    (v) => v.sessionId === sessionId && v.roundId === roundId
-  );
-}
-
-/**
- * Pure function: checks if a human has voted (selection or pairwise).
- * Returns a ConsensusResult if human primacy applies, null otherwise.
- */
-export function checkHumanPrimacy(
-  selectionVotes: SelectionVote[],
-  pairwiseVotes: Vote[],
-  isHuman: (specialistId: string) => boolean
-): ConsensusResult | null {
-  // Check human selection votes first
-  for (const sv of selectionVotes) {
-    if (isHuman(sv.specialistId)) {
-      return {
-        consensusReached: true,
-        winningProposalId: sv.selectedProposalId,
-        reasoning: `Human selection vote from ${sv.specialistId}`,
-      };
-    }
-  }
-
-  // Check human pairwise votes
-  for (const vote of pairwiseVotes) {
-    if (isHuman(vote.specialistId)) {
-      let winningId: string | undefined;
-      if (vote.voteFor === "A") winningId = vote.proposalIdA;
-      else if (vote.voteFor === "B") winningId = vote.proposalIdB;
-
-      if (winningId) {
-        return {
-          consensusReached: true,
-          winningProposalId: winningId,
-          reasoning: `Human pairwise vote from ${vote.specialistId}`,
-        };
-      }
-    }
-  }
-
-  return null;
-}
-
-/**
  * Evaluates whether consensus has been reached for a session.
  * Read-only operation - does not execute any transition.
- *
- * Human primacy: if a human has voted (pairwise or selection),
- * their vote wins immediately.
  */
 export async function evaluateConsensus(
   sessionId: string
@@ -945,20 +528,12 @@ export async function evaluateConsensus(
   }
 
   const roundProposals = getProposalsForRound(sessionId, session.currentRoundId);
-  const roundVotes = getVotesForRound(sessionId, session.currentRoundId);
-  const roundSelectionVotes = getSelectionVotesForRound(sessionId, session.currentRoundId);
-
-  // Human primacy check
-  const humanResult = checkHumanPrimacy(roundSelectionVotes, roundVotes, isHumanSpecialist);
-  if (humanResult) return humanResult;
 
   const ctx = buildArbiterContext(
     session,
     roundProposals,
-    roundVotes,
     arbiter.threshold ?? 1
   );
-  ctx.selectionVotes = roundSelectionVotes;
 
   // Build alignment scores for context
   const records = getAllAlignmentRecords(session.machineName);
@@ -1096,9 +671,6 @@ export async function submitArbitration(
       };
 
     case "humanOverride": {
-      const roundVotes = getVotesForRound(sessionId, effectiveRoundId);
-      const roundSelectionVotes = getSelectionVotesForRound(sessionId, effectiveRoundId);
-
       // Create exemplar from human decision
       const proposerCtx = buildProposerContext(session);
       createExemplar(
@@ -1107,18 +679,14 @@ export async function submitArbitration(
         proposerCtx,
         path.transitionName,
         path.toState,
-        roundProposals,
-        roundVotes,
-        roundSelectionVotes
+        roundProposals
       );
 
       // Update alignment for all specialists
       updateAlignmentAfterHumanDecision(
         session.machineName,
         path.transitionName,
-        roundProposals,
-        roundVotes,
-        roundSelectionVotes
+        roundProposals
       );
 
       // Execute the forced transition
@@ -1244,20 +812,10 @@ export async function executeTransition(
   session.history.push(record);
   session.currentRoundId = generateUUID();
 
-  // Clear proposals, votes, and selection votes for this session
+  // Clear proposals for this session
   for (const [id, proposal] of proposals.entries()) {
     if (proposal.sessionId === sessionId) {
       proposals.delete(id);
-    }
-  }
-  for (const [id, vote] of votes.entries()) {
-    if (vote.sessionId === sessionId) {
-      votes.delete(id);
-    }
-  }
-  for (const [id, sv] of selectionVotesStore.entries()) {
-    if (sv.sessionId === sessionId) {
-      selectionVotesStore.delete(id);
     }
   }
 

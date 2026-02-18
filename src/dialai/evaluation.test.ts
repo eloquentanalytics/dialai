@@ -43,7 +43,7 @@ describe("Evaluation System", () => {
           reasoning: "Go B",
           createdAt: new Date(),
         },
-      ], [], []);
+      ]);
 
       createExemplar("test-machine", "a", mockContext, "to_c", "c", [
         {
@@ -57,7 +57,7 @@ describe("Evaluation System", () => {
           reasoning: "Go B",
           createdAt: new Date(),
         },
-      ], [], []);
+      ]);
 
       createExemplar("test-machine", "a", mockContext, "to_b", "b", [
         {
@@ -71,7 +71,7 @@ describe("Evaluation System", () => {
           reasoning: "Go B",
           createdAt: new Date(),
         },
-      ], [], []);
+      ]);
 
       const result = evaluateAlignment("ai-1", "test-machine");
 
@@ -101,7 +101,7 @@ describe("Evaluation System", () => {
           reasoning: "Go B",
           createdAt: new Date(),
         },
-      ], [], []);
+      ]);
 
       createExemplar("test-machine", "a", mockContext, "to_c", "c", [
         {
@@ -115,7 +115,7 @@ describe("Evaluation System", () => {
           reasoning: "Go B",
           createdAt: new Date(),
         },
-      ], [], []);
+      ]);
 
       const result = evaluateAlignment("ai-1", "test-machine", { maxRounds: 1 });
 
@@ -165,7 +165,7 @@ describe("Evaluation System", () => {
           latencyMsec: 100,
           createdAt: new Date(),
         },
-      ], [], []);
+      ]);
 
       createExemplar("test-machine", "a", mockContext, "to_c", "c", [
         {
@@ -181,7 +181,7 @@ describe("Evaluation System", () => {
           latencyMsec: 200,
           createdAt: new Date(),
         },
-      ], [], []);
+      ]);
 
       const result = evaluateAccuracy("ai-1", "test-machine");
 
@@ -214,7 +214,7 @@ describe("Evaluation System", () => {
             reasoning: "Go B",
             createdAt: new Date(),
           },
-        ], [], []);
+        ]);
       }
 
       const result = evaluateAccuracy("ai-1", "test-machine", { lookback: 2 });

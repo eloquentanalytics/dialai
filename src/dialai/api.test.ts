@@ -9,15 +9,12 @@ import {
   getSession,
   getSessions,
   registerProposer,
-  registerVoter,
   registerArbiter,
   submitProposal,
-  submitVote,
   evaluateConsensus,
   submitArbitration,
   executeTransition,
   getProposers,
-  getVoters,
   getArbiter,
 } from "./api.js";
 import type { MachineDefinition } from "./types.js";
@@ -170,31 +167,6 @@ describe("Specialist Registration", () => {
     });
   });
 
-  describe("registerVoter", () => {
-    it("registers a voter with strategyFnName", async () => {
-      const voter = await registerVoter({
-        specialistId: "test-voter",
-        machineName: "test-machine",
-        strategyFnName: "preferA",
-      });
-
-      expect(voter.role).toBe("voter");
-      expect(voter.specialistId).toBe("test-voter");
-      expect(voter.strategyFnName).toBe("preferA");
-    });
-
-    it("registers a voter with isHuman flag", async () => {
-      const voter = await registerVoter({
-        specialistId: "human-voter",
-        machineName: "test-machine",
-        strategyFnName: "preferA",
-        isHuman: true,
-      });
-
-      expect(voter.isHuman).toBe(true);
-    });
-  });
-
   describe("registerArbiter", () => {
     it("registers an arbiter with strategyFnName", async () => {
       const arbiter = await registerArbiter({
@@ -244,19 +216,6 @@ describe("Specialist Registration", () => {
       expect(proposers).toHaveLength(2);
       expect(proposers.map((p) => p.specialistId)).toContain("p1");
       expect(proposers.map((p) => p.specialistId)).toContain("p2");
-    });
-
-    it("getVoters returns voters for a machine", async () => {
-      await registerVoter({
-        specialistId: "v1",
-        machineName: "test-machine",
-        strategyFnName: "preferA",
-      });
-
-      const voters = getVoters("test-machine");
-
-      expect(voters).toHaveLength(1);
-      expect(voters[0].specialistId).toBe("v1");
     });
 
     it("getArbiter returns arbiter for a machine", async () => {
@@ -341,91 +300,6 @@ describe("Decision Cycle", () => {
     });
   });
 
-  describe("submitVote", () => {
-    it("creates a vote using strategy when voteFor omitted", async () => {
-      const session = await createSession(multiStateMachine);
-      await registerProposer({
-        specialistId: "p1",
-        machineName: "multi-state",
-        strategyFnName: "firstAvailable",
-      });
-      await registerProposer({
-        specialistId: "p2",
-        machineName: "multi-state",
-        strategyFnName: "lastAvailable",
-      });
-      await registerVoter({
-        specialistId: "voter",
-        machineName: "multi-state",
-        strategyFnName: "preferA",
-      });
-
-      const propA = await submitProposal({
-        sessionId: session.sessionId,
-        specialistId: "p1",
-      });
-      const propB = await submitProposal({
-        sessionId: session.sessionId,
-        specialistId: "p2",
-      });
-
-      const vote = await submitVote({
-        sessionId: session.sessionId,
-        specialistId: "voter",
-        roundId: session.currentRoundId,
-        proposalIdA: propA.proposalId,
-        proposalIdB: propB.proposalId,
-      });
-
-      expect(vote.voteId).toBeDefined();
-      expect(vote.sessionId).toBe(session.sessionId);
-      expect(vote.voteFor).toBe("A");
-      expect(vote.proposalIdA).toBe(propA.proposalId);
-      expect(vote.proposalIdB).toBe(propB.proposalId);
-    });
-
-    it("creates a vote with explicit voteFor", async () => {
-      const session = await createSession(multiStateMachine);
-      await registerProposer({
-        specialistId: "p1",
-        machineName: "multi-state",
-        strategyFnName: "firstAvailable",
-      });
-      await registerProposer({
-        specialistId: "p2",
-        machineName: "multi-state",
-        strategyFnName: "lastAvailable",
-      });
-      await registerVoter({
-        specialistId: "voter",
-        machineName: "multi-state",
-        strategyFnName: "preferA",
-      });
-
-      const propA = await submitProposal({
-        sessionId: session.sessionId,
-        specialistId: "p1",
-      });
-      const propB = await submitProposal({
-        sessionId: session.sessionId,
-        specialistId: "p2",
-      });
-
-      const vote = await submitVote({
-        sessionId: session.sessionId,
-        specialistId: "voter",
-        roundId: session.currentRoundId,
-        proposalIdA: propA.proposalId,
-        proposalIdB: propB.proposalId,
-        voteFor: "B",
-        reasoning: "Explicit B vote",
-      });
-
-      expect(vote.voteFor).toBe("B");
-      expect(vote.reasoning).toBe("Explicit B vote");
-    });
-  });
-
   describe("evaluateConsensus", () => {
     it("returns consensus with single proposal and firstProposal arbiter", async () => {
       const session = await createSession(simpleMachine);
@@ -467,7 +341,7 @@ describe("Decision Cycle", () => {
         specialistId: "arbiter",
         machineName: "multi-state",
         strategyFnName: "aheadByK",
-        threshold: 3,
+        threshold: 0.5,
       });
 
       await submitProposal({
@@ -481,6 +355,7 @@ describe("Decision Cycle", () => {
 
       const result = await evaluateConsensus(session.sessionId);
 
+      // Cold start: no alignment data, so no consensus
       expect(result.consensusReached).toBe(false);
     });
   });

@@ -2,12 +2,10 @@ import { describe, test, expect, beforeEach } from "vitest";
 import {
   clear,
   registerProposer,
-  registerVoter,
   registerArbiter,
   enableSpecialist,
   disableSpecialist,
   getEnabledProposers,
-  getEnabledVoters,
   getEnabledArbiter,
   getAlignmentScore,
   updateAlignment,
@@ -76,25 +74,6 @@ describe("DIAL_237–DIAL_248: Enable/Disable Specialists", () => {
     expect(enabled[0].specialistId).toBe("p2");
   });
 
-  test("DIAL_243: disabled voter excluded from getEnabledVoters", async () => {
-    await registerVoter({
-      specialistId: "v1",
-      machineName: "test",
-      strategyFnName: "preferA",
-    });
-    await registerVoter({
-      specialistId: "v2",
-      machineName: "test",
-      strategyFnName: "preferB",
-    });
-
-    disableSpecialist("v1");
-
-    const enabled = getEnabledVoters("test");
-    expect(enabled).toHaveLength(1);
-    expect(enabled[0].specialistId).toBe("v2");
-  });
-
   test("DIAL_244: disabled arbiter excluded from getEnabledArbiter", async () => {
     await registerArbiter({
       specialistId: "a1",
@@ -106,53 +85,6 @@ describe("DIAL_237–DIAL_248: Enable/Disable Specialists", () => {
 
     const arbiter = getEnabledArbiter("test");
     expect(arbiter).toBeUndefined();
-  });
-
-  test("DIAL_245: getEnabledVoters filters by voterType", async () => {
-    await registerVoter({
-      specialistId: "v1",
-      machineName: "test",
-      voterType: "pairwise",
-      strategyFnName: "preferA",
-    });
-    await registerVoter({
-      specialistId: "v2",
-      machineName: "test",
-      voterType: "selection",
-      selectionStrategyFn: async () => ({
-        selectedProposalId: "p1",
-        reasoning: "test",
-      }),
-    });
-
-    const pairwise = getEnabledVoters("test", "pairwise");
-    expect(pairwise).toHaveLength(1);
-    expect(pairwise[0].specialistId).toBe("v1");
-
-    const selection = getEnabledVoters("test", "selection");
-    expect(selection).toHaveLength(1);
-    expect(selection[0].specialistId).toBe("v2");
-  });
-
-  test("DIAL_246: getEnabledVoters without voterType returns all enabled voters", async () => {
-    await registerVoter({
-      specialistId: "v1",
-      machineName: "test",
-      voterType: "pairwise",
-      strategyFnName: "preferA",
-    });
-    await registerVoter({
-      specialistId: "v2",
-      machineName: "test",
-      voterType: "selection",
-      selectionStrategyFn: async () => ({
-        selectedProposalId: "p1",
-        reasoning: "test",
-      }),
-    });
-
-    const all = getEnabledVoters("test");
-    expect(all).toHaveLength(2);
   });
 
   test("DIAL_247: re-enabling a disabled specialist works", async () => {

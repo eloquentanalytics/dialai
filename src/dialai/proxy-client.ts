@@ -10,17 +10,13 @@ import type {
   MachineDefinition,
   Session,
   Proposal,
-  Vote,
   Proposer,
-  Voter,
   Arbiter,
   ConsensusResult,
   ArbitrationResult,
   RegisterProposerOptions,
-  RegisterVoterOptions,
   RegisterArbiterOptions,
   SubmitProposalOptions,
-  SubmitVoteOptions,
   SubmitArbitrationOptions,
 } from "./types.js";
 
@@ -89,20 +85,12 @@ export async function registerProposer(opts: RegisterProposerOptions): Promise<P
   return rpcCall<Proposer>("register_proposer", opts as unknown as Record<string, unknown>);
 }
 
-export async function registerVoter(opts: RegisterVoterOptions): Promise<Voter> {
-  return rpcCall<Voter>("register_voter", opts as unknown as Record<string, unknown>);
-}
-
 export async function registerArbiter(opts: RegisterArbiterOptions): Promise<Arbiter> {
   return rpcCall<Arbiter>("register_arbiter", opts as unknown as Record<string, unknown>);
 }
 
 export async function submitProposal(opts: SubmitProposalOptions): Promise<Proposal> {
   return rpcCall<Proposal>("submit_proposal", opts as unknown as Record<string, unknown>);
-}
-
-export async function submitVote(opts: SubmitVoteOptions): Promise<Vote> {
-  return rpcCall<Vote>("submit_vote", opts as unknown as Record<string, unknown>);
 }
 
 export async function evaluateConsensus(sessionId: string): Promise<ConsensusResult> {

@@ -3,18 +3,13 @@ import {
   clear,
   createSession,
   registerProposer,
-  registerVoter,
   submitProposal,
-  submitVote,
-  submitSelectionVote,
   getAlignmentScore,
   isHumanSpecialist,
   updateAlignment,
   updateAlignmentAfterHumanDecision,
   getAllAlignmentRecords,
   getProposalsForRound,
-  getVotesForRound,
-  getSelectionVotesForRound,
 } from "../../src/dialai/index.js";
 import type { MachineDefinition } from "../../src/dialai/types.js";
 
@@ -184,170 +179,12 @@ describe("DIAL_198–DIAL_211: Alignment Score Tracking", () => {
     });
 
     const proposals = getProposalsForRound(session.sessionId, session.currentRoundId);
-    const votes = getVotesForRound(session.sessionId, session.currentRoundId);
-    const selVotes = getSelectionVotesForRound(session.sessionId, session.currentRoundId);
 
     // Human chose "approve"
-    updateAlignmentAfterHumanDecision("align-test", "approve", proposals, votes, selVotes);
+    updateAlignmentAfterHumanDecision("align-test", "approve", proposals);
 
     expect(getAlignmentScore("p-match", "align-test")).toBe(1.0);
     expect(getAlignmentScore("p-miss", "align-test")).toBe(0);
-  });
-
-  test("DIAL_208: updateAlignmentAfterHumanDecision checks pairwise voters", async () => {
-    const session = await createSession(twoOptionMachine());
-    await registerProposer({
-      specialistId: "p1",
-      machineName: "align-test",
-      strategyFnName: "firstAvailable",
-    });
-    await registerProposer({
-      specialistId: "p2",
-      machineName: "align-test",
-      strategyFnName: "lastAvailable",
-    });
-    await registerVoter({
-      specialistId: "v-good",
-      machineName: "align-test",
-      strategyFnName: "preferA", // votes for proposal A (approve)
-    });
-    await registerVoter({
-      specialistId: "v-bad",
-      machineName: "align-test",
-      strategyFnName: "preferB", // votes for proposal B (reject)
-    });
-
-    const propA = await submitProposal({
-      sessionId: session.sessionId,
-      specialistId: "p1",
-      roundId: session.currentRoundId,
-    });
-    const propB = await submitProposal({
-      sessionId: session.sessionId,
-      specialistId: "p2",
-      roundId: session.currentRoundId,
-    });
-    await submitVote({
-      sessionId: session.sessionId,
-      specialistId: "v-good",
-      roundId: session.currentRoundId,
-      proposalIdA: propA.proposalId,
-      proposalIdB: propB.proposalId,
-    });
-    await submitVote({
-      sessionId: session.sessionId,
-      specialistId: "v-bad",
-      roundId: session.currentRoundId,
-      proposalIdA: propA.proposalId,
-      proposalIdB: propB.proposalId,
-    });
-
-    const proposals = getProposalsForRound(session.sessionId, session.currentRoundId);
-    const votes = getVotesForRound(session.sessionId, session.currentRoundId);
-    const selVotes = getSelectionVotesForRound(session.sessionId, session.currentRoundId);
-
-    // Human chose "approve" — proposal A matches
-    updateAlignmentAfterHumanDecision("align-test", "approve", proposals, votes, selVotes);
-
-    // v-good voted A (matching proposal) → matched
-    expect(getAlignmentScore("v-good", "align-test")).toBe(1.0);
-    // v-bad voted B (non-matching proposal) → not matched
-    expect(getAlignmentScore("v-bad", "align-test")).toBe(0);
-  });
-
-  test("DIAL_209: updateAlignmentAfterHumanDecision checks selection voters", async () => {
-    const session = await createSession(twoOptionMachine());
-    await registerProposer({
-      specialistId: "p1",
-      machineName: "align-test",
-      strategyFnName: "firstAvailable",
-    });
-    await registerProposer({
-      specialistId: "p2",
-      machineName: "align-test",
-      strategyFnName: "lastAvailable",
-    });
-    await registerVoter({
-      specialistId: "sv1",
-      machineName: "align-test",
-      voterType: "selection",
-      selectionStrategyFn: async (ctx) => ({
-        selectedProposalId: ctx.proposals[0].proposalId,
-        reasoning: "first",
-      }),
-    });
-
-    await submitProposal({
-      sessionId: session.sessionId,
-      specialistId: "p1",
-      roundId: session.currentRoundId,
-    });
-    await submitProposal({
-      sessionId: session.sessionId,
-      specialistId: "p2",
-      roundId: session.currentRoundId,
-    });
-    await submitSelectionVote({
-      sessionId: session.sessionId,
-      specialistId: "sv1",
-      roundId: session.currentRoundId,
-    });
-
-    const proposals = getProposalsForRound(session.sessionId, session.currentRoundId);
-    const votes = getVotesForRound(session.sessionId, session.currentRoundId);
-    const selVotes = getSelectionVotesForRound(session.sessionId, session.currentRoundId);
-
-    // Human chose "approve" — first proposal (from p1/firstAvailable) is "approve"
-    updateAlignmentAfterHumanDecision("align-test", "approve", proposals, votes, selVotes);
-
-    // sv1 selected the first proposal (approve) → matched
-    expect(getAlignmentScore("sv1", "align-test")).toBe(1.0);
-  });
-
-  test("DIAL_210: updateAlignmentAfterHumanDecision: BOTH vote matched when either matches", async () => {
-    const session = await createSession(twoOptionMachine());
-    await registerProposer({
-      specialistId: "p1",
-      machineName: "align-test",
-      strategyFnName: "firstAvailable",
-    });
-    await registerProposer({
-      specialistId: "p2",
-      machineName: "align-test",
-      strategyFnName: "lastAvailable",
-    });
-    await registerVoter({
-      specialistId: "v-both",
-      machineName: "align-test",
-      strategyFnName: "both",
-    });
-
-    const propA = await submitProposal({
-      sessionId: session.sessionId,
-      specialistId: "p1",
-      roundId: session.currentRoundId,
-    });
-    const propB = await submitProposal({
-      sessionId: session.sessionId,
-      specialistId: "p2",
-      roundId: session.currentRoundId,
-    });
-    await submitVote({
-      sessionId: session.sessionId,
-      specialistId: "v-both",
-      roundId: session.currentRoundId,
-      proposalIdA: propA.proposalId,
-      proposalIdB: propB.proposalId,
-    });
-
-    const proposals = getProposalsForRound(session.sessionId, session.currentRoundId);
-    const votes = getVotesForRound(session.sessionId, session.currentRoundId);
-    const selVotes = getSelectionVotesForRound(session.sessionId, session.currentRoundId);
-
-    // Human chose "approve" — propA matches, so BOTH vote counts as matched
-    updateAlignmentAfterHumanDecision("align-test", "approve", proposals, votes, selVotes);
-
-    expect(getAlignmentScore("v-both", "align-test")).toBe(1.0);
   });
 
   test("DIAL_211: getAllAlignmentRecords filters by machineName", async () => {

@@ -42,9 +42,7 @@ describe("Exemplar System", () => {
         mockContext,
         "to_b",
         "b",
-        mockProposals,
-        [],
-        []
+        mockProposals
       );
 
       expect(exemplar.exemplarId).toBeDefined();
@@ -53,8 +51,6 @@ describe("Exemplar System", () => {
       expect(exemplar.humanTransitionName).toBe("to_b");
       expect(exemplar.humanToState).toBe("b");
       expect(exemplar.proposals).toHaveLength(1);
-      expect(exemplar.votes).toHaveLength(0);
-      expect(exemplar.selectionVotes).toHaveLength(0);
       expect(exemplar.createdAt).toBeInstanceOf(Date);
     });
 
@@ -65,9 +61,7 @@ describe("Exemplar System", () => {
         mockContext,
         "to_b",
         "b",
-        mockProposals,
-        [],
-        []
+        mockProposals
       );
 
       // Modifying original should not affect exemplar
@@ -77,17 +71,17 @@ describe("Exemplar System", () => {
 
   describe("getExemplars", () => {
     it("returns exemplars for a machine", () => {
-      createExemplar("test-machine", "a", mockContext, "to_b", "b", mockProposals, [], []);
-      createExemplar("test-machine", "b", mockContext, "to_c", "c", mockProposals, [], []);
-      createExemplar("other-machine", "a", mockContext, "to_b", "b", mockProposals, [], []);
+      createExemplar("test-machine", "a", mockContext, "to_b", "b", mockProposals);
+      createExemplar("test-machine", "b", mockContext, "to_c", "c", mockProposals);
+      createExemplar("other-machine", "a", mockContext, "to_b", "b", mockProposals);
 
       const exemplars = getExemplars("test-machine");
       expect(exemplars).toHaveLength(2);
     });
 
     it("filters by state", () => {
-      createExemplar("test-machine", "a", mockContext, "to_b", "b", mockProposals, [], []);
-      createExemplar("test-machine", "b", mockContext, "to_c", "c", mockProposals, [], []);
+      createExemplar("test-machine", "a", mockContext, "to_b", "b", mockProposals);
+      createExemplar("test-machine", "b", mockContext, "to_c", "c", mockProposals);
 
       const exemplars = getExemplars("test-machine", "a");
       expect(exemplars).toHaveLength(1);

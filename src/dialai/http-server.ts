@@ -8,7 +8,6 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { createMcpServer } from "./mcp.js";
 import { DIALAI_API_TOKEN } from "./config.js";
 import { validateMachine } from "./utils.js";
-import type { VoteChoice } from "./types.js";
 
 /** JSON-RPC request structure */
 interface JsonRpcRequest {
@@ -154,10 +153,8 @@ async function listTools(
       { name: "get_session", description: "Get a session by ID" },
       { name: "get_sessions", description: "List all sessions" },
       { name: "register_proposer", description: "Register a proposer" },
-      { name: "register_voter", description: "Register a voter" },
       { name: "register_arbiter", description: "Register an arbiter" },
       { name: "submit_proposal", description: "Submit a proposal" },
-      { name: "submit_vote", description: "Submit a vote" },
       { name: "evaluate_consensus", description: "Evaluate consensus" },
       { name: "submit_arbitration", description: "Submit arbitration" },
       { name: "execute_transition", description: "Execute a transition" },
@@ -180,10 +177,8 @@ async function callTool(
     getSession,
     getSessions,
     registerProposer,
-    registerVoter,
     registerArbiter,
     submitProposal,
-    submitVote,
     evaluateConsensus,
     submitArbitration,
     executeTransition,
@@ -214,15 +209,6 @@ async function callTool(
         threshold: args.threshold as number | undefined,
       });
       break;
-    case "register_voter":
-      result = await registerVoter({
-        specialistId: args.specialistId as string,
-        machineName: args.machineName as string,
-        isHuman: args.isHuman as boolean | undefined,
-        strategyFnName: args.strategyFnName as string | undefined,
-        threshold: args.threshold as number | undefined,
-      });
-      break;
     case "register_arbiter":
       result = await registerArbiter({
         specialistId: args.specialistId as string,
@@ -237,22 +223,6 @@ async function callTool(
         specialistId: args.specialistId as string,
         roundId: args.roundId as string | undefined,
         transitionName: args.transitionName as string | undefined,
-        reasoning: args.reasoning as string | undefined,
-        metaJson: args.metaJson as Record<string, unknown> | undefined,
-        costUSD: args.costUSD as number | undefined,
-        latencyMsec: args.latencyMsec as number | undefined,
-        numInputTokens: args.numInputTokens as number | undefined,
-        numOutputTokens: args.numOutputTokens as number | undefined,
-      });
-      break;
-    case "submit_vote":
-      result = await submitVote({
-        sessionId: args.sessionId as string,
-        specialistId: args.specialistId as string,
-        roundId: args.roundId as string | undefined,
-        proposalIdA: args.proposalIdA as string,
-        proposalIdB: args.proposalIdB as string,
-        voteFor: args.voteFor as VoteChoice | undefined,
         reasoning: args.reasoning as string | undefined,
         metaJson: args.metaJson as Record<string, unknown> | undefined,
         costUSD: args.costUSD as number | undefined,

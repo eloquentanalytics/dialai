@@ -35,49 +35,6 @@ export function computeAlignmentFromExemplars(
       if (specialistProposal.transitionName === exemplar.humanTransitionName) {
         matchingDecisions++;
       }
-    } else {
-      // Check if the specialist voted for the human's choice
-      const specialistVote = exemplar.votes.find(
-        (v) => v.specialistId === specialistId
-      );
-
-      if (specialistVote) {
-        const proposalA = exemplar.proposals.find(
-          (p) => p.proposalId === specialistVote.proposalIdA
-        );
-        const proposalB = exemplar.proposals.find(
-          (p) => p.proposalId === specialistVote.proposalIdB
-        );
-
-        const aMatches =
-          proposalA?.transitionName === exemplar.humanTransitionName;
-        const bMatches =
-          proposalB?.transitionName === exemplar.humanTransitionName;
-
-        if (
-          (aMatches && specialistVote.voteFor === "A") ||
-          (bMatches && specialistVote.voteFor === "B") ||
-          ((aMatches || bMatches) && specialistVote.voteFor === "BOTH")
-        ) {
-          matchingDecisions++;
-        }
-      }
-
-      // Check selection votes
-      const selectionVote = exemplar.selectionVotes.find(
-        (sv) => sv.specialistId === specialistId
-      );
-
-      if (selectionVote) {
-        const selectedProposal = exemplar.proposals.find(
-          (p) => p.proposalId === selectionVote.selectedProposalId
-        );
-        if (
-          selectedProposal?.transitionName === exemplar.humanTransitionName
-        ) {
-          matchingDecisions++;
-        }
-      }
     }
   }
 
