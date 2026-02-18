@@ -59,7 +59,6 @@ import type {
 // Puzzle Logic
 // ============================================================================
 
-const ITEM_NAMES = ["Farmer", "Wolf", "Goat", "Cabbage"] as const;
 const ITEM_SHORT = ["F", "W", "G", "C"] as const;
 
 interface Move {
@@ -227,7 +226,7 @@ function buildOptimalMoveTable(): Map<string, string> {
 
     while (queue.length > 0) {
       const { state: curr, firstMove } = queue.shift()!;
-      for (const { move: _, target } of getValidMoves(curr)) {
+      for (const { target } of getValidMoves(curr)) {
         if (target === goal) { table.set(start, firstMove); break; }
         if (!visited.has(target)) {
           visited.add(target);

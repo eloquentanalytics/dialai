@@ -28,6 +28,11 @@ export type {
   Exemplar,
   AlignmentEvaluationResult,
   AccuracyEvaluationResult,
+  DecisionRecord,
+  CollapseMetrics,
+  SpecialistMetrics,
+  Signal,
+  SignalLevel,
   RegisterProposerOptions,
   RegisterArbiterOptions,
   SubmitProposalOptions,
@@ -41,6 +46,7 @@ export {
   proposals,
   alignmentRecords,
   exemplars,
+  decisionLog,
   clear,
 } from "./store.js";
 
@@ -128,6 +134,12 @@ export {
   normalizeMachine,
 } from "./utils.js";
 
+// Re-export monitoring
+export {
+  computeCollapseMetrics,
+  computeSignals,
+} from "./monitoring.js";
+
 // Re-export config
 export {
   DIALAI_BASE_URL,
@@ -137,3 +149,25 @@ export {
   OPENROUTER_API_TOKEN,
   getConfig,
 } from "./config.js";
+
+// ============================================================================
+// Convenience Functions
+// ============================================================================
+
+import { decisionLog, alignmentRecords } from "./store.js";
+import { computeCollapseMetrics } from "./monitoring.js";
+import type { CollapseMetrics } from "./types.js";
+
+/**
+ * Convenience wrapper: computes collapse metrics for a machine
+ * by reading from the in-memory stores.
+ */
+export function getCollapseMetrics(machineName: string): CollapseMetrics {
+  const decisions = [...decisionLog.values()].filter(
+    (d) => d.machineName === machineName
+  );
+  const alignment = [...alignmentRecords.values()].filter(
+    (r) => r.machineName === machineName
+  );
+  return computeCollapseMetrics(decisions, alignment);
+}
