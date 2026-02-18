@@ -38,8 +38,16 @@ async function setupWithProposals() {
     strategyFnName: "lastAvailable",
   });
 
-  const propA = await submitProposal(session.sessionId, "p1", session.currentRoundId);
-  const propB = await submitProposal(session.sessionId, "p2", session.currentRoundId);
+  const propA = await submitProposal({
+    sessionId: session.sessionId,
+    specialistId: "p1",
+    roundId: session.currentRoundId,
+  });
+  const propB = await submitProposal({
+    sessionId: session.sessionId,
+    specialistId: "p2",
+    roundId: session.currentRoundId,
+  });
 
   return { session, propA, propB };
 }
@@ -57,13 +65,13 @@ describe("DIAL_072–DIAL_088: Vote Submission", () => {
       strategyFnName: "preferA",
     });
 
-    const vote = await submitVote(
-      session.sessionId,
-      "v1",
-      session.currentRoundId,
-      propA.proposalId,
-      propB.proposalId
-    );
+    const vote = await submitVote({
+      sessionId: session.sessionId,
+      specialistId: "v1",
+      roundId: session.currentRoundId,
+      proposalIdA: propA.proposalId,
+      proposalIdB: propB.proposalId,
+    });
 
     expect(vote.voteFor).toBe("A");
     expect(vote.reasoning).toBeDefined();
@@ -77,15 +85,15 @@ describe("DIAL_072–DIAL_088: Vote Submission", () => {
       strategyFnName: "preferA",
     });
 
-    const vote = await submitVote(
-      session.sessionId,
-      "v1",
-      session.currentRoundId,
-      propA.proposalId,
-      propB.proposalId,
-      "A",
-      "I prefer proposal A"
-    );
+    const vote = await submitVote({
+      sessionId: session.sessionId,
+      specialistId: "v1",
+      roundId: session.currentRoundId,
+      proposalIdA: propA.proposalId,
+      proposalIdB: propB.proposalId,
+      voteFor: "A",
+      reasoning: "I prefer proposal A",
+    });
 
     expect(vote.voteFor).toBe("A");
     expect(vote.reasoning).toBe("I prefer proposal A");
@@ -103,14 +111,14 @@ describe("DIAL_072–DIAL_088: Vote Submission", () => {
         strategyFnName: "preferA",
       });
 
-      const vote = await submitVote(
-        session.sessionId,
-        "v1",
-        session.currentRoundId,
-        propA.proposalId,
-        propB.proposalId,
-        validChoices[i]
-      );
+      const vote = await submitVote({
+        sessionId: session.sessionId,
+        specialistId: "v1",
+        roundId: session.currentRoundId,
+        proposalIdA: propA.proposalId,
+        proposalIdB: propB.proposalId,
+        voteFor: validChoices[i],
+      });
 
       expect(vote.voteFor).toBe(validChoices[i]);
     }
@@ -129,14 +137,20 @@ describe("DIAL_072–DIAL_088: Vote Submission", () => {
       strategyFnName: "preferB",
     });
 
-    const voteA = await submitVote(
-      session.sessionId, "v1", session.currentRoundId,
-      propA.proposalId, propB.proposalId
-    );
-    const voteB = await submitVote(
-      session.sessionId, "v2", session.currentRoundId,
-      propA.proposalId, propB.proposalId
-    );
+    const voteA = await submitVote({
+      sessionId: session.sessionId,
+      specialistId: "v1",
+      roundId: session.currentRoundId,
+      proposalIdA: propA.proposalId,
+      proposalIdB: propB.proposalId,
+    });
+    const voteB = await submitVote({
+      sessionId: session.sessionId,
+      specialistId: "v2",
+      roundId: session.currentRoundId,
+      proposalIdA: propA.proposalId,
+      proposalIdB: propB.proposalId,
+    });
 
     expect(voteA.voteId).not.toBe(voteB.voteId);
   });
@@ -149,10 +163,13 @@ describe("DIAL_072–DIAL_088: Vote Submission", () => {
       strategyFnName: "preferA",
     });
 
-    const vote = await submitVote(
-      session.sessionId, "v1", session.currentRoundId,
-      propA.proposalId, propB.proposalId
-    );
+    const vote = await submitVote({
+      sessionId: session.sessionId,
+      specialistId: "v1",
+      roundId: session.currentRoundId,
+      proposalIdA: propA.proposalId,
+      proposalIdB: propB.proposalId,
+    });
 
     expect(vote.proposalIdA).toBe(propA.proposalId);
     expect(vote.proposalIdB).toBe(propB.proposalId);
@@ -166,13 +183,19 @@ describe("DIAL_072–DIAL_088: Vote Submission", () => {
       strategyFnName: "preferA",
     });
 
-    const vote = await submitVote(
-      session.sessionId, "v1", session.currentRoundId,
-      propA.proposalId, propB.proposalId,
-      "A", "test",
-      undefined,
-      0.003, 150, 80, 30
-    );
+    const vote = await submitVote({
+      sessionId: session.sessionId,
+      specialistId: "v1",
+      roundId: session.currentRoundId,
+      proposalIdA: propA.proposalId,
+      proposalIdB: propB.proposalId,
+      voteFor: "A",
+      reasoning: "test",
+      costUSD: 0.003,
+      latencyMsec: 150,
+      numInputTokens: 80,
+      numOutputTokens: 30,
+    });
 
     expect(vote.costUSD).toBe(0.003);
     expect(vote.latencyMsec).toBe(150);
@@ -193,10 +216,13 @@ describe("DIAL_072–DIAL_088: Vote Submission", () => {
       },
     });
 
-    await submitVote(
-      session.sessionId, "v1", session.currentRoundId,
-      propA.proposalId, propB.proposalId
-    );
+    await submitVote({
+      sessionId: session.sessionId,
+      specialistId: "v1",
+      roundId: session.currentRoundId,
+      proposalIdA: propA.proposalId,
+      proposalIdB: propB.proposalId,
+    });
 
     const ctx = receivedCtx as Record<string, unknown>;
     expect(ctx.sessionId).toBe(session.sessionId);
@@ -211,10 +237,13 @@ describe("DIAL_072–DIAL_088: Vote Submission", () => {
     const { session, propA, propB } = await setupWithProposals();
 
     await expect(
-      submitVote(
-        session.sessionId, "p1", session.currentRoundId,
-        propA.proposalId, propB.proposalId
-      )
+      submitVote({
+        sessionId: session.sessionId,
+        specialistId: "p1",
+        roundId: session.currentRoundId,
+        proposalIdA: propA.proposalId,
+        proposalIdB: propB.proposalId,
+      })
     ).rejects.toThrow("is not a voter");
   });
 
@@ -227,7 +256,11 @@ describe("DIAL_072–DIAL_088: Vote Submission", () => {
     });
 
     await expect(
-      submitVote(session.sessionId, "v1", session.currentRoundId)
+      submitVote({
+        sessionId: session.sessionId,
+        specialistId: "v1",
+        roundId: session.currentRoundId,
+      })
     ).rejects.toThrow("Both proposalIdA and proposalIdB are required");
   });
 });

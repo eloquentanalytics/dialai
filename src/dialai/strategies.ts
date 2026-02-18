@@ -256,6 +256,7 @@ export async function preferFirst(
 /**
  * Select the proposal from the specialist with highest alignment score.
  * Falls back to first proposal if no alignment data.
+ * Reads alignment from ctx.alignmentScores (populated by buildSelectionVoterContext).
  */
 export async function preferHighestAlignment(
   ctx: SelectionVoterContext
@@ -264,14 +265,13 @@ export async function preferHighestAlignment(
     throw new Error("No proposals to select from");
   }
 
-  // Import alignment dynamically to avoid circular dependency
-  const { getAlignmentScore } = await import("./alignment.js");
+  const scores = ctx.alignmentScores ?? {};
 
   let bestProposal = ctx.proposals[0];
   let bestScore = -1;
 
   for (const proposal of ctx.proposals) {
-    const score = getAlignmentScore(proposal.specialistId, ctx.machineName);
+    const score = scores[proposal.specialistId] ?? 0;
     if (score > bestScore) {
       bestScore = score;
       bestProposal = proposal;
@@ -598,6 +598,8 @@ export async function pairwiseConsensus(
  * 4. margin = (leader - runner_up) / totalAlignment
  * 5. Consensus when margin >= threshold
  * 6. Cold start (all alignment = 0): no consensus, blocks for human
+ *
+ * Reads alignment from ctx.alignmentScores (populated by evaluateConsensus).
  */
 export async function alignmentWeightedMargin(
   ctx: ArbiterContext
@@ -611,15 +613,15 @@ export async function alignmentWeightedMargin(
     };
   }
 
-  // Import alignment to get scores
-  const { getAlignmentScore } = await import("./alignment.js");
+  const scores = ctx.alignmentScores ?? {};
+  const getScore = (specialistId: string): number => scores[specialistId] ?? 0;
 
   // Score proposals by grouping by transition and summing alignment
   const transitionScores = new Map<string, { score: number; proposalId: string }>();
   let totalAlignment = 0;
 
   for (const proposal of ctx.proposals) {
-    const alignment = getAlignmentScore(proposal.specialistId, ctx.machineName);
+    const alignment = getScore(proposal.specialistId);
     totalAlignment += alignment;
 
     const existing = transitionScores.get(proposal.transitionName);
@@ -636,7 +638,7 @@ export async function alignmentWeightedMargin(
   // Score selection votes by alignment
   if (ctx.selectionVotes) {
     for (const sv of ctx.selectionVotes) {
-      const alignment = getAlignmentScore(sv.specialistId, ctx.machineName);
+      const alignment = getScore(sv.specialistId);
       totalAlignment += alignment;
 
       // Find which transition this selection vote maps to
@@ -654,7 +656,7 @@ export async function alignmentWeightedMargin(
 
   // Score pairwise votes by alignment
   for (const vote of ctx.votes) {
-    const alignment = getAlignmentScore(vote.specialistId, ctx.machineName);
+    const alignment = getScore(vote.specialistId);
     totalAlignment += alignment;
 
     const proposalA = ctx.proposals.find((p) => p.proposalId === vote.proposalIdA);
@@ -711,7 +713,7 @@ export async function alignmentWeightedMargin(
     let bestProposal = candidateProposals[0];
     let bestAlignment = -1;
     for (const p of candidateProposals) {
-      const a = getAlignmentScore(p.specialistId, ctx.machineName);
+      const a = getScore(p.specialistId);
       if (a > bestAlignment) {
         bestAlignment = a;
         bestProposal = p;

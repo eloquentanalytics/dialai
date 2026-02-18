@@ -44,7 +44,12 @@ import type {
   ArbiterContext,
   ConsensusResult,
   ArbitrationResult,
+  ArbitrationPath,
   TransitionRecord,
+  SubmitProposalOptions,
+  SubmitVoteOptions,
+  SubmitSelectionVoteOptions,
+  SubmitArbitrationOptions,
 } from "./types.js";
 
 // ============================================================================
@@ -429,23 +434,65 @@ function buildArbiterContext(
 }
 
 /**
+ * Resolves a proposer's local strategy function, or null for side-effectful modes.
+ */
+export function resolveProposerStrategy(
+  proposer: Proposer
+): ((ctx: ProposerContext) => Promise<{ transitionName: string; toState: string; reasoning: string }>) | null {
+  if (proposer.strategyFn) return proposer.strategyFn;
+
+  if (proposer.strategyFnName) {
+    const fn = proposerStrategies[proposer.strategyFnName];
+    if (!fn) throw new Error(`Unknown proposer strategy: ${proposer.strategyFnName}`);
+    return fn;
+  }
+
+  return null;
+}
+
+/**
+ * Resolves a voter's local strategy function, or null for side-effectful modes.
+ */
+export function resolveVoterStrategy(
+  voter: Voter
+): ((ctx: VoterContext) => Promise<{ voteFor: VoteChoice; reasoning: string }>) | null {
+  if (voter.strategyFn) return voter.strategyFn;
+
+  if (voter.strategyFnName) {
+    const fn = voterStrategies[voter.strategyFnName];
+    if (!fn) throw new Error(`Unknown voter strategy: ${voter.strategyFnName}`);
+    return fn;
+  }
+
+  return null;
+}
+
+/**
+ * Resolves an arbiter's local strategy function, or null for side-effectful modes.
+ */
+export function resolveArbiterStrategy(
+  arbiter: Arbiter
+): ((ctx: ArbiterContext) => Promise<ConsensusResult>) | null {
+  if (arbiter.strategyFn) return arbiter.strategyFn;
+
+  if (arbiter.strategyFnName) {
+    const fn = arbiterStrategies[arbiter.strategyFnName];
+    if (!fn) throw new Error(`Unknown arbiter strategy: ${arbiter.strategyFnName}`);
+    return fn;
+  }
+
+  return null;
+}
+
+/**
  * Invokes a proposer's strategy to get a proposal.
  */
 async function invokeProposerStrategy(
   proposer: Proposer,
   ctx: ProposerContext
 ): Promise<{ transitionName: string; toState: string; reasoning: string }> {
-  if (proposer.strategyFn) {
-    return proposer.strategyFn(ctx);
-  }
-
-  if (proposer.strategyFnName) {
-    const strategyFn = proposerStrategies[proposer.strategyFnName];
-    if (!strategyFn) {
-      throw new Error(`Unknown proposer strategy: ${proposer.strategyFnName}`);
-    }
-    return strategyFn(ctx);
-  }
+  const localFn = resolveProposerStrategy(proposer);
+  if (localFn) return localFn(ctx);
 
   if (proposer.strategyWebhookUrl) {
     const { executeProposerWebhook } = await import("./llm.js");
@@ -483,17 +530,8 @@ async function invokeVoterStrategy(
   voter: Voter,
   ctx: VoterContext
 ): Promise<{ voteFor: VoteChoice; reasoning: string }> {
-  if (voter.strategyFn) {
-    return voter.strategyFn(ctx);
-  }
-
-  if (voter.strategyFnName) {
-    const strategyFn = voterStrategies[voter.strategyFnName];
-    if (!strategyFn) {
-      throw new Error(`Unknown voter strategy: ${voter.strategyFnName}`);
-    }
-    return strategyFn(ctx);
-  }
+  const localFn = resolveVoterStrategy(voter);
+  if (localFn) return localFn(ctx);
 
   if (voter.strategyWebhookUrl) {
     const { executeVoterWebhook } = await import("./llm.js");
@@ -531,17 +569,8 @@ async function invokeArbiterStrategy(
   arbiter: Arbiter,
   ctx: ArbiterContext
 ): Promise<ConsensusResult> {
-  if (arbiter.strategyFn) {
-    return arbiter.strategyFn(ctx);
-  }
-
-  if (arbiter.strategyFnName) {
-    const strategyFn = arbiterStrategies[arbiter.strategyFnName];
-    if (!strategyFn) {
-      throw new Error(`Unknown arbiter strategy: ${arbiter.strategyFnName}`);
-    }
-    return strategyFn(ctx);
-  }
+  const localFn = resolveArbiterStrategy(arbiter);
+  if (localFn) return localFn(ctx);
 
   if (arbiter.strategyWebhookUrl) {
     const { executeWebhook } = await import("./llm.js");
@@ -561,17 +590,20 @@ async function invokeArbiterStrategy(
  * If transitionName is omitted, invokes the specialist's registered strategy.
  */
 export async function submitProposal(
-  sessionId: string,
-  specialistId: string,
-  roundId?: string,
-  transitionName?: string,
-  reasoning?: string,
-  metaJson?: Record<string, unknown>,
-  costUSD?: number,
-  latencyMsec?: number,
-  numInputTokens?: number,
-  numOutputTokens?: number
+  opts: SubmitProposalOptions
 ): Promise<Proposal> {
+  const {
+    sessionId,
+    specialistId,
+    roundId,
+    transitionName,
+    reasoning,
+    metaJson,
+    costUSD,
+    latencyMsec,
+    numInputTokens,
+    numOutputTokens,
+  } = opts;
   const session = await getSession(sessionId);
   const specialist = specialists.get(specialistId);
 
@@ -635,19 +667,22 @@ export async function submitProposal(
  * If voteFor is omitted, invokes the specialist's registered strategy.
  */
 export async function submitVote(
-  sessionId: string,
-  specialistId: string,
-  roundId?: string,
-  proposalIdA?: string,
-  proposalIdB?: string,
-  voteFor?: VoteChoice,
-  reasoning?: string,
-  metaJson?: Record<string, unknown>,
-  costUSD?: number,
-  latencyMsec?: number,
-  numInputTokens?: number,
-  numOutputTokens?: number
+  opts: SubmitVoteOptions
 ): Promise<Vote> {
+  const {
+    sessionId,
+    specialistId,
+    roundId,
+    proposalIdA,
+    proposalIdB,
+    voteFor,
+    reasoning,
+    metaJson,
+    costUSD,
+    latencyMsec,
+    numInputTokens,
+    numOutputTokens,
+  } = opts;
   const session = await getSession(sessionId);
   const specialist = specialists.get(specialistId);
 
@@ -717,6 +752,14 @@ function buildSelectionVoterContext(
   roundProposals: Proposal[]
 ): SelectionVoterContext {
   const currentStateDef = session.machine.states[session.currentState];
+
+  // Build alignment scores for context
+  const records = getAllAlignmentRecords(session.machineName);
+  const alignmentScores: Record<string, number> = {};
+  for (const r of records) {
+    alignmentScores[r.specialistId] = r.alignmentScore;
+  }
+
   return {
     sessionId: session.sessionId,
     currentState: session.currentState,
@@ -724,6 +767,7 @@ function buildSelectionVoterContext(
     machineName: session.machineName,
     proposals: roundProposals,
     history: session.history,
+    alignmentScores,
   };
 }
 
@@ -732,17 +776,20 @@ function buildSelectionVoterContext(
  * If selectedProposalId is omitted, invokes the voter's selection strategy.
  */
 export async function submitSelectionVote(
-  sessionId: string,
-  specialistId: string,
-  roundId?: string,
-  selectedProposalId?: string,
-  reasoning?: string,
-  metaJson?: Record<string, unknown>,
-  costUSD?: number,
-  latencyMsec?: number,
-  numInputTokens?: number,
-  numOutputTokens?: number
+  opts: SubmitSelectionVoteOptions
 ): Promise<SelectionVote> {
+  const {
+    sessionId,
+    specialistId,
+    roundId,
+    selectedProposalId,
+    reasoning,
+    metaJson,
+    costUSD,
+    latencyMsec,
+    numInputTokens,
+    numOutputTokens,
+  } = opts;
   const session = await getSession(sessionId);
   const specialist = specialists.get(specialistId);
 
@@ -841,6 +888,46 @@ export function getSelectionVotesForRound(
 }
 
 /**
+ * Pure function: checks if a human has voted (selection or pairwise).
+ * Returns a ConsensusResult if human primacy applies, null otherwise.
+ */
+export function checkHumanPrimacy(
+  selectionVotes: SelectionVote[],
+  pairwiseVotes: Vote[],
+  isHuman: (specialistId: string) => boolean
+): ConsensusResult | null {
+  // Check human selection votes first
+  for (const sv of selectionVotes) {
+    if (isHuman(sv.specialistId)) {
+      return {
+        consensusReached: true,
+        winningProposalId: sv.selectedProposalId,
+        reasoning: `Human selection vote from ${sv.specialistId}`,
+      };
+    }
+  }
+
+  // Check human pairwise votes
+  for (const vote of pairwiseVotes) {
+    if (isHuman(vote.specialistId)) {
+      let winningId: string | undefined;
+      if (vote.voteFor === "A") winningId = vote.proposalIdA;
+      else if (vote.voteFor === "B") winningId = vote.proposalIdB;
+
+      if (winningId) {
+        return {
+          consensusReached: true,
+          winningProposalId: winningId,
+          reasoning: `Human pairwise vote from ${vote.specialistId}`,
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
  * Evaluates whether consensus has been reached for a session.
  * Read-only operation - does not execute any transition.
  *
@@ -861,33 +948,9 @@ export async function evaluateConsensus(
   const roundVotes = getVotesForRound(sessionId, session.currentRoundId);
   const roundSelectionVotes = getSelectionVotesForRound(sessionId, session.currentRoundId);
 
-  // Human primacy: check for human selection votes first
-  for (const sv of roundSelectionVotes) {
-    if (isHumanSpecialist(sv.specialistId)) {
-      return {
-        consensusReached: true,
-        winningProposalId: sv.selectedProposalId,
-        reasoning: `Human selection vote from ${sv.specialistId}`,
-      };
-    }
-  }
-
-  // Human primacy: check for human pairwise votes
-  for (const vote of roundVotes) {
-    if (isHumanSpecialist(vote.specialistId)) {
-      let winningId: string | undefined;
-      if (vote.voteFor === "A") winningId = vote.proposalIdA;
-      else if (vote.voteFor === "B") winningId = vote.proposalIdB;
-
-      if (winningId) {
-        return {
-          consensusReached: true,
-          winningProposalId: winningId,
-          reasoning: `Human pairwise vote from ${vote.specialistId}`,
-        };
-      }
-    }
-  }
+  // Human primacy check
+  const humanResult = checkHumanPrimacy(roundSelectionVotes, roundVotes, isHumanSpecialist);
+  if (humanResult) return humanResult;
 
   const ctx = buildArbiterContext(
     session,
@@ -909,237 +972,232 @@ export async function evaluateConsensus(
 }
 
 /**
+ * Pure function: classifies which path submitArbitration should take
+ * based on round staleness, human status, transition validity, and proposal count.
+ */
+export function classifyArbitration(
+  currentRoundId: string,
+  effectiveRoundId: string,
+  isHuman: boolean,
+  transitionName: string | undefined,
+  currentStateTransitions: Record<string, string> | undefined,
+  proposalCount: number,
+  currentState: string
+): ArbitrationPath {
+  if (effectiveRoundId !== currentRoundId) {
+    return { type: "stale" };
+  }
+
+  if (transitionName) {
+    if (!isHuman) {
+      return { type: "notHuman" };
+    }
+    if (!currentStateTransitions?.[transitionName]) {
+      return {
+        type: "invalidTransition",
+        reason: `Invalid transition "${transitionName}" from state "${currentState}"`,
+      };
+    }
+    return {
+      type: "humanOverride",
+      transitionName,
+      toState: currentStateTransitions[transitionName],
+    };
+  }
+
+  if (proposalCount === 0) {
+    return { type: "noProposals" };
+  }
+
+  return { type: "evaluate" };
+}
+
+/**
  * Evaluates consensus and optionally executes the winning transition.
  */
 export async function submitArbitration(
-  sessionId: string,
-  roundId?: string,
-  specialistId?: string,
-  transitionName?: string,
-  reasoning?: string,
-  metaJson?: Record<string, unknown>,
-  costUSD?: number,
-  latencyMsec?: number,
-  numInputTokens?: number,
-  numOutputTokens?: number
+  opts: SubmitArbitrationOptions
 ): Promise<ArbitrationResult> {
+  const {
+    sessionId,
+    roundId,
+    specialistId,
+    transitionName,
+    reasoning,
+    metaJson,
+    costUSD,
+    latencyMsec,
+    numInputTokens,
+    numOutputTokens,
+  } = opts;
   const session = await getSession(sessionId);
   const effectiveRoundId = roundId ?? session.currentRoundId;
   const arbitrationId = generateUUID();
 
-  // Check for staleness
-  const stale = effectiveRoundId !== session.currentRoundId;
-  if (stale) {
-    return {
-      arbitrationId,
-      sessionId,
-      roundId: effectiveRoundId,
-      specialistId,
-      stale: true,
-      guardsPass: false,
-      guardReason: "Round ID mismatch - decision cycle already completed",
-      executed: false,
-      isHuman: false,
-      metaJson,
-      costUSD,
-      latencyMsec,
-      numInputTokens,
-      numOutputTokens,
-    };
-  }
-
-  // If transitionName provided, this is a forced transition
-  if (transitionName) {
-    // Check if specialist is human
-    const specialist = specialistId ? specialists.get(specialistId) : undefined;
-    const isHuman = specialist && "isHuman" in specialist && specialist.isHuman === true;
-
-    if (!isHuman) {
-      return {
-        arbitrationId,
-        sessionId,
-        roundId: effectiveRoundId,
-        specialistId,
-        stale: false,
-        guardsPass: false,
-        guardReason: "Only human specialists can force arbitration",
-        executed: false,
-        isHuman: false,
-        metaJson,
-        costUSD,
-        latencyMsec,
-        numInputTokens,
-        numOutputTokens,
-      };
-    }
-
-    // Validate the transition
-    const currentStateDef = session.machine.states[session.currentState];
-    if (!currentStateDef?.transitions?.[transitionName]) {
-      return {
-        arbitrationId,
-        sessionId,
-        roundId: effectiveRoundId,
-        specialistId,
-        stale: false,
-        guardsPass: false,
-        guardReason: `Invalid transition "${transitionName}" from state "${session.currentState}"`,
-        executed: false,
-        isHuman: true,
-        metaJson,
-        costUSD,
-        latencyMsec,
-        numInputTokens,
-        numOutputTokens,
-      };
-    }
-
-    const toState = currentStateDef.transitions[transitionName];
-
-    // Gather round data for exemplar and alignment
-    const roundProposals = getProposalsForRound(sessionId, effectiveRoundId);
-    const roundVotes = getVotesForRound(sessionId, effectiveRoundId);
-    const roundSelectionVotes = getSelectionVotesForRound(sessionId, effectiveRoundId);
-
-    // Create exemplar from human decision
-    const proposerCtx = buildProposerContext(session);
-    createExemplar(
-      session.machineName,
-      session.currentState,
-      proposerCtx,
-      transitionName,
-      toState,
-      roundProposals,
-      roundVotes,
-      roundSelectionVotes
-    );
-
-    // Update alignment for all specialists
-    updateAlignmentAfterHumanDecision(
-      session.machineName,
-      transitionName,
-      roundProposals,
-      roundVotes,
-      roundSelectionVotes
-    );
-
-    // Execute the forced transition
-    await executeTransition(sessionId, transitionName, toState, reasoning);
-
-    return {
-      arbitrationId,
-      sessionId,
-      roundId: effectiveRoundId,
-      specialistId,
-      stale: false,
-      guardsPass: true,
-      guardReason: "Human override accepted",
-      transitionName,
-      toState,
-      reasoning,
-      executed: true,
-      isHuman: true,
-      metaJson,
-      costUSD,
-      latencyMsec,
-      numInputTokens,
-      numOutputTokens,
-    };
-  }
-
-  // Normal consensus evaluation
-  const roundProposals = getProposalsForRound(sessionId, effectiveRoundId);
-
-  if (roundProposals.length === 0) {
-    return {
-      arbitrationId,
-      sessionId,
-      roundId: effectiveRoundId,
-      specialistId,
-      stale: false,
-      guardsPass: false,
-      guardReason: "No proposals in current round",
-      executed: false,
-      isHuman: false,
-      metaJson,
-      costUSD,
-      latencyMsec,
-      numInputTokens,
-      numOutputTokens,
-    };
-  }
-
-  // Evaluate consensus
-  const consensusResult = await evaluateConsensus(sessionId);
-
-  if (!consensusResult.consensusReached) {
-    return {
-      arbitrationId,
-      sessionId,
-      roundId: effectiveRoundId,
-      specialistId,
-      stale: false,
-      guardsPass: false,
-      guardReason: consensusResult.reasoning,
-      executed: false,
-      isHuman: false,
-      metaJson,
-      costUSD,
-      latencyMsec,
-      numInputTokens,
-      numOutputTokens,
-    };
-  }
-
-  // Find the winning proposal
-  const winningProposal = proposals.get(consensusResult.winningProposalId!);
-  if (!winningProposal) {
-    return {
-      arbitrationId,
-      sessionId,
-      roundId: effectiveRoundId,
-      specialistId,
-      stale: false,
-      guardsPass: false,
-      guardReason: `Winning proposal not found: ${consensusResult.winningProposalId}`,
-      executed: false,
-      isHuman: false,
-      metaJson,
-      costUSD,
-      latencyMsec,
-      numInputTokens,
-      numOutputTokens,
-    };
-  }
-
-  // Execute the transition
-  await executeTransition(
-    sessionId,
-    winningProposal.transitionName,
-    winningProposal.toState,
-    reasoning ?? winningProposal.reasoning
-  );
-
-  return {
+  // Shared fields for early-return results
+  const base = {
     arbitrationId,
     sessionId,
     roundId: effectiveRoundId,
     specialistId,
-    stale: false,
-    guardsPass: true,
-    guardReason: consensusResult.reasoning,
-    winningProposalId: consensusResult.winningProposalId,
-    transitionName: winningProposal.transitionName,
-    toState: winningProposal.toState,
-    reasoning: reasoning ?? winningProposal.reasoning,
-    executed: true,
-    isHuman: false,
-    metaJson: metaJson ?? winningProposal.metaJson,
+    metaJson,
     costUSD,
     latencyMsec,
     numInputTokens,
     numOutputTokens,
   };
+
+  // Determine if specialist is human
+  const specialist = specialistId ? specialists.get(specialistId) : undefined;
+  const isHuman = specialist != null && "isHuman" in specialist && specialist.isHuman === true;
+
+  const currentStateDef = session.machine.states[session.currentState];
+  const roundProposals = getProposalsForRound(sessionId, effectiveRoundId);
+
+  const path = classifyArbitration(
+    session.currentRoundId,
+    effectiveRoundId,
+    isHuman,
+    transitionName,
+    currentStateDef?.transitions,
+    roundProposals.length,
+    session.currentState
+  );
+
+  switch (path.type) {
+    case "stale":
+      return {
+        ...base,
+        stale: true,
+        guardsPass: false,
+        guardReason: "Round ID mismatch - decision cycle already completed",
+        executed: false,
+        isHuman: false,
+      };
+
+    case "notHuman":
+      return {
+        ...base,
+        stale: false,
+        guardsPass: false,
+        guardReason: "Only human specialists can force arbitration",
+        executed: false,
+        isHuman: false,
+      };
+
+    case "invalidTransition":
+      return {
+        ...base,
+        stale: false,
+        guardsPass: false,
+        guardReason: path.reason,
+        executed: false,
+        isHuman: true,
+      };
+
+    case "humanOverride": {
+      const roundVotes = getVotesForRound(sessionId, effectiveRoundId);
+      const roundSelectionVotes = getSelectionVotesForRound(sessionId, effectiveRoundId);
+
+      // Create exemplar from human decision
+      const proposerCtx = buildProposerContext(session);
+      createExemplar(
+        session.machineName,
+        session.currentState,
+        proposerCtx,
+        path.transitionName,
+        path.toState,
+        roundProposals,
+        roundVotes,
+        roundSelectionVotes
+      );
+
+      // Update alignment for all specialists
+      updateAlignmentAfterHumanDecision(
+        session.machineName,
+        path.transitionName,
+        roundProposals,
+        roundVotes,
+        roundSelectionVotes
+      );
+
+      // Execute the forced transition
+      await executeTransition(sessionId, path.transitionName, path.toState, reasoning);
+
+      return {
+        ...base,
+        stale: false,
+        guardsPass: true,
+        guardReason: "Human override accepted",
+        transitionName: path.transitionName,
+        toState: path.toState,
+        reasoning,
+        executed: true,
+        isHuman: true,
+      };
+    }
+
+    case "noProposals":
+      return {
+        ...base,
+        stale: false,
+        guardsPass: false,
+        guardReason: "No proposals in current round",
+        executed: false,
+        isHuman: false,
+      };
+
+    case "evaluate": {
+      // Evaluate consensus
+      const consensusResult = await evaluateConsensus(sessionId);
+
+      if (!consensusResult.consensusReached) {
+        return {
+          ...base,
+          stale: false,
+          guardsPass: false,
+          guardReason: consensusResult.reasoning,
+          executed: false,
+          isHuman: false,
+        };
+      }
+
+      // Find the winning proposal
+      const winningProposal = proposals.get(consensusResult.winningProposalId!);
+      if (!winningProposal) {
+        return {
+          ...base,
+          stale: false,
+          guardsPass: false,
+          guardReason: `Winning proposal not found: ${consensusResult.winningProposalId}`,
+          executed: false,
+          isHuman: false,
+        };
+      }
+
+      // Execute the transition
+      await executeTransition(
+        sessionId,
+        winningProposal.transitionName,
+        winningProposal.toState,
+        reasoning ?? winningProposal.reasoning
+      );
+
+      return {
+        ...base,
+        stale: false,
+        guardsPass: true,
+        guardReason: consensusResult.reasoning,
+        winningProposalId: consensusResult.winningProposalId,
+        transitionName: winningProposal.transitionName,
+        toState: winningProposal.toState,
+        reasoning: reasoning ?? winningProposal.reasoning,
+        executed: true,
+        isHuman: false,
+        metaJson: metaJson ?? winningProposal.metaJson,
+      };
+    }
+  }
 }
 
 /**

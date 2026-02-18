@@ -37,7 +37,11 @@ describe("DIAL_056–DIAL_071: Proposal Submission", () => {
       strategyFnName: "firstAvailable",
     });
 
-    const proposal = await submitProposal(session.sessionId, "p1", session.currentRoundId);
+    const proposal = await submitProposal({
+      sessionId: session.sessionId,
+      specialistId: "p1",
+      roundId: session.currentRoundId,
+    });
 
     expect(proposal.transitionName).toBe("approve");
     expect(proposal.toState).toBe("approved");
@@ -52,13 +56,13 @@ describe("DIAL_056–DIAL_071: Proposal Submission", () => {
       strategyFnName: "firstAvailable",
     });
 
-    const proposal = await submitProposal(
-      session.sessionId,
-      "p1",
-      session.currentRoundId,
-      "reject",
-      "I think we should reject"
-    );
+    const proposal = await submitProposal({
+      sessionId: session.sessionId,
+      specialistId: "p1",
+      roundId: session.currentRoundId,
+      transitionName: "reject",
+      reasoning: "I think we should reject",
+    });
 
     expect(proposal.transitionName).toBe("reject");
     expect(proposal.toState).toBe("rejected");
@@ -78,8 +82,16 @@ describe("DIAL_056–DIAL_071: Proposal Submission", () => {
       strategyFnName: "lastAvailable",
     });
 
-    const a = await submitProposal(session.sessionId, "p1", session.currentRoundId);
-    const b = await submitProposal(session.sessionId, "p2", session.currentRoundId);
+    const a = await submitProposal({
+      sessionId: session.sessionId,
+      specialistId: "p1",
+      roundId: session.currentRoundId,
+    });
+    const b = await submitProposal({
+      sessionId: session.sessionId,
+      specialistId: "p2",
+      roundId: session.currentRoundId,
+    });
 
     expect(a.proposalId).not.toBe(b.proposalId);
   });
@@ -92,7 +104,10 @@ describe("DIAL_056–DIAL_071: Proposal Submission", () => {
       strategyFnName: "firstAvailable",
     });
 
-    const proposal = await submitProposal(session.sessionId, "p1");
+    const proposal = await submitProposal({
+      sessionId: session.sessionId,
+      specialistId: "p1",
+    });
 
     expect(proposal.roundId).toBe(session.currentRoundId);
   });
@@ -105,18 +120,15 @@ describe("DIAL_056–DIAL_071: Proposal Submission", () => {
       strategyFnName: "firstAvailable",
     });
 
-    const proposal = await submitProposal(
-      session.sessionId,
-      "p1",
-      session.currentRoundId,
-      undefined,
-      undefined,
-      undefined,
-      0.005,
-      250,
-      100,
-      50
-    );
+    const proposal = await submitProposal({
+      sessionId: session.sessionId,
+      specialistId: "p1",
+      roundId: session.currentRoundId,
+      costUSD: 0.005,
+      latencyMsec: 250,
+      numInputTokens: 100,
+      numOutputTokens: 50,
+    });
 
     expect(proposal.costUSD).toBe(0.005);
     expect(proposal.latencyMsec).toBe(250);
@@ -132,7 +144,11 @@ describe("DIAL_056–DIAL_071: Proposal Submission", () => {
       strategyFnName: "firstAvailable",
     });
 
-    const proposal = await submitProposal(session.sessionId, "p1", session.currentRoundId);
+    const proposal = await submitProposal({
+      sessionId: session.sessionId,
+      specialistId: "p1",
+      roundId: session.currentRoundId,
+    });
 
     // firstAvailable picks "approve" -> "approved"
     expect(proposal.toState).toBe(
@@ -148,7 +164,7 @@ describe("DIAL_056–DIAL_071: Proposal Submission", () => {
     });
 
     await expect(
-      submitProposal("nonexistent", "p1")
+      submitProposal({ sessionId: "nonexistent", specialistId: "p1" })
     ).rejects.toThrow("Session not found");
   });
 
@@ -156,7 +172,7 @@ describe("DIAL_056–DIAL_071: Proposal Submission", () => {
     const session = await createSession(twoOptionMachine());
 
     await expect(
-      submitProposal(session.sessionId, "unknown")
+      submitProposal({ sessionId: session.sessionId, specialistId: "unknown" })
     ).rejects.toThrow("Specialist not found");
   });
 
@@ -169,7 +185,7 @@ describe("DIAL_056–DIAL_071: Proposal Submission", () => {
     });
 
     await expect(
-      submitProposal(session.sessionId, "v1")
+      submitProposal({ sessionId: session.sessionId, specialistId: "v1" })
     ).rejects.toThrow("is not a proposer");
   });
 
@@ -182,7 +198,12 @@ describe("DIAL_056–DIAL_071: Proposal Submission", () => {
     });
 
     await expect(
-      submitProposal(session.sessionId, "p1", session.currentRoundId, "nonexistent")
+      submitProposal({
+        sessionId: session.sessionId,
+        specialistId: "p1",
+        roundId: session.currentRoundId,
+        transitionName: "nonexistent",
+      })
     ).rejects.toThrow('Invalid transition "nonexistent"');
   });
 });

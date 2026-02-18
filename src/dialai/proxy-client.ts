@@ -16,10 +16,12 @@ import type {
   Arbiter,
   ConsensusResult,
   ArbitrationResult,
-  VoteChoice,
   RegisterProposerOptions,
   RegisterVoterOptions,
   RegisterArbiterOptions,
+  SubmitProposalOptions,
+  SubmitVoteOptions,
+  SubmitArbitrationOptions,
 } from "./types.js";
 
 /**
@@ -95,90 +97,20 @@ export async function registerArbiter(opts: RegisterArbiterOptions): Promise<Arb
   return rpcCall<Arbiter>("register_arbiter", opts as unknown as Record<string, unknown>);
 }
 
-export async function submitProposal(
-  sessionId: string,
-  specialistId: string,
-  roundId?: string,
-  transitionName?: string,
-  reasoning?: string,
-  metaJson?: Record<string, unknown>,
-  costUSD?: number,
-  latencyMsec?: number,
-  numInputTokens?: number,
-  numOutputTokens?: number
-): Promise<Proposal> {
-  return rpcCall<Proposal>("submit_proposal", {
-    sessionId,
-    specialistId,
-    roundId,
-    transitionName,
-    reasoning,
-    metaJson,
-    costUSD,
-    latencyMsec,
-    numInputTokens,
-    numOutputTokens,
-  });
+export async function submitProposal(opts: SubmitProposalOptions): Promise<Proposal> {
+  return rpcCall<Proposal>("submit_proposal", opts as unknown as Record<string, unknown>);
 }
 
-export async function submitVote(
-  sessionId: string,
-  specialistId: string,
-  roundId?: string,
-  proposalIdA?: string,
-  proposalIdB?: string,
-  voteFor?: VoteChoice,
-  reasoning?: string,
-  metaJson?: Record<string, unknown>,
-  costUSD?: number,
-  latencyMsec?: number,
-  numInputTokens?: number,
-  numOutputTokens?: number
-): Promise<Vote> {
-  return rpcCall<Vote>("submit_vote", {
-    sessionId,
-    specialistId,
-    roundId,
-    proposalIdA,
-    proposalIdB,
-    voteFor,
-    reasoning,
-    metaJson,
-    costUSD,
-    latencyMsec,
-    numInputTokens,
-    numOutputTokens,
-  });
+export async function submitVote(opts: SubmitVoteOptions): Promise<Vote> {
+  return rpcCall<Vote>("submit_vote", opts as unknown as Record<string, unknown>);
 }
 
 export async function evaluateConsensus(sessionId: string): Promise<ConsensusResult> {
   return rpcCall<ConsensusResult>("evaluate_consensus", { sessionId });
 }
 
-export async function submitArbitration(
-  sessionId: string,
-  roundId?: string,
-  specialistId?: string,
-  transitionName?: string,
-  reasoning?: string,
-  metaJson?: Record<string, unknown>,
-  costUSD?: number,
-  latencyMsec?: number,
-  numInputTokens?: number,
-  numOutputTokens?: number
-): Promise<ArbitrationResult> {
-  return rpcCall<ArbitrationResult>("submit_arbitration", {
-    sessionId,
-    roundId,
-    specialistId,
-    transitionName,
-    reasoning,
-    metaJson,
-    costUSD,
-    latencyMsec,
-    numInputTokens,
-    numOutputTokens,
-  });
+export async function submitArbitration(opts: SubmitArbitrationOptions): Promise<ArbitrationResult> {
+  return rpcCall<ArbitrationResult>("submit_arbitration", opts as unknown as Record<string, unknown>);
 }
 
 export async function executeTransition(

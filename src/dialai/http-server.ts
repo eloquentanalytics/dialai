@@ -232,51 +232,51 @@ async function callTool(
       });
       break;
     case "submit_proposal":
-      result = await submitProposal(
-        args.sessionId as string,
-        args.specialistId as string,
-        args.roundId as string | undefined,
-        args.transitionName as string | undefined,
-        args.reasoning as string | undefined,
-        args.metaJson as Record<string, unknown> | undefined,
-        args.costUSD as number | undefined,
-        args.latencyMsec as number | undefined,
-        args.numInputTokens as number | undefined,
-        args.numOutputTokens as number | undefined
-      );
+      result = await submitProposal({
+        sessionId: args.sessionId as string,
+        specialistId: args.specialistId as string,
+        roundId: args.roundId as string | undefined,
+        transitionName: args.transitionName as string | undefined,
+        reasoning: args.reasoning as string | undefined,
+        metaJson: args.metaJson as Record<string, unknown> | undefined,
+        costUSD: args.costUSD as number | undefined,
+        latencyMsec: args.latencyMsec as number | undefined,
+        numInputTokens: args.numInputTokens as number | undefined,
+        numOutputTokens: args.numOutputTokens as number | undefined,
+      });
       break;
     case "submit_vote":
-      result = await submitVote(
-        args.sessionId as string,
-        args.specialistId as string,
-        args.roundId as string | undefined,
-        args.proposalIdA as string,
-        args.proposalIdB as string,
-        args.voteFor as VoteChoice | undefined,
-        args.reasoning as string | undefined,
-        args.metaJson as Record<string, unknown> | undefined,
-        args.costUSD as number | undefined,
-        args.latencyMsec as number | undefined,
-        args.numInputTokens as number | undefined,
-        args.numOutputTokens as number | undefined
-      );
+      result = await submitVote({
+        sessionId: args.sessionId as string,
+        specialistId: args.specialistId as string,
+        roundId: args.roundId as string | undefined,
+        proposalIdA: args.proposalIdA as string,
+        proposalIdB: args.proposalIdB as string,
+        voteFor: args.voteFor as VoteChoice | undefined,
+        reasoning: args.reasoning as string | undefined,
+        metaJson: args.metaJson as Record<string, unknown> | undefined,
+        costUSD: args.costUSD as number | undefined,
+        latencyMsec: args.latencyMsec as number | undefined,
+        numInputTokens: args.numInputTokens as number | undefined,
+        numOutputTokens: args.numOutputTokens as number | undefined,
+      });
       break;
     case "evaluate_consensus":
       result = await evaluateConsensus(args.sessionId as string);
       break;
     case "submit_arbitration":
-      result = await submitArbitration(
-        args.sessionId as string,
-        args.roundId as string | undefined,
-        args.specialistId as string | undefined,
-        args.transitionName as string | undefined,
-        args.reasoning as string | undefined,
-        args.metaJson as Record<string, unknown> | undefined,
-        args.costUSD as number | undefined,
-        args.latencyMsec as number | undefined,
-        args.numInputTokens as number | undefined,
-        args.numOutputTokens as number | undefined
-      );
+      result = await submitArbitration({
+        sessionId: args.sessionId as string,
+        roundId: args.roundId as string | undefined,
+        specialistId: args.specialistId as string | undefined,
+        transitionName: args.transitionName as string | undefined,
+        reasoning: args.reasoning as string | undefined,
+        metaJson: args.metaJson as Record<string, unknown> | undefined,
+        costUSD: args.costUSD as number | undefined,
+        latencyMsec: args.latencyMsec as number | undefined,
+        numInputTokens: args.numInputTokens as number | undefined,
+        numOutputTokens: args.numOutputTokens as number | undefined,
+      });
       break;
     case "execute_transition":
       result = await executeTransition(

@@ -125,7 +125,11 @@ describe("DIAL_249–DIAL_259: Query Helpers", () => {
       strategyFnName: "firstAvailable",
     });
 
-    await submitProposal(session.sessionId, "p1", session.currentRoundId);
+    await submitProposal({
+      sessionId: session.sessionId,
+      specialistId: "p1",
+      roundId: session.currentRoundId,
+    });
 
     const proposals = getProposalsForRound(session.sessionId, session.currentRoundId);
     expect(proposals).toHaveLength(1);
@@ -151,15 +155,23 @@ describe("DIAL_249–DIAL_259: Query Helpers", () => {
       strategyFnName: "preferA",
     });
 
-    const propA = await submitProposal(session.sessionId, "p1", session.currentRoundId);
-    const propB = await submitProposal(session.sessionId, "p2", session.currentRoundId);
-    await submitVote(
-      session.sessionId,
-      "v1",
-      session.currentRoundId,
-      propA.proposalId,
-      propB.proposalId
-    );
+    const propA = await submitProposal({
+      sessionId: session.sessionId,
+      specialistId: "p1",
+      roundId: session.currentRoundId,
+    });
+    const propB = await submitProposal({
+      sessionId: session.sessionId,
+      specialistId: "p2",
+      roundId: session.currentRoundId,
+    });
+    await submitVote({
+      sessionId: session.sessionId,
+      specialistId: "v1",
+      roundId: session.currentRoundId,
+      proposalIdA: propA.proposalId,
+      proposalIdB: propB.proposalId,
+    });
 
     const votes = getVotesForRound(session.sessionId, session.currentRoundId);
     expect(votes).toHaveLength(1);
@@ -183,8 +195,16 @@ describe("DIAL_249–DIAL_259: Query Helpers", () => {
       }),
     });
 
-    const prop = await submitProposal(session.sessionId, "p1", session.currentRoundId);
-    await submitSelectionVote(session.sessionId, "sv1", session.currentRoundId);
+    const prop = await submitProposal({
+      sessionId: session.sessionId,
+      specialistId: "p1",
+      roundId: session.currentRoundId,
+    });
+    await submitSelectionVote({
+      sessionId: session.sessionId,
+      specialistId: "sv1",
+      roundId: session.currentRoundId,
+    });
 
     const selVotes = getSelectionVotesForRound(session.sessionId, session.currentRoundId);
     expect(selVotes).toHaveLength(1);

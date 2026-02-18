@@ -9,30 +9,19 @@ import { getExemplars } from "./exemplars.js";
 import type {
   AlignmentEvaluationResult,
   AccuracyEvaluationResult,
+  Exemplar,
 } from "./types.js";
 
 /**
- * Evaluates a specialist's alignment with human decisions by comparing
- * against stored exemplars.
- *
- * @param specialistId - The specialist to evaluate
- * @param machineName - The machine to evaluate against
- * @param options - Optional configuration
- * @returns Alignment evaluation result
+ * Pure function: computes alignment from a list of exemplars for a specialist.
+ * No store access.
  */
-export function evaluateAlignment(
+export function computeAlignmentFromExemplars(
   specialistId: string,
-  machineName: string,
-  options?: { maxRounds?: number }
-): AlignmentEvaluationResult {
-  const specialist = specialists.get(specialistId);
-  if (!specialist) {
-    throw new Error(`Specialist not found: ${specialistId}`);
-  }
-
-  const exemplars = getExemplars(machineName);
-  const maxRounds = options?.maxRounds ?? exemplars.length;
-  const evaluationExemplars = exemplars.slice(0, maxRounds);
+  exemplars: Exemplar[],
+  maxRounds?: number
+): { matchingDecisions: number; totalExemplars: number; alignmentScore: number } {
+  const evaluationExemplars = exemplars.slice(0, maxRounds ?? exemplars.length);
 
   let matchingDecisions = 0;
 
@@ -95,36 +84,28 @@ export function evaluateAlignment(
   const totalExemplars = evaluationExemplars.length;
 
   return {
-    specialistId,
-    machineName,
-    totalExemplars,
     matchingDecisions,
+    totalExemplars,
     alignmentScore: totalExemplars > 0 ? matchingDecisions / totalExemplars : 0,
   };
 }
 
 /**
- * Evaluates a specialist's accuracy by analyzing their proposal history.
- * Compares proposals against the transitions that were actually executed.
- *
- * @param specialistId - The specialist to evaluate
- * @param machineName - The machine to evaluate against
- * @param options - Optional configuration
- * @returns Accuracy evaluation result
+ * Pure function: computes accuracy metrics from a list of exemplars for a specialist.
+ * No store access.
  */
-export function evaluateAccuracy(
+export function computeAccuracyFromExemplars(
   specialistId: string,
-  machineName: string,
-  options?: { lookback?: number }
-): AccuracyEvaluationResult {
-  const specialist = specialists.get(specialistId);
-  if (!specialist) {
-    throw new Error(`Specialist not found: ${specialistId}`);
-  }
-
-  const exemplars = getExemplars(machineName);
-  const lookback = options?.lookback ?? exemplars.length;
-  const evaluationExemplars = exemplars.slice(-lookback);
+  exemplars: Exemplar[],
+  lookback?: number
+): {
+  totalDecisions: number;
+  transitionMatchRate: number;
+  stateMatchRate: number;
+  totalCostUSD: number;
+  avgLatencyMsec: number;
+} {
+  const evaluationExemplars = exemplars.slice(-(lookback ?? exemplars.length));
 
   let transitionMatches = 0;
   let stateMatches = 0;
@@ -159,13 +140,68 @@ export function evaluateAccuracy(
   }
 
   return {
-    specialistId,
-    machineName,
     totalDecisions,
     transitionMatchRate:
       totalDecisions > 0 ? transitionMatches / totalDecisions : 0,
     stateMatchRate: totalDecisions > 0 ? stateMatches / totalDecisions : 0,
     totalCostUSD: totalCost,
     avgLatencyMsec: latencyCount > 0 ? totalLatency / latencyCount : 0,
+  };
+}
+
+/**
+ * Evaluates a specialist's alignment with human decisions by comparing
+ * against stored exemplars.
+ * Thin wrapper: validates specialist, fetches exemplars, calls pure function.
+ */
+export function evaluateAlignment(
+  specialistId: string,
+  machineName: string,
+  options?: { maxRounds?: number }
+): AlignmentEvaluationResult {
+  const specialist = specialists.get(specialistId);
+  if (!specialist) {
+    throw new Error(`Specialist not found: ${specialistId}`);
+  }
+
+  const exemplars = getExemplars(machineName);
+  const result = computeAlignmentFromExemplars(
+    specialistId,
+    exemplars,
+    options?.maxRounds
+  );
+
+  return {
+    specialistId,
+    machineName,
+    ...result,
+  };
+}
+
+/**
+ * Evaluates a specialist's accuracy by analyzing their proposal history.
+ * Thin wrapper: validates specialist, fetches exemplars, calls pure function.
+ */
+export function evaluateAccuracy(
+  specialistId: string,
+  machineName: string,
+  options?: { lookback?: number }
+): AccuracyEvaluationResult {
+  const specialist = specialists.get(specialistId);
+  if (!specialist) {
+    throw new Error(`Specialist not found: ${specialistId}`);
+  }
+
+  const exemplars = getExemplars(machineName);
+  const result = computeAccuracyFromExemplars(
+    specialistId,
+    exemplars,
+    options?.lookback
+  );
+
+  return {
+    specialistId,
+    machineName,
+    ...result,
   };
 }

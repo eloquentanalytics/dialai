@@ -81,7 +81,11 @@ describe("DIAL_104–DIAL_114: Transition Execution", () => {
       strategyFnName: "firstAvailable",
     });
 
-    await submitProposal(session.sessionId, "p1", session.currentRoundId);
+    await submitProposal({
+      sessionId: session.sessionId,
+      specialistId: "p1",
+      roundId: session.currentRoundId,
+    });
     expect(getProposalsForRound(session.sessionId, session.currentRoundId)).toHaveLength(1);
 
     await executeTransition(session.sessionId, "to_b", "b");

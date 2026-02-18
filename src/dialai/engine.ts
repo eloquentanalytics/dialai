@@ -195,19 +195,19 @@ export async function runSession(
 
     if (championId) {
       // Fast path: only solicit from champion
-      await submitProposal(
-        currentSession.sessionId,
-        championId,
-        currentSession.currentRoundId
-      );
+      await submitProposal({
+        sessionId: currentSession.sessionId,
+        specialistId: championId,
+        roundId: currentSession.currentRoundId,
+      });
 
       // Check consensus immediately
       const consensusResult = await evaluateConsensus(currentSession.sessionId);
       if (consensusResult.consensusReached) {
-        const result = await submitArbitration(
-          currentSession.sessionId,
-          currentSession.currentRoundId
-        );
+        const result = await submitArbitration({
+          sessionId: currentSession.sessionId,
+          roundId: currentSession.currentRoundId,
+        });
         if (result.executed) {
           // Trip line check: verify champion still above threshold
           const currentScore = getAlignmentScore(championId, machineName);
@@ -240,20 +240,20 @@ export async function runSession(
           continue;
         }
       }
-      await submitProposal(
-        currentSession.sessionId,
-        proposer.specialistId,
-        currentSession.currentRoundId
-      );
+      await submitProposal({
+        sessionId: currentSession.sessionId,
+        specialistId: proposer.specialistId,
+        roundId: currentSession.currentRoundId,
+      });
     }
 
     // Check consensus after proposals
     const postProposalConsensus = await evaluateConsensus(currentSession.sessionId);
     if (postProposalConsensus.consensusReached) {
-      const result = await submitArbitration(
-        currentSession.sessionId,
-        currentSession.currentRoundId
-      );
+      const result = await submitArbitration({
+        sessionId: currentSession.sessionId,
+        roundId: currentSession.currentRoundId,
+      });
       if (result.executed) {
         currentSession = await getSession(session.sessionId);
         continue;
@@ -263,11 +263,11 @@ export async function runSession(
     // Step 2: Solicit selection voters
     const selectionVoters = getEnabledVoters(machineName, "selection");
     for (const voter of selectionVoters) {
-      await submitSelectionVote(
-        currentSession.sessionId,
-        voter.specialistId,
-        currentSession.currentRoundId
-      );
+      await submitSelectionVote({
+        sessionId: currentSession.sessionId,
+        specialistId: voter.specialistId,
+        roundId: currentSession.currentRoundId,
+      });
 
       // Check consensus after each selection vote
       const result = await evaluateConsensus(currentSession.sessionId);
@@ -278,10 +278,10 @@ export async function runSession(
     }
 
     if (consensusReached) {
-      const result = await submitArbitration(
-        currentSession.sessionId,
-        currentSession.currentRoundId
-      );
+      const result = await submitArbitration({
+        sessionId: currentSession.sessionId,
+        roundId: currentSession.currentRoundId,
+      });
       if (result.executed) {
         currentSession = await getSession(session.sessionId);
         continue;
@@ -308,13 +308,13 @@ export async function runSession(
       // Have each voter vote on each pair, check consensus after each
       for (const voter of pairwiseVoters) {
         for (const [propA, propB] of pairs) {
-          await submitVote(
-            currentSession.sessionId,
-            voter.specialistId,
-            currentSession.currentRoundId,
-            propA.proposalId,
-            propB.proposalId
-          );
+          await submitVote({
+            sessionId: currentSession.sessionId,
+            specialistId: voter.specialistId,
+            roundId: currentSession.currentRoundId,
+            proposalIdA: propA.proposalId,
+            proposalIdB: propB.proposalId,
+          });
         }
 
         // Check consensus after each voter
@@ -327,10 +327,10 @@ export async function runSession(
     }
 
     if (consensusReached) {
-      const result = await submitArbitration(
-        currentSession.sessionId,
-        currentSession.currentRoundId
-      );
+      const result = await submitArbitration({
+        sessionId: currentSession.sessionId,
+        roundId: currentSession.currentRoundId,
+      });
       if (result.executed) {
         currentSession = await getSession(session.sessionId);
         continue;
@@ -338,10 +338,10 @@ export async function runSession(
     }
 
     // Step 4: Try final arbitration
-    const finalResult = await submitArbitration(
-      currentSession.sessionId,
-      currentSession.currentRoundId
-    );
+    const finalResult = await submitArbitration({
+      sessionId: currentSession.sessionId,
+      roundId: currentSession.currentRoundId,
+    });
 
     if (finalResult.executed) {
       currentSession = await getSession(session.sessionId);

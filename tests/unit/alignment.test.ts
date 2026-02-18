@@ -172,8 +172,16 @@ describe("DIAL_198–DIAL_211: Alignment Score Tracking", () => {
     });
 
     // p-match proposes "approve", p-miss proposes "reject"
-    await submitProposal(session.sessionId, "p-match", session.currentRoundId);
-    await submitProposal(session.sessionId, "p-miss", session.currentRoundId);
+    await submitProposal({
+      sessionId: session.sessionId,
+      specialistId: "p-match",
+      roundId: session.currentRoundId,
+    });
+    await submitProposal({
+      sessionId: session.sessionId,
+      specialistId: "p-miss",
+      roundId: session.currentRoundId,
+    });
 
     const proposals = getProposalsForRound(session.sessionId, session.currentRoundId);
     const votes = getVotesForRound(session.sessionId, session.currentRoundId);
@@ -209,10 +217,30 @@ describe("DIAL_198–DIAL_211: Alignment Score Tracking", () => {
       strategyFnName: "preferB", // votes for proposal B (reject)
     });
 
-    const propA = await submitProposal(session.sessionId, "p1", session.currentRoundId);
-    const propB = await submitProposal(session.sessionId, "p2", session.currentRoundId);
-    await submitVote(session.sessionId, "v-good", session.currentRoundId, propA.proposalId, propB.proposalId);
-    await submitVote(session.sessionId, "v-bad", session.currentRoundId, propA.proposalId, propB.proposalId);
+    const propA = await submitProposal({
+      sessionId: session.sessionId,
+      specialistId: "p1",
+      roundId: session.currentRoundId,
+    });
+    const propB = await submitProposal({
+      sessionId: session.sessionId,
+      specialistId: "p2",
+      roundId: session.currentRoundId,
+    });
+    await submitVote({
+      sessionId: session.sessionId,
+      specialistId: "v-good",
+      roundId: session.currentRoundId,
+      proposalIdA: propA.proposalId,
+      proposalIdB: propB.proposalId,
+    });
+    await submitVote({
+      sessionId: session.sessionId,
+      specialistId: "v-bad",
+      roundId: session.currentRoundId,
+      proposalIdA: propA.proposalId,
+      proposalIdB: propB.proposalId,
+    });
 
     const proposals = getProposalsForRound(session.sessionId, session.currentRoundId);
     const votes = getVotesForRound(session.sessionId, session.currentRoundId);
@@ -249,9 +277,21 @@ describe("DIAL_198–DIAL_211: Alignment Score Tracking", () => {
       }),
     });
 
-    await submitProposal(session.sessionId, "p1", session.currentRoundId);
-    await submitProposal(session.sessionId, "p2", session.currentRoundId);
-    await submitSelectionVote(session.sessionId, "sv1", session.currentRoundId);
+    await submitProposal({
+      sessionId: session.sessionId,
+      specialistId: "p1",
+      roundId: session.currentRoundId,
+    });
+    await submitProposal({
+      sessionId: session.sessionId,
+      specialistId: "p2",
+      roundId: session.currentRoundId,
+    });
+    await submitSelectionVote({
+      sessionId: session.sessionId,
+      specialistId: "sv1",
+      roundId: session.currentRoundId,
+    });
 
     const proposals = getProposalsForRound(session.sessionId, session.currentRoundId);
     const votes = getVotesForRound(session.sessionId, session.currentRoundId);
@@ -282,9 +322,23 @@ describe("DIAL_198–DIAL_211: Alignment Score Tracking", () => {
       strategyFnName: "both",
     });
 
-    const propA = await submitProposal(session.sessionId, "p1", session.currentRoundId);
-    const propB = await submitProposal(session.sessionId, "p2", session.currentRoundId);
-    await submitVote(session.sessionId, "v-both", session.currentRoundId, propA.proposalId, propB.proposalId);
+    const propA = await submitProposal({
+      sessionId: session.sessionId,
+      specialistId: "p1",
+      roundId: session.currentRoundId,
+    });
+    const propB = await submitProposal({
+      sessionId: session.sessionId,
+      specialistId: "p2",
+      roundId: session.currentRoundId,
+    });
+    await submitVote({
+      sessionId: session.sessionId,
+      specialistId: "v-both",
+      roundId: session.currentRoundId,
+      proposalIdA: propA.proposalId,
+      proposalIdB: propB.proposalId,
+    });
 
     const proposals = getProposalsForRound(session.sessionId, session.currentRoundId);
     const votes = getVotesForRound(session.sessionId, session.currentRoundId);

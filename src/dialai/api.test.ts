@@ -288,11 +288,11 @@ describe("Decision Cycle", () => {
         strategyFnName: "firstAvailable",
       });
 
-      const proposal = await submitProposal(
-        session.sessionId,
-        "proposer",
-        session.currentRoundId
-      );
+      const proposal = await submitProposal({
+        sessionId: session.sessionId,
+        specialistId: "proposer",
+        roundId: session.currentRoundId,
+      });
 
       expect(proposal.proposalId).toBeDefined();
       expect(proposal.sessionId).toBe(session.sessionId);
@@ -310,13 +310,13 @@ describe("Decision Cycle", () => {
         strategyFnName: "firstAvailable",
       });
 
-      const proposal = await submitProposal(
-        session.sessionId,
-        "proposer",
-        session.currentRoundId,
-        "complete",
-        "Manual reason"
-      );
+      const proposal = await submitProposal({
+        sessionId: session.sessionId,
+        specialistId: "proposer",
+        roundId: session.currentRoundId,
+        transitionName: "complete",
+        reasoning: "Manual reason",
+      });
 
       expect(proposal.transitionName).toBe("complete");
       expect(proposal.reasoning).toBe("Manual reason");
@@ -331,12 +331,12 @@ describe("Decision Cycle", () => {
       });
 
       await expect(
-        submitProposal(
-          session.sessionId,
-          "proposer",
-          session.currentRoundId,
-          "invalid"
-        )
+        submitProposal({
+          sessionId: session.sessionId,
+          specialistId: "proposer",
+          roundId: session.currentRoundId,
+          transitionName: "invalid",
+        })
       ).rejects.toThrow("Invalid transition");
     });
   });
@@ -360,16 +360,22 @@ describe("Decision Cycle", () => {
         strategyFnName: "preferA",
       });
 
-      const propA = await submitProposal(session.sessionId, "p1");
-      const propB = await submitProposal(session.sessionId, "p2");
+      const propA = await submitProposal({
+        sessionId: session.sessionId,
+        specialistId: "p1",
+      });
+      const propB = await submitProposal({
+        sessionId: session.sessionId,
+        specialistId: "p2",
+      });
 
-      const vote = await submitVote(
-        session.sessionId,
-        "voter",
-        session.currentRoundId,
-        propA.proposalId,
-        propB.proposalId
-      );
+      const vote = await submitVote({
+        sessionId: session.sessionId,
+        specialistId: "voter",
+        roundId: session.currentRoundId,
+        proposalIdA: propA.proposalId,
+        proposalIdB: propB.proposalId,
+      });
 
       expect(vote.voteId).toBeDefined();
       expect(vote.sessionId).toBe(session.sessionId);
@@ -396,18 +402,24 @@ describe("Decision Cycle", () => {
         strategyFnName: "preferA",
       });
 
-      const propA = await submitProposal(session.sessionId, "p1");
-      const propB = await submitProposal(session.sessionId, "p2");
+      const propA = await submitProposal({
+        sessionId: session.sessionId,
+        specialistId: "p1",
+      });
+      const propB = await submitProposal({
+        sessionId: session.sessionId,
+        specialistId: "p2",
+      });
 
-      const vote = await submitVote(
-        session.sessionId,
-        "voter",
-        session.currentRoundId,
-        propA.proposalId,
-        propB.proposalId,
-        "B",
-        "Explicit B vote"
-      );
+      const vote = await submitVote({
+        sessionId: session.sessionId,
+        specialistId: "voter",
+        roundId: session.currentRoundId,
+        proposalIdA: propA.proposalId,
+        proposalIdB: propB.proposalId,
+        voteFor: "B",
+        reasoning: "Explicit B vote",
+      });
 
       expect(vote.voteFor).toBe("B");
       expect(vote.reasoning).toBe("Explicit B vote");
@@ -428,7 +440,10 @@ describe("Decision Cycle", () => {
         strategyFnName: "firstProposal",
       });
 
-      await submitProposal(session.sessionId, "proposer");
+      await submitProposal({
+        sessionId: session.sessionId,
+        specialistId: "proposer",
+      });
 
       const result = await evaluateConsensus(session.sessionId);
 
@@ -455,8 +470,14 @@ describe("Decision Cycle", () => {
         threshold: 3,
       });
 
-      await submitProposal(session.sessionId, "p1");
-      await submitProposal(session.sessionId, "p2");
+      await submitProposal({
+        sessionId: session.sessionId,
+        specialistId: "p1",
+      });
+      await submitProposal({
+        sessionId: session.sessionId,
+        specialistId: "p2",
+      });
 
       const result = await evaluateConsensus(session.sessionId);
 
@@ -478,12 +499,15 @@ describe("Decision Cycle", () => {
         strategyFnName: "firstProposal",
       });
 
-      await submitProposal(session.sessionId, "proposer");
+      await submitProposal({
+        sessionId: session.sessionId,
+        specialistId: "proposer",
+      });
 
-      const result = await submitArbitration(
-        session.sessionId,
-        session.currentRoundId
-      );
+      const result = await submitArbitration({
+        sessionId: session.sessionId,
+        roundId: session.currentRoundId,
+      });
 
       expect(result.executed).toBe(true);
       expect(result.transitionName).toBe("complete");
@@ -506,13 +530,13 @@ describe("Decision Cycle", () => {
         threshold: 100, // Very high threshold
       });
 
-      const result = await submitArbitration(
-        session.sessionId,
-        session.currentRoundId,
-        "human",
-        "to_c",
-        "Human override"
-      );
+      const result = await submitArbitration({
+        sessionId: session.sessionId,
+        roundId: session.currentRoundId,
+        specialistId: "human",
+        transitionName: "to_c",
+        reasoning: "Human override",
+      });
 
       expect(result.executed).toBe(true);
       expect(result.isHuman).toBe(true);
@@ -532,12 +556,12 @@ describe("Decision Cycle", () => {
         strategyFnName: "aheadByK",
       });
 
-      const result = await submitArbitration(
-        session.sessionId,
-        session.currentRoundId,
-        "ai",
-        "to_c"
-      );
+      const result = await submitArbitration({
+        sessionId: session.sessionId,
+        roundId: session.currentRoundId,
+        specialistId: "ai",
+        transitionName: "to_c",
+      });
 
       expect(result.executed).toBe(false);
       expect(result.guardReason).toContain("human");
@@ -557,11 +581,20 @@ describe("Decision Cycle", () => {
       });
 
       const oldRoundId = session.currentRoundId;
-      await submitProposal(session.sessionId, "proposer");
-      await submitArbitration(session.sessionId, oldRoundId);
+      await submitProposal({
+        sessionId: session.sessionId,
+        specialistId: "proposer",
+      });
+      await submitArbitration({
+        sessionId: session.sessionId,
+        roundId: oldRoundId,
+      });
 
       // Try again with old round ID
-      const result = await submitArbitration(session.sessionId, oldRoundId);
+      const result = await submitArbitration({
+        sessionId: session.sessionId,
+        roundId: oldRoundId,
+      });
 
       expect(result.stale).toBe(true);
       expect(result.executed).toBe(false);

@@ -3,7 +3,6 @@ import {
   clear,
   preferFirst,
   preferHighestAlignment,
-  updateAlignment,
   registerProposer,
 } from "../../src/dialai/index.js";
 import type { SelectionVoterContext, Proposal } from "../../src/dialai/types.js";
@@ -52,18 +51,13 @@ describe("DIAL_165–DIAL_170: Built-in Selection Voter Strategies", () => {
   });
 
   test("DIAL_167: preferHighestAlignment selects proposal from best-aligned specialist", async () => {
-    await registerProposer({ specialistId: "low", machineName: "sel-test", strategyFnName: "firstAvailable" });
-    await registerProposer({ specialistId: "high", machineName: "sel-test", strategyFnName: "firstAvailable" });
-
-    for (let i = 0; i < 3; i++) updateAlignment("low", "sel-test", true);
-    for (let i = 0; i < 7; i++) updateAlignment("low", "sel-test", false);
-    for (let i = 0; i < 9; i++) updateAlignment("high", "sel-test", true);
-    for (let i = 0; i < 1; i++) updateAlignment("high", "sel-test", false);
-
     const propLow = makeProposal({ proposalId: "prop-low", specialistId: "low" });
     const propHigh = makeProposal({ proposalId: "prop-high", specialistId: "high" });
 
-    const result = await preferHighestAlignment(makeCtx([propLow, propHigh]));
+    const ctx = makeCtx([propLow, propHigh]);
+    ctx.alignmentScores = { low: 0.3, high: 0.9 };
+
+    const result = await preferHighestAlignment(ctx);
 
     expect(result.selectedProposalId).toBe("prop-high");
   });

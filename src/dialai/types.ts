@@ -420,6 +420,21 @@ export interface ArbitrationResult {
 }
 
 // ============================================================================
+// Arbitration Classification Types
+// ============================================================================
+
+/**
+ * Pure classification of which path submitArbitration should take.
+ */
+export type ArbitrationPath =
+  | { type: "stale" }
+  | { type: "humanOverride"; transitionName: string; toState: string }
+  | { type: "notHuman" }
+  | { type: "invalidTransition"; reason: string }
+  | { type: "noProposals" }
+  | { type: "evaluate" };
+
+// ============================================================================
 // Selection Voter Types
 // ============================================================================
 
@@ -439,6 +454,8 @@ export interface SelectionVoterContext {
   proposals: Proposal[];
   /** All previous transitions */
   history: TransitionRecord[];
+  /** Alignment scores by specialistId */
+  alignmentScores?: Record<string, number>;
 }
 
 /**
@@ -669,4 +686,116 @@ export interface RegisterArbiterOptions {
   // For built-in strategies:
   /** Strategy-specific threshold */
   threshold?: number;
+}
+
+// ============================================================================
+// Submit Options Types
+// ============================================================================
+
+/**
+ * Options for submitProposal().
+ */
+export interface SubmitProposalOptions {
+  /** Required: session to submit to */
+  sessionId: string;
+  /** Required: who is submitting */
+  specialistId: string;
+  /** Round ID (optional, uses current) */
+  roundId?: string;
+  /** Transition to propose (optional, invokes strategy) */
+  transitionName?: string;
+  /** Explanation */
+  reasoning?: string;
+  /** Arbitrary metadata */
+  metaJson?: Record<string, unknown>;
+  /** Cost in USD */
+  costUSD?: number;
+  /** Time in milliseconds */
+  latencyMsec?: number;
+  /** Input tokens */
+  numInputTokens?: number;
+  /** Output tokens */
+  numOutputTokens?: number;
+}
+
+/**
+ * Options for submitVote().
+ */
+export interface SubmitVoteOptions {
+  /** Required: session to vote in */
+  sessionId: string;
+  /** Required: who is voting */
+  specialistId: string;
+  /** Round ID (optional, uses current) */
+  roundId?: string;
+  /** First proposal ID */
+  proposalIdA?: string;
+  /** Second proposal ID */
+  proposalIdB?: string;
+  /** Vote choice (optional, invokes strategy) */
+  voteFor?: VoteChoice;
+  /** Explanation */
+  reasoning?: string;
+  /** Arbitrary metadata */
+  metaJson?: Record<string, unknown>;
+  /** Cost in USD */
+  costUSD?: number;
+  /** Time in milliseconds */
+  latencyMsec?: number;
+  /** Input tokens */
+  numInputTokens?: number;
+  /** Output tokens */
+  numOutputTokens?: number;
+}
+
+/**
+ * Options for submitSelectionVote().
+ */
+export interface SubmitSelectionVoteOptions {
+  /** Required: session to vote in */
+  sessionId: string;
+  /** Required: who is voting */
+  specialistId: string;
+  /** Round ID (optional, uses current) */
+  roundId?: string;
+  /** The selected proposal ID (optional, invokes strategy) */
+  selectedProposalId?: string;
+  /** Explanation */
+  reasoning?: string;
+  /** Arbitrary metadata */
+  metaJson?: Record<string, unknown>;
+  /** Cost in USD */
+  costUSD?: number;
+  /** Time in milliseconds */
+  latencyMsec?: number;
+  /** Input tokens */
+  numInputTokens?: number;
+  /** Output tokens */
+  numOutputTokens?: number;
+}
+
+/**
+ * Options for submitArbitration().
+ */
+export interface SubmitArbitrationOptions {
+  /** Required: session to arbitrate */
+  sessionId: string;
+  /** Round ID (optional, uses current) */
+  roundId?: string;
+  /** Who is calling */
+  specialistId?: string;
+  /** Force this transition (human only) */
+  transitionName?: string;
+  /** Explanation */
+  reasoning?: string;
+  /** Arbitrary metadata */
+  metaJson?: Record<string, unknown>;
+  /** Cost in USD */
+  costUSD?: number;
+  /** Time in milliseconds */
+  latencyMsec?: number;
+  /** Input tokens */
+  numInputTokens?: number;
+  /** Output tokens */
+  numOutputTokens?: number;
 }

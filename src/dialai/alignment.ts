@@ -70,28 +70,29 @@ export function updateAlignment(
 }
 
 /**
- * Updates alignment for all specialists after a human forces a decision.
- * Compares each specialist's proposals and votes against the human's chosen transition.
+ * Pure function: computes alignment updates for all specialists given a human decision.
+ * Returns an array of { specialistId, matched } without touching the store.
  */
-export function updateAlignmentAfterHumanDecision(
-  machineName: string,
+export function computeAlignmentUpdates(
   humanTransitionName: string,
   proposals: Proposal[],
   votes: Vote[],
-  roundSelectionVotes: SelectionVote[]
-): void {
+  selectionVotes: SelectionVote[],
+  humanSpecialistIds: Set<string>
+): Array<{ specialistId: string; matched: boolean }> {
+  const results: Array<{ specialistId: string; matched: boolean }> = [];
+
   // Check proposers: did they propose the same transition?
   for (const proposal of proposals) {
-    if (isHumanSpecialist(proposal.specialistId)) continue;
+    if (humanSpecialistIds.has(proposal.specialistId)) continue;
     const matched = proposal.transitionName === humanTransitionName;
-    updateAlignment(proposal.specialistId, machineName, matched);
+    results.push({ specialistId: proposal.specialistId, matched });
   }
 
   // Check pairwise voters: did they vote for the proposal matching the human choice?
   for (const vote of votes) {
-    if (isHumanSpecialist(vote.specialistId)) continue;
+    if (humanSpecialistIds.has(vote.specialistId)) continue;
 
-    // Find which proposal (A or B) matches the human transition
     const proposalA = proposals.find((p) => p.proposalId === vote.proposalIdA);
     const proposalB = proposals.find((p) => p.proposalId === vote.proposalIdB);
 
@@ -104,18 +105,55 @@ export function updateAlignmentAfterHumanDecision(
     if ((aMatches || bMatches) && vote.voteFor === "BOTH") matched = true;
     if (!aMatches && !bMatches && vote.voteFor === "NEITHER") matched = true;
 
-    updateAlignment(vote.specialistId, machineName, matched);
+    results.push({ specialistId: vote.specialistId, matched });
   }
 
   // Check selection voters: did they select the proposal matching the human choice?
-  for (const sv of roundSelectionVotes) {
-    if (isHumanSpecialist(sv.specialistId)) continue;
+  for (const sv of selectionVotes) {
+    if (humanSpecialistIds.has(sv.specialistId)) continue;
 
     const selectedProposal = proposals.find(
       (p) => p.proposalId === sv.selectedProposalId
     );
     const matched = selectedProposal?.transitionName === humanTransitionName;
-    updateAlignment(sv.specialistId, machineName, matched ?? false);
+    results.push({ specialistId: sv.specialistId, matched: matched ?? false });
+  }
+
+  return results;
+}
+
+/**
+ * Updates alignment for all specialists after a human forces a decision.
+ * Thin wrapper: builds the human IDs set, calls the pure function, applies results.
+ */
+export function updateAlignmentAfterHumanDecision(
+  machineName: string,
+  humanTransitionName: string,
+  proposals: Proposal[],
+  votes: Vote[],
+  roundSelectionVotes: SelectionVote[]
+): void {
+  // Build set of human specialist IDs
+  const allSpecialistIds = new Set<string>();
+  for (const p of proposals) allSpecialistIds.add(p.specialistId);
+  for (const v of votes) allSpecialistIds.add(v.specialistId);
+  for (const sv of roundSelectionVotes) allSpecialistIds.add(sv.specialistId);
+
+  const humanSpecialistIds = new Set<string>();
+  for (const id of allSpecialistIds) {
+    if (isHumanSpecialist(id)) humanSpecialistIds.add(id);
+  }
+
+  const updates = computeAlignmentUpdates(
+    humanTransitionName,
+    proposals,
+    votes,
+    roundSelectionVotes,
+    humanSpecialistIds
+  );
+
+  for (const { specialistId, matched } of updates) {
+    updateAlignment(specialistId, machineName, matched);
   }
 }
 

@@ -366,18 +366,18 @@ export function createMcpServer(): Server {
         }
 
         case "submit_proposal": {
-          const proposal = await submitProposal(
-            args?.sessionId as string,
-            args?.specialistId as string,
-            args?.roundId as string | undefined,
-            args?.transitionName as string | undefined,
-            args?.reasoning as string | undefined,
-            args?.metaJson as Record<string, unknown> | undefined,
-            args?.costUSD as number | undefined,
-            args?.latencyMsec as number | undefined,
-            args?.numInputTokens as number | undefined,
-            args?.numOutputTokens as number | undefined
-          );
+          const proposal = await submitProposal({
+            sessionId: args?.sessionId as string,
+            specialistId: args?.specialistId as string,
+            roundId: args?.roundId as string | undefined,
+            transitionName: args?.transitionName as string | undefined,
+            reasoning: args?.reasoning as string | undefined,
+            metaJson: args?.metaJson as Record<string, unknown> | undefined,
+            costUSD: args?.costUSD as number | undefined,
+            latencyMsec: args?.latencyMsec as number | undefined,
+            numInputTokens: args?.numInputTokens as number | undefined,
+            numOutputTokens: args?.numOutputTokens as number | undefined,
+          });
           return {
             content: [
               {
@@ -389,20 +389,20 @@ export function createMcpServer(): Server {
         }
 
         case "submit_vote": {
-          const vote = await submitVote(
-            args?.sessionId as string,
-            args?.specialistId as string,
-            args?.roundId as string | undefined,
-            args?.proposalIdA as string,
-            args?.proposalIdB as string,
-            args?.voteFor as VoteChoice | undefined,
-            args?.reasoning as string | undefined,
-            args?.metaJson as Record<string, unknown> | undefined,
-            args?.costUSD as number | undefined,
-            args?.latencyMsec as number | undefined,
-            args?.numInputTokens as number | undefined,
-            args?.numOutputTokens as number | undefined
-          );
+          const vote = await submitVote({
+            sessionId: args?.sessionId as string,
+            specialistId: args?.specialistId as string,
+            roundId: args?.roundId as string | undefined,
+            proposalIdA: args?.proposalIdA as string,
+            proposalIdB: args?.proposalIdB as string,
+            voteFor: args?.voteFor as VoteChoice | undefined,
+            reasoning: args?.reasoning as string | undefined,
+            metaJson: args?.metaJson as Record<string, unknown> | undefined,
+            costUSD: args?.costUSD as number | undefined,
+            latencyMsec: args?.latencyMsec as number | undefined,
+            numInputTokens: args?.numInputTokens as number | undefined,
+            numOutputTokens: args?.numOutputTokens as number | undefined,
+          });
           return {
             content: [
               {
@@ -426,18 +426,18 @@ export function createMcpServer(): Server {
         }
 
         case "submit_arbitration": {
-          const result = await submitArbitration(
-            args?.sessionId as string,
-            args?.roundId as string | undefined,
-            args?.specialistId as string | undefined,
-            args?.transitionName as string | undefined,
-            args?.reasoning as string | undefined,
-            args?.metaJson as Record<string, unknown> | undefined,
-            args?.costUSD as number | undefined,
-            args?.latencyMsec as number | undefined,
-            args?.numInputTokens as number | undefined,
-            args?.numOutputTokens as number | undefined
-          );
+          const result = await submitArbitration({
+            sessionId: args?.sessionId as string,
+            roundId: args?.roundId as string | undefined,
+            specialistId: args?.specialistId as string | undefined,
+            transitionName: args?.transitionName as string | undefined,
+            reasoning: args?.reasoning as string | undefined,
+            metaJson: args?.metaJson as Record<string, unknown> | undefined,
+            costUSD: args?.costUSD as number | undefined,
+            latencyMsec: args?.latencyMsec as number | undefined,
+            numInputTokens: args?.numInputTokens as number | undefined,
+            numOutputTokens: args?.numOutputTokens as number | undefined,
+          });
           return {
             content: [
               {

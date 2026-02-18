@@ -72,41 +72,41 @@ describe("Integration: Decision Cycle", () => {
     });
 
     // Submit proposals
-    const propA = await submitProposal(
-      session.sessionId,
-      "p1",
-      session.currentRoundId
-    );
-    const propB = await submitProposal(
-      session.sessionId,
-      "p2",
-      session.currentRoundId
-    );
+    const propA = await submitProposal({
+      sessionId: session.sessionId,
+      specialistId: "p1",
+      roundId: session.currentRoundId,
+    });
+    const propB = await submitProposal({
+      sessionId: session.sessionId,
+      specialistId: "p2",
+      roundId: session.currentRoundId,
+    });
 
     expect(propA.transitionName).toBe("approve");
     expect(propB.transitionName).toBe("reject");
 
     // Submit votes
-    await submitVote(
-      session.sessionId,
-      "v1",
-      session.currentRoundId,
-      propA.proposalId,
-      propB.proposalId
-    );
-    await submitVote(
-      session.sessionId,
-      "v2",
-      session.currentRoundId,
-      propA.proposalId,
-      propB.proposalId
-    );
+    await submitVote({
+      sessionId: session.sessionId,
+      specialistId: "v1",
+      roundId: session.currentRoundId,
+      proposalIdA: propA.proposalId,
+      proposalIdB: propB.proposalId,
+    });
+    await submitVote({
+      sessionId: session.sessionId,
+      specialistId: "v2",
+      roundId: session.currentRoundId,
+      proposalIdA: propA.proposalId,
+      proposalIdB: propB.proposalId,
+    });
 
     // Arbitrate
-    const result = await submitArbitration(
-      session.sessionId,
-      session.currentRoundId
-    );
+    const result = await submitArbitration({
+      sessionId: session.sessionId,
+      roundId: session.currentRoundId,
+    });
 
     expect(result.executed).toBe(true);
     expect(result.transitionName).toBe("approve");
@@ -178,13 +178,13 @@ describe("Integration: Decision Cycle", () => {
     });
 
     // Human forces the transition
-    const result = await submitArbitration(
-      session.sessionId,
-      session.currentRoundId,
-      "human",
-      "approve",
-      "Human decided to approve"
-    );
+    const result = await submitArbitration({
+      sessionId: session.sessionId,
+      roundId: session.currentRoundId,
+      specialistId: "human",
+      transitionName: "approve",
+      reasoning: "Human decided to approve",
+    });
 
     expect(result.executed).toBe(true);
     expect(result.isHuman).toBe(true);
@@ -223,18 +223,17 @@ describe("Integration: Decision Cycle", () => {
     });
 
     // Submit proposal with cost tracking
-    const proposal = await submitProposal(
-      session.sessionId,
-      "p1",
-      session.currentRoundId,
-      undefined,
-      "Auto proposal",
-      { source: "test" },
-      0.005,
-      250,
-      100,
-      50
-    );
+    const proposal = await submitProposal({
+      sessionId: session.sessionId,
+      specialistId: "p1",
+      roundId: session.currentRoundId,
+      reasoning: "Auto proposal",
+      metaJson: { source: "test" },
+      costUSD: 0.005,
+      latencyMsec: 250,
+      numInputTokens: 100,
+      numOutputTokens: 50,
+    });
 
     expect(proposal.costUSD).toBe(0.005);
     expect(proposal.latencyMsec).toBe(250);

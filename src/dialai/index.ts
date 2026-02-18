@@ -31,6 +31,7 @@ export type {
   VoteChoice,
   ConsensusResult,
   ArbitrationResult,
+  ArbitrationPath,
   AlignmentRecord,
   Exemplar,
   AlignmentEvaluationResult,
@@ -38,6 +39,10 @@ export type {
   RegisterProposerOptions,
   RegisterVoterOptions,
   RegisterArbiterOptions,
+  SubmitProposalOptions,
+  SubmitVoteOptions,
+  SubmitSelectionVoteOptions,
+  SubmitArbitrationOptions,
 } from "./types.js";
 
 // Re-export store
@@ -72,11 +77,17 @@ export {
   getEnabledProposers,
   getEnabledVoters,
   getEnabledArbiter,
+  // Strategy resolution
+  resolveProposerStrategy,
+  resolveVoterStrategy,
+  resolveArbiterStrategy,
   // Decision cycle
   submitProposal,
   submitVote,
   submitSelectionVote,
+  checkHumanPrimacy,
   evaluateConsensus,
+  classifyArbitration,
   submitArbitration,
   executeTransition,
   getProposalsForRound,
@@ -123,6 +134,7 @@ export {
   isHumanSpecialist,
   getAlignmentScore,
   updateAlignment,
+  computeAlignmentUpdates,
   updateAlignmentAfterHumanDecision,
   getAllAlignmentRecords,
 } from "./alignment.js";
@@ -131,7 +143,12 @@ export {
 export { createExemplar, getExemplars } from "./exemplars.js";
 
 // Re-export evaluation
-export { evaluateAlignment, evaluateAccuracy } from "./evaluation.js";
+export {
+  computeAlignmentFromExemplars,
+  computeAccuracyFromExemplars,
+  evaluateAlignment,
+  evaluateAccuracy,
+} from "./evaluation.js";
 
 // Re-export LLM/webhook execution
 export {
