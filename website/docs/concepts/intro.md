@@ -4,13 +4,13 @@ sidebar_position: 1
 
 # Core Concepts
 
-DIAL orchestrates **specialists** — both AI and human — that compete and collaborate to navigate **state machines** through **decision cycles**. An **arbiter** drives each cycle, maintaining a unified **consensus score** that determines when one proposal is clearly superior to the rest.
+DIAL orchestrates **specialists** — both AI and human — that compete and collaborate to navigate **state machines** through **decision cycles**. An **arbiter** drives each cycle, counting proposals per transition and declaring consensus when one transition is ahead by k proposals.
 
 ## The Big Picture
 
 ### Task Specialists, Not Agents
 
-DIAL does not guide a single agent toward completing a task. It simultaneously solicits proposals from an arbitrary number of models, prompts, and strategies — all competing at the same decision point. Each registered proposer independently analyzes the current state and suggests a transition. The arbiter maintains a running consensus score and declares a winner when the margin of superiority crosses the threshold.
+DIAL does not guide a single agent toward completing a task. It simultaneously solicits proposals from an arbitrary number of models, prompts, and strategies — all competing at the same decision point. Each registered proposer independently analyzes the current state and suggests a transition. The arbiter counts proposals per transition and declares a winner when one transition is ahead by k proposals.
 
 This is mass simultaneous solicitation, not sequential A/B testing. Specialists are interchangeable and compete on the quality of their contributions, measured against human ground truth.
 
@@ -50,18 +50,17 @@ After every arriving proposal, the arbiter re-evaluates the **consensus score**.
 
 ### The Consensus Score
 
-Every contribution — a proposal — adds the specialist's **alignment score** to the consensus score of the transition it supports. Alignment is a simple measurement: `matching choices / total comparisons` with human ground truth.
+Every proposal is an endorsement of a transition. The arbiter counts proposals per transition and evaluates whether one transition has built a sufficient lead.
 
-The arbiter groups proposals by **transition** (not individual proposal). Two proposers that chose the same transition with similar reasoning are supporting the same outcome — their alignment scores combine.
+The arbiter groups proposals by **transition** (not individual proposal). Two proposers that chose the same transition are supporting the same outcome — their endorsements count together.
 
-Consensus is reached when the leading transition's score is sufficiently ahead of the runner-up:
+Consensus is reached when the leading transition is ahead of the runner-up by k proposals:
 
 ```
-margin = (score(leader) − score(runner_up)) / Σ alignment
-consensus when: margin ≥ threshold
+count(leader) − count(runner_up) ≥ k
 ```
 
-The **risk dial** controls the threshold. At 0.0, the arbiter requires human participation in every round. As the dial is raised, autonomous consensus becomes possible.
+The **ahead-by-k threshold** controls how much agreement is required. With k=1, a single-proposal lead is sufficient. Higher values of k require stronger agreement among proposers.
 
 [Learn more about Arbitration →](./arbitration.md)
 

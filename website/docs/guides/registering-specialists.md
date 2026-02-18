@@ -262,14 +262,14 @@ Humans can also bypass the entire decision cycle using `submitArbitration` with 
 import { submitArbitration } from "dialai";
 
 // Human override - directly execute a transition
-await submitArbitration(
-  session.sessionId,
-  session.currentRoundId,
-  "human-reviewer",           // must be registered with isHuman: true
-  "approve",
-  "Reviewed and approved by manager",
-  { approvedBy: "manager@example.com" }
-);
+await submitArbitration({
+  sessionId: session.sessionId,
+  roundId: session.currentRoundId,
+  specialistId: "human-reviewer",           // must be registered with isHuman: true
+  transitionName: "approve",
+  reasoning: "Reviewed and approved by manager",
+  metaJson: { approvedBy: "manager@example.com" },
+});
 ```
 
 ## Registration Options Reference

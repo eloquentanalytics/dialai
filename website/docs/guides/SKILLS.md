@@ -36,7 +36,7 @@ Each skill below is available as a standalone file that agents can download:
 | Run Machine | [SKILL.md](./skills/run-machine/SKILL.md) | Execute state machines from CLI |
 | Create Machine | [SKILL.md](./skills/create-machine/SKILL.md) | Define state machine JSON |
 | Add Specialists | [SKILL.md](./skills/add-specialists/SKILL.md) | Configure AI and human participants |
-| Decision Cycles | [SKILL.md](./skills/decision-cycles/SKILL.md) | Understand Propose, Arbitrate, Execute |
+| Decision Cycles | [SKILL.md](./skills/decision-cycles/SKILL.md) | Understand the decision cycle |
 | Programmatic Usage | [SKILL.md](./skills/programmatic-usage/SKILL.md) | TypeScript/JavaScript integration |
 | MCP Server | [SKILL.md](./skills/mcp-server/SKILL.md) | Run as MCP server for AI assistants |
 | Troubleshooting | [SKILL.md](./skills/troubleshooting/SKILL.md) | Debug common issues |
@@ -100,9 +100,9 @@ For machines with embedded specialists, see [State Machines](./state-machines.md
 ### Human Override
 ```json
 {
-  "proposers": [
-    { "id": "ai", "strategy": "llm", "config": {...} },
-    { "id": "human", "strategy": "human" }
+  "specialists": [
+    { "specialistId": "ai", "role": "proposer", "strategyFnName": "firstAvailable" },
+    { "specialistId": "human", "role": "proposer", "isHuman": true }
   ]
 }
 ```
@@ -111,12 +111,12 @@ Human proposals always win consensus immediately.
 ### AI Consensus
 ```json
 {
-  "proposers": [
-    { "id": "ai-1", "strategy": "llm", "config": {...} },
-    { "id": "ai-2", "strategy": "llm", "config": {...} },
-    { "id": "ai-3", "strategy": "llm", "config": {...} }
-  ],
-  "arbiter": { "strategy": "ahead-by-k", "k": 2 }
+  "specialists": [
+    { "specialistId": "ai-1", "role": "proposer", "strategyFnName": "firstAvailable" },
+    { "specialistId": "ai-2", "role": "proposer", "strategyFnName": "firstAvailable" },
+    { "specialistId": "ai-3", "role": "proposer", "strategyFnName": "firstAvailable" },
+    { "specialistId": "arbiter", "role": "arbiter", "strategyFnName": "aheadByK", "threshold": 2 }
+  ]
 }
 ```
 

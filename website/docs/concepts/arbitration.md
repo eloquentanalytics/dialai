@@ -4,7 +4,7 @@ sidebar_position: 5
 
 # Arbitration
 
-The **arbiter** is the orchestrator of every decision cycle. It solicits contributions from specialists, maintains the unified consensus score, and declares consensus when one transition demonstrates a clear margin of superiority.
+The **arbiter** is the orchestrator of every decision cycle. It solicits proposals from specialists, counts endorsements per transition, and declares consensus when one transition is ahead of all others by k proposals.
 
 ## The Arbiter as Orchestrator
 
@@ -69,8 +69,8 @@ Proposals are grouped by **transition**, not by individual proposal. If two prop
 
 This is critical for the consensus score: the question isn't "which proposal is best?" but "which transition has the most support from aligned specialists?"
 
-When proposals target the same transition with semantically similar reasoning, their alignment scores **combine**. This means:
-- Two moderately-aligned specialists proposing the same transition can outweigh one highly-aligned specialist proposing a different one
+When proposals target the same transition, each endorsement counts equally toward that transition's tally. This means:
+- Two specialists proposing the same transition contribute two endorsements, moving closer to the ahead-by-k threshold
 - Clustering prevents spurious competition between specialists who agree on the outcome
 
 ## Self-Healing
@@ -130,7 +130,7 @@ The threshold can be set at the **machine level** (applies to all states) or **p
 
 ### 1. Start with a High Threshold
 
-Begin with `consensus_threshold` near 1.0. This forces human participation, which generates exemplars and calibrates alignment. Lower the threshold only after alignment scores demonstrate reliable human prediction.
+Begin with a higher k value (e.g., k=3). This requires stronger agreement among proposers, which increases the likelihood of human participation, generates exemplars, and calibrates alignment. Lower the threshold only after alignment scores demonstrate reliable human prediction.
 
 ### 2. Monitor the Margin
 

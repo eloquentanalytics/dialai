@@ -25,9 +25,16 @@
         "$ref": "#/$defs/stateConfig"
       }
     },
-    "arbiter": {
-      "$ref": "#/$defs/arbiterConfig",
-      "description": "Default arbiter configuration for all states"
+    "specialists": {
+      "type": "array",
+      "description": "Optional specialists to register when running this machine",
+      "items": {
+        "$ref": "#/$defs/specialistDefinition"
+      }
+    },
+    "consensusThreshold": {
+      "type": "number",
+      "description": "Default consensus threshold for the machine (ahead-by-k)"
     }
   },
   "$defs": {
@@ -45,68 +52,63 @@
             "type": "string"
           }
         },
-        "proposers": {
-          "type": "object",
-          "description": "Proposer specialists registered for this state",
-          "additionalProperties": {
-            "$ref": "#/$defs/specialistConfig"
-          }
-        },
-        "arbiter": {
-          "$ref": "#/$defs/arbiterConfig",
-          "description": "Arbiter configuration for this state (overrides machine-level)"
+        "consensusThreshold": {
+          "type": "number",
+          "description": "Consensus threshold override for this state (ahead-by-k)"
         }
       }
     },
-    "specialistConfig": {
+    "specialistDefinition": {
       "type": "object",
-      "description": "Configuration for a proposer specialist",
+      "description": "Configuration for a specialist",
+      "required": ["specialistId", "role"],
       "properties": {
-        "strategyFn": {
+        "specialistId": {
           "type": "string",
-          "description": "Inline strategy function as a string (Mode 1)"
+          "description": "Unique identifier for the specialist"
         },
-        "modelId": {
+        "role": {
           "type": "string",
-          "description": "LLM model identifier for LLM-based strategies (Mode 2/3)"
+          "enum": ["proposer", "arbiter"],
+          "description": "Role of the specialist"
+        },
+        "machineName": {
+          "type": "string",
+          "description": "Machine to participate in (defaults to the containing machine)"
+        },
+        "isHuman": {
+          "type": "boolean",
+          "description": "If true, can force arbitration decisions"
+        },
+        "strategyFnName": {
+          "type": "string",
+          "description": "Built-in strategy name"
+        },
+        "strategyWebhookUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "Webhook URL for strategy execution"
         },
         "contextFn": {
           "type": "string",
-          "description": "Context function for LLM-based strategies (Mode 3)"
+          "description": "Context function for LLM-based strategies"
         },
         "contextWebhookUrl": {
           "type": "string",
           "format": "uri",
           "description": "Webhook URL for context generation"
         },
-        "strategyWebhookUrl": {
+        "modelId": {
           "type": "string",
-          "format": "uri",
-          "description": "Webhook URL for strategy execution (Mode 4)"
+          "description": "LLM model identifier"
         },
         "webhookTokenName": {
           "type": "string",
           "description": "Environment variable name containing the webhook auth token"
-        }
-      }
-    },
-    "arbiterConfig": {
-      "type": "object",
-      "description": "Configuration for the arbiter",
-      "properties": {
-        "aheadByK": {
-          "type": "integer",
-          "minimum": 1,
-          "default": 1,
-          "description": "Proposals the leading transition must be ahead by for consensus"
         },
-        "modelId": {
-          "type": "string",
-          "description": "LLM model for reasoning synthesis (optional)"
-        },
-        "contextFn": {
-          "type": "string",
-          "description": "Context function for reasoning synthesis"
+        "threshold": {
+          "type": "number",
+          "description": "Strategy-specific threshold"
         }
       }
     }

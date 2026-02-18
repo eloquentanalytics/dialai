@@ -2,28 +2,34 @@
 sidebar_position: 10
 ---
 
-# `submitArbitration(sessionId, roundId?, specialistId?, transitionName?, reasoning?, metaJson?, costUSD?, latencyMsec?, numInputTokens?, numOutputTokens?): Promise<ArbitrationResult>`
+# `submitArbitration(opts): Promise<ArbitrationResult>`
 
 Evaluates consensus and optionally executes the winning transition. Follows the same unified pattern as `submitProposal`: if the key decision parameter is omitted, the arbiter's strategy is invoked.
 
 ## Signature
 
 ```typescript
-submitArbitration(
-  sessionId: string,
-  roundId?: string,           // omit to use current round
-  specialistId?: string,      // who is calling (required for override)
-  transitionName?: string,    // if omitted, check consensus; if provided, force transition
-  reasoning?: string,
-  metaJson?: Record<string, unknown>,
-  costUSD?: number,
-  latencyMsec?: number,
-  numInputTokens?: number,
-  numOutputTokens?: number
-): Promise<ArbitrationResult>
+submitArbitration(opts: SubmitArbitrationOptions): Promise<ArbitrationResult>
 ```
 
-| Param | Type | Required | Description |
+**SubmitArbitrationOptions:**
+
+```typescript
+interface SubmitArbitrationOptions {
+  sessionId: string;                      // Required: session to arbitrate
+  roundId?: string;                       // Omit to use current round
+  specialistId?: string;                  // Who is calling (required for override)
+  transitionName?: string;                // Force this transition (human only)
+  reasoning?: string;                     // Explanation
+  metaJson?: Record<string, unknown>;     // Arbitrary metadata
+  costUSD?: number;                       // Cost in USD
+  latencyMsec?: number;                   // Time in milliseconds
+  numInputTokens?: number;                // Input tokens
+  numOutputTokens?: number;               // Output tokens
+}
+```
+
+| Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `sessionId` | `string` | Yes | Session identifier |
 | `roundId` | `string` | No | Associates arbitration with current state round; omit to use current round |
@@ -94,7 +100,10 @@ Any specialist (AI or human) can check for consensus:
 ```typescript
 import { submitArbitration } from "dialai";
 
-const result = await submitArbitration(session.sessionId, session.currentRoundId);
+const result = await submitArbitration({
+  sessionId: session.sessionId,
+  roundId: session.currentRoundId,
+});
 
 if (result.executed) {
   console.log("Transitioned to:", result.toState);
@@ -113,14 +122,14 @@ Only a human specialist can force a transition when consensus isn't reached:
 import { submitArbitration } from "dialai";
 
 // Human decides to approve, bypassing normal consensus
-const result = await submitArbitration(
-  session.sessionId,
-  session.currentRoundId,
-  "human-reviewer",  // must be registered with isHuman: true
-  "approve",
-  "Reviewed and approved by manager",
-  { approvedBy: "jane@example.com" }
-);
+const result = await submitArbitration({
+  sessionId: session.sessionId,
+  roundId: session.currentRoundId,
+  specialistId: "human-reviewer",  // must be registered with isHuman: true
+  transitionName: "approve",
+  reasoning: "Reviewed and approved by manager",
+  metaJson: { approvedBy: "jane@example.com" },
+});
 
 console.log(result.executed); // true
 ```
@@ -129,13 +138,13 @@ If an AI specialist tries to force a transition, it is rejected:
 
 ```typescript
 // This will fail - AI cannot force arbitration
-const result = await submitArbitration(
-  session.sessionId,
-  session.currentRoundId,
-  "ai-specialist",  // not registered with isHuman: true
-  "approve",
-  "I think we should approve"
-);
+const result = await submitArbitration({
+  sessionId: session.sessionId,
+  roundId: session.currentRoundId,
+  specialistId: "ai-specialist",  // not registered with isHuman: true
+  transitionName: "approve",
+  reasoning: "I think we should approve",
+});
 
 console.log(result.executed);   // false
 console.log(result.guardReason); // "Only human specialists can force arbitration"
@@ -147,26 +156,26 @@ console.log(result.guardReason); // "Only human specialists can force arbitratio
 import { submitProposal, submitArbitration } from "dialai";
 
 // Submit proposals
-const proposal1 = await submitProposal(
-  session.sessionId,
-  "ai-proposer-1",
-  session.currentRoundId
-);
+const proposal1 = await submitProposal({
+  sessionId: session.sessionId,
+  specialistId: "ai-proposer-1",
+  roundId: session.currentRoundId,
+});
 
 // Check if consensus reached
-let result = await submitArbitration(session.sessionId, session.currentRoundId);
+let result = await submitArbitration({ sessionId: session.sessionId, roundId: session.currentRoundId });
 if (result.executed) return;
 
-const proposal2 = await submitProposal(
-  session.sessionId,
-  "ai-proposer-2",
-  session.currentRoundId
-);
+const proposal2 = await submitProposal({
+  sessionId: session.sessionId,
+  specialistId: "ai-proposer-2",
+  roundId: session.currentRoundId,
+});
 
 // Check again
-result = await submitArbitration(session.sessionId, session.currentRoundId);
+result = await submitArbitration({ sessionId: session.sessionId, roundId: session.currentRoundId });
 if (result.executed) return;
 
 // No consensus - wait for human to decide
-// Human can call: submitArbitration(sessionId, roundId, "human-reviewer", "approve", "reason")
+// Human can call: submitArbitration({ sessionId, roundId, specialistId: "human-reviewer", transitionName: "approve", reasoning: "reason" })
 ```

@@ -78,11 +78,11 @@ The DIAL API is designed as a set of tools an agent needs:
 | `getSession` | Check the current state |
 | `getSessions` | List all active processes |
 | `registerProposer` | Join a decision process as a proposer |
-| `submitProposal` | Propose a transition (with roundId) |
-| `submitArbitration` | Evaluate consensus and execute winning transition |
+| `submitProposal` | Propose a transition (options object with sessionId, specialistId, etc.) |
+| `submitArbitration` | Evaluate consensus and execute winning transition (options object) |
 | `executeTransition` | Apply a transition directly |
 
-An agent calling `submitProposal(sessionId, myId, roundId, "approve", "Document meets quality standards")` is doing exactly one thing: proposing a state transition for the current decision round. There is no ambiguity about what the call does, what it returns, or what happens next.
+An agent calling `submitProposal({ sessionId, specialistId: myId, roundId, transitionName: "approve", reasoning: "Document meets quality standards" })` is doing exactly one thing: proposing a state transition for the current decision round. There is no ambiguity about what the call does, what it returns, or what happens next.
 
 This is agent experience development. The framework is built so that the agent's path from "I have a task" to "I took an action" is as short and unambiguous as possible.
 
@@ -223,7 +223,7 @@ DIAL publishes modular skills following the [Agent Skills](https://agentskills.i
 | [run-machine](./guides/skills/run-machine/SKILL.md) | Execute a state machine from CLI |
 | [create-machine](./guides/skills/create-machine/SKILL.md) | Define state machine JSON |
 | [add-specialists](./guides/skills/add-specialists/SKILL.md) | Configure AI and human specialists |
-| [decision-cycles](./guides/skills/decision-cycles/SKILL.md) | Understand the PVAE cycle |
+| [decision-cycles](./guides/skills/decision-cycles/SKILL.md) | Understand the decision cycle |
 | [programmatic-usage](./guides/skills/programmatic-usage/SKILL.md) | TypeScript/JavaScript integration |
 | [mcp-server](./guides/skills/mcp-server/SKILL.md) | Run as MCP server |
 | [troubleshooting](./guides/skills/troubleshooting/SKILL.md) | Debug common issues |

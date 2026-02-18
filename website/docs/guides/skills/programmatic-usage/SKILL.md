@@ -113,10 +113,9 @@ const session = await getSession(sessionId);
 const session = await getSession(sessionId);
 
 for (const record of session.history) {
-  console.log(`${record.fromState} -> ${record.toState}`);
-  console.log(`  Action: ${record.action}`);
+  console.log(`Transition: ${record.transitionName}`);
   console.log(`  Reasoning: ${record.reasoning}`);
-  console.log(`  Timestamp: ${record.timestamp}`);
+  console.log(`  Timestamp: ${record.executionTimestamp}`);
 }
 ```
 

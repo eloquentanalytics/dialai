@@ -129,7 +129,7 @@ const machine: MachineDefinition = {
 };
 
 // Step 1: Create session
-const session = createSession(machine);
+const session = await createSession(machine);
 console.log("Created session:", session.sessionId);
 console.log("Current state:", session.currentState); // "pending"
 
@@ -155,8 +155,8 @@ await registerProposer({
 });
 
 // Step 3: Submit proposals (invoke strategies)
-const p1 = await submitProposal(session.sessionId, "optimist");
-const p2 = await submitProposal(session.sessionId, "pessimist");
+const p1 = await submitProposal({ sessionId: session.sessionId, specialistId: "optimist" });
+const p2 = await submitProposal({ sessionId: session.sessionId, specialistId: "pessimist" });
 console.log("Proposal 1:", p1.transitionName, "→", p1.toState);
 console.log("Proposal 2:", p2.transitionName, "→", p2.toState);
 

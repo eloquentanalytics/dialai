@@ -100,14 +100,14 @@ You can also bypass strategies and submit proposals directly by providing all pa
 import { submitProposal } from "dialai";
 
 // Submit a proposal directly (providing transitionName bypasses strategy)
-const proposal = await submitProposal(
+const proposal = await submitProposal({
   sessionId,
-  "manual-proposer",
-  session.currentRoundId,
-  "approve",
-  "Manually approved after review",
-  { source: "manual-review" }
-);
+  specialistId: "manual-proposer",
+  roundId: session.currentRoundId,
+  transitionName: "approve",
+  reasoning: "Manually approved after review",
+  metaJson: { source: "manual-review" },
+});
 ```
 
 ## Strategy Invocation
@@ -118,9 +118,9 @@ To invoke a specialist's registered strategy, simply omit the proposal data:
 import { submitProposal } from "dialai";
 
 // Invoke proposer's strategy (omit transitionName)
-const proposal = await submitProposal(
+const proposal = await submitProposal({
   sessionId,
-  "ai-proposer-1",
-  session.currentRoundId
-);
+  specialistId: "ai-proposer-1",
+  roundId: session.currentRoundId,
+});
 ```

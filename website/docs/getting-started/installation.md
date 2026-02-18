@@ -87,7 +87,7 @@ const machine: MachineDefinition = {
   },
 };
 
-const session = runSession(machine);
+const session = await runSession(machine);
 console.log("DIAL installed successfully!");
 console.log("Session reached:", session.currentState); // "end"
 ```

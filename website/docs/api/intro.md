@@ -165,8 +165,15 @@ The context passed to a custom arbiter strategy function:
 
 ```typescript
 interface ArbiterContext {
-  session: Session;
+  sessionId: string;
+  roundId: string;
+  currentState: string;
+  prompt: string;
+  machineName: string;
   proposals: Proposal[];
+  alignmentScores?: Record<string, number>;
+  humanGoldExamples?: HumanGoldExample[];
+  history: TransitionRecord[];
   threshold: number;
 }
 ```
@@ -210,45 +217,36 @@ Creates and stores a proposal. If `transitionName` is omitted, invokes the speci
 import { submitProposal } from "dialai";
 
 // Strategy invocation (AI specialists)
-const proposal = await submitProposal(
-  session.sessionId,
-  "ai-proposer-1",
-  session.currentRoundId  // roundId - omit to use current round; provide to target a specific round
-);
+const proposal = await submitProposal({
+  sessionId: session.sessionId,
+  specialistId: "ai-proposer-1",
+  roundId: session.currentRoundId,  // omit to use current round
+});
 
 // Direct submission with all parameters
-const proposal = await submitProposal(
-  session.sessionId,
-  "ai-proposer-1",
-  session.currentRoundId, // roundId
-  "approve",              // transitionName
-  "Looks good to me",     // reasoning
-  { source: "review" },   // metaJson
-  0.003,                  // costUSD
-  200,                    // latencyMsec
-  150,                    // numInputTokens
-  50                      // numOutputTokens
-);
+const proposal = await submitProposal({
+  sessionId: session.sessionId,
+  specialistId: "ai-proposer-1",
+  roundId: session.currentRoundId,
+  transitionName: "approve",
+  reasoning: "Looks good to me",
+  metaJson: { source: "review" },
+  costUSD: 0.003,
+  latencyMsec: 200,
+  numInputTokens: 150,
+  numOutputTokens: 50,
+});
 ```
 
 **Signature:**
 
 ```typescript
-submitProposal(
-  sessionId: string,
-  specialistId: string,
-  roundId?: string,
-  transitionName?: string,
-  reasoning?: string,
-  metaJson?: Record<string, unknown>,
-  costUSD?: number,
-  latencyMsec?: number,
-  numInputTokens?: number,
-  numOutputTokens?: number
-): Promise<Proposal>
+submitProposal(opts: SubmitProposalOptions): Promise<Proposal>
 ```
 
-| Param | Type | Required | Description |
+**SubmitProposalOptions:**
+
+| Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `sessionId` | `string` | Yes | Session identifier |
 | `specialistId` | `string` | Yes | Who is submitting |
@@ -303,7 +301,9 @@ Evaluates consensus and optionally executes the winning transition. Combines con
 import { submitArbitration } from "dialai";
 
 // Check for consensus and auto-execute if found
-const result = await submitArbitration(session.sessionId, "0");
+const result = await submitArbitration({
+  sessionId: session.sessionId,
+});
 
 if (result.executed) {
   console.log("Transitioned to:", result.toState);
@@ -312,38 +312,28 @@ if (result.executed) {
 }
 
 // Human override with cost tracking
-const result = await submitArbitration(
-  session.sessionId,
-  "0",                        // roundId
-  "human-reviewer",           // specialistId
-  "approve",                  // transitionName (force this transition)
-  "Manager approved",         // reasoning
-  { approvedBy: "jane" },     // metaJson
-  0.0,                        // costUSD (human decision)
-  5000,                       // latencyMsec
-  0,                          // numInputTokens
-  0                           // numOutputTokens
-);
+const result = await submitArbitration({
+  sessionId: session.sessionId,
+  specialistId: "human-reviewer",
+  transitionName: "approve",
+  reasoning: "Manager approved",
+  metaJson: { approvedBy: "jane" },
+  costUSD: 0.0,
+  latencyMsec: 5000,
+  numInputTokens: 0,
+  numOutputTokens: 0,
+});
 ```
 
 **Signature:**
 
 ```typescript
-submitArbitration(
-  sessionId: string,
-  roundId?: string,           // omit to use current round
-  specialistId?: string,
-  transitionName?: string,
-  reasoning?: string,
-  metaJson?: Record<string, unknown>,
-  costUSD?: number,
-  latencyMsec?: number,
-  numInputTokens?: number,
-  numOutputTokens?: number
-): Promise<ArbitrationResult>
+submitArbitration(opts: SubmitArbitrationOptions): Promise<ArbitrationResult>
 ```
 
-| Param | Type | Required | Description |
+**SubmitArbitrationOptions:**
+
+| Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `sessionId` | `string` | Yes | Session identifier |
 | `roundId` | `string` | No | Omit to use current round; if provided, enables staleness detection |
@@ -373,7 +363,7 @@ const updated = await executeTransition(
 );
 
 console.log(updated.currentState); // "approved"
-console.log(updated.history);      // [..., { fromState, toState, ... }]
+console.log(updated.history);      // [..., { transitionName, reasoning, ... }]
 ```
 
 **Signature:**

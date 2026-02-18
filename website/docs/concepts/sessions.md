@@ -65,20 +65,19 @@ Each state can have:
 
 - **prompt**: A description of the decision to be made. This is given to all specialists and guides their proposals.
 - **transitions**: A map of transition names to target states. If omitted, the state is terminal.
-- **consensusThreshold**: The **risk dial** for this state (0.0–1.0). Controls how much margin of superiority is required for autonomous consensus. Higher = more cautious. If omitted, uses the machine default.
+- **consensusThreshold**: The **ahead-by-k threshold** for this state (integer). Controls how many proposals the leading transition must be ahead by for consensus. Higher = more deliberation required. If omitted, uses the machine default (k=1).
 
-### The Risk Dial
+### The Ahead-by-k Threshold
 
-Each state has a **consensus threshold** (also called the risk dial) that controls how easily the arbiter can reach autonomous consensus:
+Each state has a **consensus threshold** (the ahead-by-k parameter) that controls how easily the arbiter can reach consensus:
 
 | Value | Behavior |
 |-------|----------|
-| **1.0** | Maximum caution — practically requires human participation |
-| **0.5** | Moderate — leader must have ~2× the support of runner-up |
-| **0.1** | Aggressive — a modest lead is sufficient |
-| **0.0** | Any lead counts — fastest delegation |
+| **k = 1** | A single-proposal lead is sufficient — fast consensus when proposers agree |
+| **k = 2** | Leader must be ahead by two proposals — more deliberation required |
+| **k = 3+** | Requires strong agreement among proposers — high-stakes decisions |
 
-You can set different thresholds for different states. A high-stakes "approve deployment" state might use 0.9, while a routine "categorize ticket" state might use 0.3.
+You can set different thresholds for different states. A high-stakes "approve deployment" state might use k=3, while a routine "categorize ticket" state might use k=1.
 
 ## Decision Prompts
 
@@ -126,7 +125,7 @@ Each machine should model one type of decision process. If a workflow has distin
 
 ### 4. Start with High Thresholds
 
-Begin with `consensusThreshold` near 1.0. This forces human participation, generating exemplars and calibrating alignment scores. Lower the threshold only after specialists demonstrate reliable human alignment.
+Begin with a higher `consensusThreshold` value (e.g., k=3). This requires stronger agreement among proposers, increasing the likelihood of human participation and generating exemplars. Lower the threshold only after specialists demonstrate reliable human alignment.
 
 ### 5. Design for Task Decomposition
 

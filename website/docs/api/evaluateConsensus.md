@@ -20,8 +20,8 @@ await registerProposer({ specialistId: "p2", machineName: machine.machineName, s
 await registerArbiter({ specialistId: "arbiter", machineName: machine.machineName, strategyFnName: "aheadByK", threshold: 1 });
 
 // Submit proposals
-const propA = await submitProposal(session.sessionId, "p1");
-const propB = await submitProposal(session.sessionId, "p2");
+const propA = await submitProposal({ sessionId: session.sessionId, specialistId: "p1" });
+const propB = await submitProposal({ sessionId: session.sessionId, specialistId: "p2" });
 
 // Check consensus (read-only)
 const result = await evaluateConsensus(session.sessionId);
@@ -64,7 +64,7 @@ const result = await evaluateConsensus(session.sessionId);
 if (result.consensusReached) {
   console.log("Winner:", result.winningProposalId);
   // Optionally execute the transition
-  await submitArbitration(session.sessionId, session.currentRoundId);
+  await submitArbitration({ sessionId: session.sessionId, roundId: session.currentRoundId });
 } else {
   console.log("No consensus yet:", result.reasoning);
   // Request more proposals or wait for human

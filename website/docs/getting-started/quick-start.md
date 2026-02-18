@@ -93,30 +93,30 @@ console.log(session.currentState);   // "pending"
 console.log(session.currentRoundId); // "e5f6g7h8-..."
 
 // Two AI specialists each submit a proposal
-const proposalA = await submitProposal(
-  session.sessionId,
-  "ai-specialist",
-  session.currentRoundId,
-  "complete",
-  "The task is ready to complete",
-  { source: "automated-check" }
-);
+const proposalA = await submitProposal({
+  sessionId: session.sessionId,
+  specialistId: "ai-specialist",
+  roundId: session.currentRoundId,
+  transitionName: "complete",
+  reasoning: "The task is ready to complete",
+  metaJson: { source: "automated-check" },
+});
 
-const proposalB = await submitProposal(
-  session.sessionId,
-  "contrarian-ai",
-  session.currentRoundId,
-  "complete",
-  "I agree, let's complete it"
-);
+const proposalB = await submitProposal({
+  sessionId: session.sessionId,
+  specialistId: "contrarian-ai",
+  roundId: session.currentRoundId,
+  transitionName: "complete",
+  reasoning: "I agree, let's complete it",
+});
 
 // Submit arbitration - checks for consensus (both propose "complete", ahead by k=1)
-const result = await submitArbitration(session.sessionId, session.currentRoundId);
+const result = await submitArbitration({ sessionId: session.sessionId, roundId: session.currentRoundId });
 console.log(result.executed);    // true (both proposers agreed)
 console.log(result.toState);     // "done"
 
 console.log(session.currentState); // "done"
-console.log(session.history);      // [{ fromState: "pending", toState: "done", ... }]
+console.log(session.history);      // [{ transitionName: "complete", reasoning: "...", ... }]
 ```
 
 **Human primacy** means that when AI cannot reach consensus, a human can force a decision by calling `submitArbitration` with an explicit transition. A human proposal always wins.

@@ -90,7 +90,7 @@ Include a valid example alongside each error message showing the correct format.
 
 **Status**: Implemented (good state)
 
-Keep the number of tools small and focused. DIAL exposes 11 tools, each with a single purpose.
+Keep the number of tools small and focused. DIAL exposes 10 tools, each with a single purpose.
 
 > "Fewer, well-designed tools often outperform many granular ones, especially for agents with small context windows or tight latency budgets." — [MCP Best Practices](https://modelcontextprotocol.info/docs/best-practices/)
 

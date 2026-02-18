@@ -9,14 +9,28 @@ Complete type definitions for the `dialai` library. All types are exported from 
 ```typescript
 import type {
   MachineDefinition,
+  StateDefinition,
+  SpecialistDefinition,
   Session,
   TransitionRecord,
   Specialist,
   Proposer,
+  Arbiter,
   ProposerContext,
+  ArbiterContext,
+  ProposerStrategyResult,
+  ArbiterStrategyResult,
+  HumanGoldExample,
   Proposal,
   ConsensusResult,
   ArbitrationResult,
+  ArbitrationPath,
+  AlignmentRecord,
+  Exemplar,
+  AlignmentEvaluationResult,
+  AccuracyEvaluationResult,
+  SubmitProposalOptions,
+  SubmitArbitrationOptions,
 } from "dialai";
 ```
 
@@ -28,13 +42,12 @@ The blueprint for a state machine. Defines the states, transitions, and prompts.
 
 ```typescript
 interface MachineDefinition {
-  machineName: string;       // Unique identifier for this machine type
-  initialState: string;      // State where sessions start
-  goalState: string;         // Rest state where the session is headed
-  states: Record<string, {
-    prompt?: string;         // Decision prompt for this state
-    transitions?: Record<string, string>;  // Map of transition names to target states
-  }>;
+  machineName: string;                    // Unique identifier for this machine type
+  initialState: string;                   // State where sessions start
+  goalState: string;                      // Rest state where the session is headed
+  states: Record<string, StateDefinition>;
+  specialists?: SpecialistDefinition[];   // Optional specialists to register
+  consensusThreshold?: number;            // Default consensus threshold (ahead-by-k)
 }
 ```
 
@@ -74,6 +87,7 @@ interface Session {
   sessionId: string;            // UUID generated at creation
   machineName: string;          // Name of the machine being run
   currentState: string;         // Current state in the machine
+  currentRoundId: string;       // ID of the current decision round
   machine: MachineDefinition;   // The full machine definition
   history: TransitionRecord[];  // All executed transitions in order
   createdAt: Date;              // When the session was created
@@ -113,11 +127,8 @@ interface Proposer {
   specialistId: string;
   machineName: string;
   isHuman?: boolean;              // If true, can force arbitration decisions
-  strategyFn?: (ctx: ProposerContext) => Promise<{
-    transitionName: string;
-    toState: string;
-    reasoning: string;
-  }>;
+  enabled?: boolean;              // Whether this specialist is enabled (default true)
+  strategyFn?: (ctx: ProposerContext) => Promise<ProposerStrategyResult>;
   strategyFnName?: string;        // Built-in strategy name
   strategyWebhookUrl?: string;
   contextFn?: (ctx: ProposerContext) => Promise<string>;
@@ -137,11 +148,8 @@ interface Arbiter {
   role: "arbiter";
   specialistId: string;
   machineName: string;
-  strategyFn?: (ctx: ArbiterContext) => Promise<{
-    consensusReached: boolean;
-    winningProposalId?: string;
-    reasoning: string;
-  }>;
+  enabled?: boolean;              // Whether this specialist is enabled (default true)
+  strategyFn?: (ctx: ArbiterContext) => Promise<ArbiterStrategyResult>;
   strategyFnName?: string;        // Built-in: "aheadByK"
   strategyWebhookUrl?: string;
   webhookTokenName?: string;
@@ -193,7 +201,10 @@ interface ArbiterContext {
   roundId: string;              // Current round ID
   currentState: string;         // Current state name
   prompt: string;               // Decision prompt for this state
+  machineName: string;          // Machine name
   proposals: Proposal[];        // All proposals in this round
+  alignmentScores?: Record<string, number>;  // Alignment scores by specialistId
+  humanGoldExamples?: HumanGoldExample[];    // Human gold examples (for mostSimilar)
   history: TransitionRecord[];  // All previous transitions
   threshold: number;            // Configured threshold for this arbiter
 }
@@ -206,7 +217,7 @@ const arbiterStrategy = async (ctx: ArbiterContext) => {
   // Simple ahead-by-k logic counting proposals per transition
   const tallies: Record<string, number> = {};
   for (const p of ctx.proposals) {
-    tallies[p.proposalId] = (tallies[p.proposalId] ?? 0) + 1;
+    tallies[p.transitionName] = (tallies[p.transitionName] ?? 0) + 1;
   }
   const sorted = Object.entries(tallies).sort((a, b) => b[1] - a[1]);
 
@@ -248,6 +259,7 @@ interface Proposal {
   latencyMsec?: number;     // Time in milliseconds to generate
   numInputTokens?: number;  // Input tokens used
   numOutputTokens?: number; // Output tokens used
+  createdAt: Date;          // When the proposal was created
 }
 ```
 
@@ -368,3 +380,190 @@ Proposers support five execution modes. Arbiters support three (no LLM modes). E
 Arbiters cannot use LLM-based modes because arbitration must be deterministic and auditable.
 
 See [Registering Specialists](/docs/guides/registering-specialists) for detailed examples of each mode.
+
+## Additional Types
+
+### StateDefinition
+
+Definition of a single state in the machine.
+
+```typescript
+interface StateDefinition {
+  prompt?: string;                         // Decision prompt for this state
+  transitions?: Record<string, string>;    // Map of transition names to target states
+  consensusThreshold?: number;             // Consensus threshold override for this state
+}
+```
+
+### SpecialistDefinition
+
+Specialist definition for machine JSON files (used in `MachineDefinition.specialists`).
+
+```typescript
+interface SpecialistDefinition {
+  role: "proposer" | "arbiter";
+  specialistId: string;
+  machineName?: string;
+  isHuman?: boolean;
+  strategyFn?: string;
+  strategyFnName?: string;
+  strategyWebhookUrl?: string;
+  contextFn?: string;
+  contextWebhookUrl?: string;
+  modelId?: string;
+  webhookTokenName?: string;
+  threshold?: number;
+}
+```
+
+### HumanGoldExample
+
+Human gold example for similarity-based arbitration.
+
+```typescript
+interface HumanGoldExample {
+  transitionName: string;                  // The expected transition
+  reasoning: string;                       // The reasoning for this decision
+  metaJson?: Record<string, unknown>;      // Arbitrary metadata
+}
+```
+
+### ProposerStrategyResult
+
+Result from a proposer strategy function.
+
+```typescript
+interface ProposerStrategyResult {
+  transitionName: string;
+  toState: string;
+  reasoning: string;
+}
+```
+
+### ArbiterStrategyResult
+
+Result from an arbiter strategy function.
+
+```typescript
+interface ArbiterStrategyResult {
+  consensusReached: boolean;
+  winningProposalId?: string;
+  reasoning: string;
+}
+```
+
+### ArbitrationPath
+
+Pure classification of which path `submitArbitration` should take.
+
+```typescript
+type ArbitrationPath =
+  | { type: "stale" }
+  | { type: "humanOverride"; transitionName: string; toState: string }
+  | { type: "notHuman" }
+  | { type: "invalidTransition"; reason: string }
+  | { type: "noProposals" }
+  | { type: "evaluate" };
+```
+
+### AlignmentRecord
+
+Tracks how well a specialist aligns with human decisions.
+
+```typescript
+interface AlignmentRecord {
+  specialistId: string;       // The specialist being tracked
+  machineName: string;        // The machine this alignment is for
+  matchingChoices: number;    // Number of times specialist matched human choice
+  totalComparisons: number;   // Total number of comparisons
+  alignmentScore: number;     // Calculated: matchingChoices / totalComparisons
+  lastUpdated: Date;          // When this record was last updated
+}
+```
+
+### Exemplar
+
+A snapshot of context when a human forces a decision.
+
+```typescript
+interface Exemplar {
+  exemplarId: string;                 // UUID for this exemplar
+  machineName: string;                // Machine name
+  state: string;                      // The state when the decision was made
+  context: ProposerContext;           // The session context at decision time
+  humanTransitionName: string;        // The transition the human chose
+  humanToState: string;               // The state the human transitioned to
+  proposals: Proposal[];              // All proposals that were available
+  createdAt: Date;                    // When this exemplar was created
+}
+```
+
+### AlignmentEvaluationResult
+
+Result of evaluating a specialist's alignment with human decisions.
+
+```typescript
+interface AlignmentEvaluationResult {
+  specialistId: string;        // The specialist evaluated
+  machineName: string;         // Machine name
+  totalExemplars: number;      // Total exemplars evaluated against
+  matchingDecisions: number;   // Number of matching decisions
+  alignmentScore: number;      // matchingDecisions / totalExemplars
+}
+```
+
+### AccuracyEvaluationResult
+
+Result of evaluating a specialist's accuracy metrics.
+
+```typescript
+interface AccuracyEvaluationResult {
+  specialistId: string;          // The specialist evaluated
+  machineName: string;           // Machine name
+  totalDecisions: number;        // Number of decisions evaluated
+  transitionMatchRate: number;   // Rate of matching transitions
+  stateMatchRate: number;        // Rate of matching target states
+  totalCostUSD: number;          // Total cost in USD
+  avgLatencyMsec: number;        // Average latency in milliseconds
+}
+```
+
+## Submit Options
+
+### SubmitProposalOptions
+
+Options for `submitProposal()`.
+
+```typescript
+interface SubmitProposalOptions {
+  sessionId: string;                      // Required: session to submit to
+  specialistId: string;                   // Required: who is submitting
+  roundId?: string;                       // Round ID (optional, uses current)
+  transitionName?: string;                // Transition to propose (invokes strategy if omitted)
+  reasoning?: string;                     // Explanation
+  metaJson?: Record<string, unknown>;     // Arbitrary metadata
+  costUSD?: number;                       // Cost in USD
+  latencyMsec?: number;                   // Time in milliseconds
+  numInputTokens?: number;                // Input tokens
+  numOutputTokens?: number;               // Output tokens
+}
+```
+
+### SubmitArbitrationOptions
+
+Options for `submitArbitration()`.
+
+```typescript
+interface SubmitArbitrationOptions {
+  sessionId: string;                      // Required: session to arbitrate
+  roundId?: string;                       // Round ID (optional, uses current)
+  specialistId?: string;                  // Who is calling
+  transitionName?: string;                // Force this transition (human only)
+  reasoning?: string;                     // Explanation
+  metaJson?: Record<string, unknown>;     // Arbitrary metadata
+  costUSD?: number;                       // Cost in USD
+  latencyMsec?: number;                   // Time in milliseconds
+  numInputTokens?: number;                // Input tokens
+  numOutputTokens?: number;               // Output tokens
+}
+```
