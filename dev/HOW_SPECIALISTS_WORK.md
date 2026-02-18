@@ -1,12 +1,12 @@
 # How Specialists Work
 
-Specialists are the pluggable actors that participate in DIAL sessions. They propose transitions, vote on competing proposals, and are the mechanism through which both AI and humans participate in the decision cycle.
+Specialists are the pluggable actors that participate in DIAL sessions. They propose transitions and are the mechanism through which both AI and humans participate in the decision cycle.
 
 ---
 
 ## Roles
 
-A specialist has one of three roles.
+A specialist has one of two roles.
 
 ### Proposer
 
@@ -14,16 +14,7 @@ Proposers analyze the current state and suggest what transition should happen ne
 
 A proposer receives the current state, the decision prompt, the available transitions, and the session history. It returns a single transition choice with reasoning.
 
-### Voter
-
-Voters evaluate proposals and express preferences between them. When two or more proposals exist, the orchestrator solicits pairwise votes from all registered voters for the session type. Each voter compares two proposals and votes A, B, BOTH, or NEITHER.
-
-| Vote | Meaning |
-|------|---------|
-| **A** | Proposal A better reflects what the human would choose |
-| **B** | Proposal B better reflects what the human would choose |
-| **BOTH** | Both proposals are equally faithful to the decision criteria |
-| **NEITHER** | Neither proposal faithfully applies the decision criteria |
+Each proposal counts as one endorsement of the transition it selects. Consensus is determined by counting endorsements per transition using the ahead-by-k mechanism (see [Consensus](#consensus-how-proposals-become-transitions) below).
 
 ### Arbiter
 
@@ -33,7 +24,7 @@ Arbitration is built into the framework via the `evaluateConsensus` function. Th
 
 ## Session Type Binding
 
-A specialist is registered for a specific `machineName`. It only participates in sessions of that type. Multiple specialists of different roles and execution modes can be registered for the same session type. The orchestrator finds all matching specialists when it needs proposals or votes.
+A specialist is registered for a specific `machineName`. It only participates in sessions of that type. Multiple specialists of different roles and execution modes can be registered for the same session type. The orchestrator finds all matching specialists when it needs proposals.
 
 ```typescript
 // These two specialists both participate in "document-review" sessions
@@ -45,9 +36,9 @@ registerSpecialist({
 });
 
 registerSpecialist({
-  specialistId: "voter-1",
+  specialistId: "proposer-2",
   machineName: "document-review",
-  role: "voter",
+  role: "proposer",
   strategyFn: async (ctx) => { /* ... */ },
 });
 ```
@@ -56,11 +47,11 @@ registerSpecialist({
 
 ## The Four Execution Modes
 
-When you register a specialist, you configure **how** it produces proposals or votes. There are four execution modes. They are mutually exclusive.
+When you register a specialist, you configure **how** it produces proposals. There are four execution modes. They are mutually exclusive.
 
 ### 1. `strategyFn` — Local Function
 
-You provide an async function. The orchestrator calls it with the appropriate context for the specialist's role and expects a complete Proposal or Vote back.
+You provide an async function. The orchestrator calls it with the appropriate context and expects a complete Proposal back.
 
 ```typescript
 registerSpecialist({
@@ -75,19 +66,7 @@ registerSpecialist({
 });
 ```
 
-```typescript
-registerSpecialist({
-  specialistId: "my-voter",
-  machineName: "document-review",
-  role: "voter",
-  strategyFn: async (context: VoterContext) => ({
-    voteFor: "A",
-    reasoning: "Proposal A better addresses the prompt",
-  }),
-});
-```
-
-The function receives full context (see [Context Shapes](#context-shapes-by-role) below) and returns the final answer. What happens inside the function is entirely up to you. Call your own LLM, run deterministic logic, flip a coin. The orchestrator does not care — it only checks that the return value matches the specialist's role.
+The function receives full context (see [Context Shapes](#context-shapes-by-role) below) and returns the final answer. What happens inside the function is entirely up to you. Call your own LLM, run deterministic logic, flip a coin. The orchestrator does not care — it only checks that the return value matches the expected proposal shape.
 
 **Required parameters:** `strategyFn`
 **Forbidden parameters:** `contextFn`, `contextWebhookUrl`, `strategyWebhookUrl`, `modelId`, `webhookTokenName`
@@ -96,7 +75,7 @@ The function receives full context (see [Context Shapes](#context-shapes-by-role
 
 ### 2. `strategyWebhookUrl` — Remote Function
 
-Same as `strategyFn`, but the orchestrator POSTs the context to a URL instead of calling a local function. The webhook receives the full proposer or voter context as the JSON request body.
+Same as `strategyFn`, but the orchestrator POSTs the context to a URL instead of calling a local function. The webhook receives the full proposer context as the JSON request body.
 
 ```typescript
 registerSpecialist({
@@ -122,19 +101,14 @@ Content-Type: application/json
 
 The orchestrator waits **up to 55 seconds** for the webhook to respond.
 
-- **If the webhook responds** with a JSON body containing a valid proposal or vote, the orchestrator submits it on the specialist's behalf. The orchestrator treats it the same as a `strategyFn` return value.
+- **If the webhook responds** with a JSON body containing a valid proposal, the orchestrator submits it on the specialist's behalf. The orchestrator treats it the same as a `strategyFn` return value.
 
   Proposer response:
   ```json
   { "transitionName": "approve", "toState": "approved", "reasoning": "Meets criteria" }
   ```
 
-  Voter response:
-  ```json
-  { "voteFor": "A", "reasoning": "Proposal A is more faithful to the prompt" }
-  ```
-
-- **If the webhook does not respond within 55 seconds**, or responds with an empty body or a `202 Accepted`, the orchestrator moves on. The webhook is then responsible for calling the DIAL API (`submitProposal` or `submitVote`) at its own leisure when it has a result.
+- **If the webhook does not respond within 55 seconds**, or responds with an empty body or a `202 Accepted`, the orchestrator moves on. The webhook is then responsible for calling the DIAL API (`submitProposal`) at its own leisure when it has a result.
 
 If the webhook does not intend to reply inline, it should drop the connection early or return `202 Accepted` immediately rather than holding the request open.
 
@@ -145,7 +119,7 @@ If the webhook does not intend to reply inline, it should drop the connection ea
 
 ### 3. `contextFn` — Local Context, Orchestrator Calls LLM
 
-You provide an async function that returns a string. The orchestrator sends that string to the LLM specified by `modelId` along with the decision prompt and parses the LLM response into a Proposal or Vote.
+You provide an async function that returns a string. The orchestrator sends that string to the LLM specified by `modelId` along with the decision prompt and parses the LLM response into a Proposal.
 
 ```typescript
 registerSpecialist({
@@ -160,19 +134,7 @@ registerSpecialist({
 });
 ```
 
-```typescript
-registerSpecialist({
-  specialistId: "context-voter",
-  machineName: "document-review",
-  role: "voter",
-  modelId: "openai/gpt-4o-mini",
-  contextFn: async (context: VoterContext) => {
-    return `Company policy requires minimal state transitions when possible.`;
-  },
-});
-```
-
-The orchestrator handles all LLM interaction: prompt assembly, the API call, response parsing, and validation. Your function only provides the context string — whatever additional information the LLM needs beyond the decision prompt and proposal/transition data that the orchestrator already has.
+The orchestrator handles all LLM interaction: prompt assembly, the API call, response parsing, and validation. Your function only provides the context string — whatever additional information the LLM needs beyond the decision prompt and transition data that the orchestrator already has.
 
 The reference implementation uses any OpenAI-compatible chat completions endpoint. The base URL is configurable. By default it points at OpenRouter and expects `OPENROUTER_API_TOKEN` in the environment.
 
@@ -220,7 +182,7 @@ The orchestrator waits **up to 55 seconds** for the webhook to respond with cont
   { "markdown": "## Review Notes\n..." }
   ```
 
-- **If the webhook does not respond within 55 seconds**, the orchestrator calls the LLM with no additional context — only the decision prompt and the built-in proposal/transition data. The specialist still participates, but without the extra context the webhook would have provided.
+- **If the webhook does not respond within 55 seconds**, the orchestrator calls the LLM with no additional context — only the decision prompt and the built-in transition data. The specialist still participates, but without the extra context the webhook would have provided.
 
 If the webhook does not intend to reply inline, it should drop the connection early rather than holding the request open.
 
@@ -233,7 +195,7 @@ Authentication works identically to `strategyWebhookUrl` — Basic Auth with `ma
 
 ## Context Shapes by Role
 
-The orchestrator passes different context depending on the specialist's role.
+The orchestrator passes context to proposers when soliciting proposals.
 
 ### ProposerContext
 
@@ -255,24 +217,6 @@ A proposer `strategyFn` must return:
 { transitionName: string; toState: string; reasoning: string }
 ```
 
-### VoterContext
-
-Passed to voter `strategyFn`, voter `contextFn`, and as the POST body to voter webhooks.
-
-```typescript
-interface VoterContext {
-  sessionId: string;
-  proposalA: Proposal;
-  proposalB: Proposal;
-}
-```
-
-A voter `strategyFn` must return:
-
-```typescript
-{ voteFor: "A" | "B" | "BOTH" | "NEITHER"; reasoning: string }
-```
-
 ---
 
 ## Specialist ID Conventions
@@ -281,7 +225,7 @@ The `specialistId` is a free-form string. Any naming scheme works, but including
 
 ```
 ai-proposer-1
-ai-voter-gpt4
+ai-proposer-gpt4
 human-reviewer
 human-approver-jane
 remote-context-proposer
@@ -296,47 +240,47 @@ One naming convention has behavioral significance: if the `specialistId` contain
 A specialist is identified as human if its `specialistId` contains `"human"` (case-insensitive). Examples:
 
 ```
-human-reviewer          ← human
-specialist.human.jane   ← human
-HUMAN_APPROVER          ← human
-ai-proposer-1           ← not human
-quality-voter           ← not human
+human-reviewer          <- human
+specialist.human.jane   <- human
+HUMAN_APPROVER          <- human
+ai-proposer-1           <- not human
 ```
 
-When `evaluateConsensus` encounters a vote from a human specialist, that vote wins immediately. All AI votes are ignored. This is the **human primacy override** — the foundational safety mechanism in DIAL.
+When `evaluateConsensus` encounters a proposal from a human specialist, that proposal wins consensus immediately. All AI proposals are disregarded. This is the **human primacy rule** — the foundational safety mechanism in DIAL.
 
 ```
-Proposal A: "approve"
-  - AI Voter 1 votes A
-  - AI Voter 2 votes A
-  - AI Voter 3 votes A
+Transition: "approve"
+  - AI Proposer 1 endorses "approve"
+  - AI Proposer 2 endorses "approve"
+  - AI Proposer 3 endorses "approve"
 
-Proposal B: "request_changes"
-  - Human Voter votes B
+Transition: "request_changes"
+  - Human Proposer endorses "request_changes"
 
-Result: B wins immediately. AI votes do not matter.
+Result: "request_changes" wins immediately. AI proposals do not matter.
 ```
 
-The rationale: humans have context that AI cannot access. When a human's decision differs from the AI's, the AI should assume the human had reasons it cannot see. See `DIAL_CONSTITUTION.md` for the full reasoning.
+The winning proposal is the human's proposal. The rationale: humans have context that AI cannot access. When a human's decision differs from the AI's, the AI should assume the human had reasons it cannot see. See `DIAL_CONSTITUTION.md` for the full reasoning.
 
 ---
 
-## Consensus: How Votes Become Transitions
+## Consensus: How Proposals Become Transitions
 
-After proposals and votes are collected, `evaluateConsensus` determines the outcome.
+After proposals are collected, `evaluateConsensus` determines the outcome by counting endorsements per transition.
 
 ### Rules
 
 1. **Zero proposals** — No consensus. `consensusReached: false`.
 
-2. **Single proposal** — Auto-consensus. The lone proposal wins. No votes needed.
+2. **Human proposal exists** — The human's proposal wins immediately. All AI proposals are disregarded. The winning proposal is the first proposal submitted by a human specialist for the winning transition.
 
-3. **Two or more proposals** — Evaluate votes:
-   - If any human specialist has voted, their choice wins immediately (human primacy).
-   - Otherwise, tally votes per proposal. Each vote counts as one.
-   - For each vote: `"A"` adds 1 to proposal A, `"B"` adds 1 to proposal B, `"BOTH"` adds 1 to both, `"NEITHER"` adds nothing.
-   - The leading proposal must be ahead of the runner-up by at least `k = 1` votes.
-   - If no proposal leads by the required margin, consensus fails.
+3. **Single transition endorsed** — Auto-consensus. If every proposal endorses the same transition, that transition wins. The winning proposal is the first proposal submitted for that transition.
+
+4. **Multiple transitions endorsed** — Apply ahead-by-k:
+   - Count the number of proposals endorsing each transition.
+   - The leading transition must be ahead of the runner-up by at least `k` proposals (default `k = 1`).
+   - If a transition leads by the required margin, it wins. The winning proposal is the first proposal submitted for that transition.
+   - If no transition leads by the required margin, consensus fails.
 
 ### Result Shape
 
@@ -358,25 +302,23 @@ Specialists do not run in isolation. They participate in a repeating cycle drive
 
 1. **Solicit proposals** — The orchestrator calls all registered proposers for the session type. Each proposer receives a `ProposerContext` and returns a proposal (or, for webhooks, the orchestrator POSTs the context and waits for a response).
 
-2. **Solicit pairwise votes** — If two or more proposals exist, the orchestrator generates all pairs and solicits votes from all registered voters for each pair. With N proposals and V voters, this produces `V * (N choose 2)` votes.
+2. **Evaluate consensus** — `evaluateConsensus` counts endorsements per transition and applies the rules described above (human primacy, then ahead-by-k).
 
-3. **Evaluate consensus** — `evaluateConsensus` applies the voting rules described above.
+3. **Execute transition** — If consensus is reached, the winning proposal's transition executes. The session's `currentState` updates. All proposals for the session are cleared.
 
-4. **Execute transition** — If consensus is reached, the winning proposal's transition executes. The session's `currentState` updates. All proposals and votes for the session are cleared.
-
-5. **Repeat** — If the session has not reached `defaultState`, the cycle runs again from step 1 in the new state.
+4. **Repeat** — If the session has not reached `defaultState`, the cycle runs again from step 1 in the new state.
 
 If consensus cannot be reached at any step, the engine throws an error.
 
 ### Single-Proposer Shortcut
 
-When only one proposer is registered (or only one proposal is submitted), that proposal wins by auto-consensus. No voters are solicited. This is the common case for simple machines and the built-in deterministic proposer.
+When only one proposer is registered (or only one proposal is submitted), that proposal wins by auto-consensus. This is the common case for simple machines and the built-in deterministic proposer.
 
 ---
 
 ## Direct Submission
 
-You can bypass the strategy/execution mode system entirely and submit proposals or votes directly using `submitProposal` and `submitVote`. This is useful for:
+You can bypass the strategy/execution mode system entirely and submit proposals directly using `submitProposal`. This is useful for:
 
 - Human-facing UIs where a person makes the choice
 - External systems that call into the DIAL API
@@ -384,7 +326,7 @@ You can bypass the strategy/execution mode system entirely and submit proposals 
 - Testing
 
 ```typescript
-import { submitProposal, submitVote } from "dialai";
+import { submitProposal } from "dialai";
 
 const proposal = submitProposal(
   sessionId,
@@ -393,18 +335,9 @@ const proposal = submitProposal(
   "approved",
   "Manually approved after review"
 );
-
-const vote = submitVote(
-  sessionId,
-  "manual-voter",
-  proposalA.proposalId,
-  proposalB.proposalId,
-  "A",
-  "Prefer proposal A"
-);
 ```
 
-Direct submission does not require a registered specialist. The `specialistId` is just a string identifier. However, if the ID contains `"human"`, the human primacy override still applies during consensus evaluation.
+Direct submission does not require a registered specialist. The `specialistId` is just a string identifier. However, if the ID contains `"human"`, the human primacy rule still applies during consensus evaluation.
 
 ---
 
@@ -421,8 +354,8 @@ Direct submission does not require a registered specialist. The `specialistId` i
 
 Any other combination is an error. Examples of invalid configurations and their error messages:
 
-- `strategyFn` + `modelId` — *"modelId is only used with contextFn or contextWebhookUrl. A strategyFn returns proposals/votes directly and does not need a model."*
-- `contextFn` without `modelId` — *"contextFn provides context for an LLM to generate proposals/votes. You must also specify modelId."*
+- `strategyFn` + `modelId` — *"modelId is only used with contextFn or contextWebhookUrl. A strategyFn returns proposals directly and does not need a model."*
+- `contextFn` without `modelId` — *"contextFn provides context for an LLM to generate proposals. You must also specify modelId."*
 - `strategyFn` + `contextFn` — *"Provide either strategyFn (you handle everything) or contextFn + modelId (orchestrator calls the LLM), not both."*
 - `contextWebhookUrl` without `webhookTokenName` — *"Webhook URLs require webhookTokenName for authentication."*
 - No execution parameters at all — *"Specialist must specify one of: strategyFn, strategyWebhookUrl, contextFn + modelId, or contextWebhookUrl + modelId."*
@@ -435,9 +368,9 @@ Any other combination is an error. Examples of invalid configurations and their 
 |-------|------|----------|---------|-------------|
 | `specialistId` | `string` | Yes | — | Unique identifier. Include "human" for human specialists. |
 | `machineName` | `string` | Yes | — | Which session type this specialist participates in |
-| `role` | `"proposer" \| "voter"` | Yes | — | The specialist's role |
-| `strategyFn` | `async (context) => result` | Mode 1 | — | Local function that returns a proposal or vote |
-| `strategyWebhookUrl` | `string` | Mode 2 | — | URL to POST context to; expects proposal/vote response |
+| `role` | `"proposer"` | Yes | — | The specialist's role |
+| `strategyFn` | `async (context) => result` | Mode 1 | — | Local function that returns a proposal |
+| `strategyWebhookUrl` | `string` | Mode 2 | — | URL to POST context to; expects proposal response |
 | `contextFn` | `async (context) => string` | Mode 3 | — | Local function that returns context for the LLM |
 | `contextWebhookUrl` | `string` | Mode 4 | — | URL to POST context request to; expects context response |
 | `modelId` | `string` | Modes 3, 4 | — | LLM model identifier (e.g., `"openai/gpt-4o-mini"`) |
@@ -460,20 +393,20 @@ When a specialist uses `contextFn` or `contextWebhookUrl` (modes 3 and 4), the o
 - **Model**: The `modelId` from the specialist registration (e.g., `"openai/gpt-4o-mini"`).
 
 The orchestrator assembles the LLM prompt from:
-1. A system message framing the specialist's role (proposer or voter)
+1. A system message framing the specialist's role as a proposer
 2. The decision prompt from the machine state
-3. The available transitions or proposals (depending on role)
+3. The available transitions
 4. The context string returned by `contextFn` or the context webhook
 
-The LLM response is parsed into the appropriate shape (proposal or vote) and submitted on behalf of the specialist.
+The LLM response is parsed into a proposal and submitted on behalf of the specialist.
 
 ---
 
 ## Reasoning
 
-Every proposal and every vote includes a `reasoning` string. This is not optional decoration — it is the mechanism by which humans and other specialists can evaluate whether a decision was derived from the right criteria.
+Every proposal includes a `reasoning` string. This is not optional decoration — it is the mechanism by which humans and other specialists can evaluate whether a decision was derived from the right criteria.
 
-Good reasoning traces back to the decision prompt or session history. It explains *why* this transition or *why* this vote, not just *what* was chosen.
+Good reasoning traces back to the decision prompt or session history. It explains *why* this transition was chosen, not just *what* was chosen.
 
 ```
 Good: "The document has been reviewed by two approvers and all comments are resolved,
@@ -482,10 +415,10 @@ Good: "The document has been reviewed by two approvers and all comments are reso
 Bad:  "approve"
 ```
 
-When a specialist is uncertain, the correct response is to say so — vote NEITHER, or include the uncertainty in the reasoning. Fabricating confidence corrupts the system's ability to measure alignment.
+When a specialist is uncertain, the reasoning should include the uncertainty. Fabricating confidence corrupts the system's ability to measure alignment.
 
 ---
 
 ## All Functions Are Async
 
-Every function in the specialist execution path is async: `strategyFn`, `contextFn`, `solicitProposal`, `solicitVote`, and `runSession`. This is true even for mode 1, where a local deterministic function could be synchronous. The uniform async interface means the orchestrator does not need separate codepaths for sync and async execution.
+Every function in the specialist execution path is async: `strategyFn`, `contextFn`, `solicitProposal`, and `runSession`. This is true even for mode 1, where a local deterministic function could be synchronous. The uniform async interface means the orchestrator does not need separate codepaths for sync and async execution.

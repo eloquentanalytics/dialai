@@ -101,9 +101,7 @@ Walk through the complete decision cycle step by step:
 import {
   createSession,
   registerProposer,
-  registerVoter,
   submitProposal,
-  submitVote,
   evaluateConsensus,
   executeTransition,
   clear,
@@ -156,42 +154,18 @@ await registerProposer({
   }),
 });
 
-await registerVoter({
-  specialistId: "tiebreaker",
-  machineName: "review",
-  strategyFn: async (ctx) => {
-    // Prefer approval
-    if (ctx.proposalA.toState === "approved") {
-      return { voteFor: "A", reasoning: "Approve" };
-    }
-    if (ctx.proposalB.toState === "approved") {
-      return { voteFor: "B", reasoning: "Approve" };
-    }
-    return { voteFor: "NEITHER", reasoning: "Neither approves" };
-  },
-});
-
 // Step 3: Submit proposals (invoke strategies)
 const p1 = await submitProposal(session.sessionId, "optimist");
 const p2 = await submitProposal(session.sessionId, "pessimist");
 console.log("Proposal 1:", p1.transitionName, "→", p1.toState);
 console.log("Proposal 2:", p2.transitionName, "→", p2.toState);
 
-// Step 4: Submit vote (invoke strategy)
-const vote = await submitVote(
-  session.sessionId,
-  "tiebreaker",
-  p1.proposalId,
-  p2.proposalId
-);
-console.log("Vote:", vote.voteFor, "-", vote.reasoning);
-
-// Step 5: Evaluate consensus
+// Step 4: Evaluate consensus
 const result = await evaluateConsensus(session.sessionId);
 console.log("Consensus reached:", result.consensusReached);
 console.log("Winner:", result.winningProposalId);
 
-// Step 6: Execute transition
+// Step 5: Execute transition
 if (result.consensusReached && result.winningProposalId) {
   const winner = [p1, p2].find(p => p.proposalId === result.winningProposalId)!;
   await executeTransition(
@@ -282,45 +256,6 @@ await registerProposer({
       toState: ctx.transitions[name],
       reasoning: "All transitions already taken",
     };
-  },
-});
-```
-
-## Custom Voter Strategies
-
-### Prefer Shortest Path
-
-```typescript
-await registerVoter({
-  specialistId: "shortest-path",
-  machineName: "my-task",
-  strategyFn: async (ctx) => {
-    const goalStates = ["done", "approved", "completed"];
-    const aIsGoal = goalStates.includes(ctx.proposalA.toState);
-    const bIsGoal = goalStates.includes(ctx.proposalB.toState);
-
-    if (aIsGoal && !bIsGoal) return { voteFor: "A", reasoning: "A reaches goal" };
-    if (bIsGoal && !aIsGoal) return { voteFor: "B", reasoning: "B reaches goal" };
-    if (aIsGoal && bIsGoal) return { voteFor: "BOTH", reasoning: "Both reach goal" };
-    return { voteFor: "NEITHER", reasoning: "Neither reaches goal" };
-  },
-});
-```
-
-### Prefer Specific Transitions
-
-```typescript
-await registerVoter({
-  specialistId: "approve-biased",
-  machineName: "review",
-  strategyFn: async (ctx) => {
-    if (ctx.proposalA.transitionName === "approve") {
-      return { voteFor: "A", reasoning: "Prefer approval" };
-    }
-    if (ctx.proposalB.transitionName === "approve") {
-      return { voteFor: "B", reasoning: "Prefer approval" };
-    }
-    return { voteFor: "NEITHER", reasoning: "Neither is approval" };
   },
 });
 ```
@@ -453,21 +388,17 @@ describe("MyMachine", () => {
 ### Testing Specific Transitions
 
 ```typescript
-it("takes approve transition when voter prefers it", async () => {
+it("takes approve transition when proposer prefers it", async () => {
   clear();
 
-  await registerVoter({
+  await registerProposer({
     specialistId: "always-approve",
     machineName: "review",
-    strategyFn: async (ctx) => {
-      if (ctx.proposalA.transitionName === "approve") {
-        return { voteFor: "A", reasoning: "Approve" };
-      }
-      if (ctx.proposalB.transitionName === "approve") {
-        return { voteFor: "B", reasoning: "Approve" };
-      }
-      return { voteFor: "NEITHER", reasoning: "No approval" };
-    },
+    strategyFn: async (ctx) => ({
+      transitionName: "approve",
+      toState: "approved",
+      reasoning: "Prefer approval",
+    }),
   });
 
   const session = await runSession(machine);

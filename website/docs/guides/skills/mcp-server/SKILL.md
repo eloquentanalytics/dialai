@@ -46,7 +46,6 @@ Once connected, Claude has access to these tools:
 | `dialai_get_session` | Get current state and history of a session |
 | `dialai_get_sessions` | List all active sessions |
 | `dialai_submit_proposal` | Submit a transition proposal |
-| `dialai_submit_vote` | Cast a vote between proposals |
 | `dialai_evaluate_consensus` | Check if consensus has been reached |
 | `dialai_execute_transition` | Apply the winning proposal |
 
@@ -82,19 +81,6 @@ Once connected, Claude has access to these tools:
   "action": "transition-name",
   "target": "target-state",
   "reasoning": "Why this transition"
-}
-```
-
-### dialai_submit_vote
-
-```json
-{
-  "sessionId": "session-uuid",
-  "specialistId": "voter-id",
-  "proposalA": "proposal-id-1",
-  "proposalB": "proposal-id-2",
-  "choice": "A" | "B" | "NEITHER",
-  "reasoning": "Why this choice"
 }
 ```
 

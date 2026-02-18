@@ -36,7 +36,7 @@ Each skill below is available as a standalone file that agents can download:
 | Run Machine | [SKILL.md](./skills/run-machine/SKILL.md) | Execute state machines from CLI |
 | Create Machine | [SKILL.md](./skills/create-machine/SKILL.md) | Define state machine JSON |
 | Add Specialists | [SKILL.md](./skills/add-specialists/SKILL.md) | Configure AI and human participants |
-| Decision Cycles | [SKILL.md](./skills/decision-cycles/SKILL.md) | Understand Propose, Vote, Arbitrate, Execute |
+| Decision Cycles | [SKILL.md](./skills/decision-cycles/SKILL.md) | Understand Propose, Arbitrate, Execute |
 | Programmatic Usage | [SKILL.md](./skills/programmatic-usage/SKILL.md) | TypeScript/JavaScript integration |
 | MCP Server | [SKILL.md](./skills/mcp-server/SKILL.md) | Run as MCP server for AI assistants |
 | Troubleshooting | [SKILL.md](./skills/troubleshooting/SKILL.md) | Debug common issues |
@@ -46,13 +46,12 @@ Each skill below is available as a standalone file that agents can download:
 ### The Decision Cycle
 
 ```
-Propose -> Vote -> Arbitrate -> Execute -> (repeat until goalState)
+Propose -> Arbitrate -> Execute -> (repeat until goalState)
 ```
 
-1. **Propose**: Proposers submit transition proposals
-2. **Vote**: Voters compare proposals pairwise
-3. **Arbitrate**: Arbiter evaluates consensus
-4. **Execute**: Winning transition is applied
+1. **Propose**: Proposers submit transition proposals (each proposal endorses a transition)
+2. **Arbitrate**: Arbiter counts proposals per transition, applies ahead-by-k consensus
+3. **Execute**: Winning transition is applied
 
 ### Specialist Types
 
@@ -92,9 +91,7 @@ For machines with embedded specialists, see [State Machines](./state-machines.md
 | `createSession` | Start a new decision process |
 | `getSession` | Check session state |
 | `registerProposer` | Add a proposer |
-| `registerVoter` | Add a voter |
 | `submitProposal` | Submit a transition proposal (with roundId) |
-| `submitVote` | Cast a vote (with roundId) |
 | `submitArbitration` | Evaluate consensus and execute |
 | `executeTransition` | Apply a transition directly |
 
@@ -103,21 +100,23 @@ For machines with embedded specialists, see [State Machines](./state-machines.md
 ### Human Override
 ```json
 {
-  "proposers": [{ "id": "ai", "strategy": "llm", "config": {...} }],
-  "voters": [{ "id": "human", "strategy": "human" }]
+  "proposers": [
+    { "id": "ai", "strategy": "llm", "config": {...} },
+    { "id": "human", "strategy": "human" }
+  ]
 }
 ```
+Human proposals always win consensus immediately.
 
 ### AI Consensus
 ```json
 {
-  "proposers": [{ "id": "ai", "strategy": "llm", "config": {...} }],
-  "voters": [
+  "proposers": [
     { "id": "ai-1", "strategy": "llm", "config": {...} },
     { "id": "ai-2", "strategy": "llm", "config": {...} },
     { "id": "ai-3", "strategy": "llm", "config": {...} }
   ],
-  "arbiter": { "strategy": "supermajority", "threshold": 0.66 }
+  "arbiter": { "strategy": "ahead-by-k", "k": 2 }
 }
 ```
 

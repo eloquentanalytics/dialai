@@ -39,30 +39,25 @@ It is always safer for the AI to assume the human had reasons, just as it is saf
 
 ### Alignment Score = 1.0
 
-Humans always have an **alignment score of 1.0** — they *are* the ground truth by definition. In the [unified consensus score](./arbitration.md), a human's contribution carries the maximum possible multiplier:
+Humans always have an **alignment score of 1.0** — they *are* the ground truth by definition. A human proposal always wins consensus immediately — this is the mechanism by which human primacy is enforced in the [ahead-by-k consensus](./arbitration.md).
 
-- A human proposal adds **1.0** to the transition's score
-- A human vote adds **1.0** to the voted transition's score
-- An AI specialist with alignment 0.7 adds **0.7** for the same action
-
-This means a single human contribution carries more weight than any individual AI contribution. It also means that as AI alignment approaches 1.0, the AI's contributions approach the influence of a human — but never exceed it.
+This means a human can always override AI consensus by submitting a proposal. The human's proposal takes precedence because the arbiter recognizes human authority.
 
 ### Forcing Decisions
 
-When the arbiter exhausts all specialists without reaching consensus, it **blocks for a human**. The human can then **force** a decision — bypassing the consensus score entirely:
+When the arbiter exhausts all specialists without reaching consensus, it **blocks for a human**. The human can then submit a proposal, which always wins:
 
-1. The human selects a transition (or a specific proposal)
-2. The arbiter accepts it immediately — no score evaluation
+1. The human submits a proposal for their chosen transition
+2. The arbiter accepts it immediately — the human proposal always wins
 3. The session advances to the next state
 
-AI specialists cannot force decisions. They can only contribute to the consensus score.
+AI specialists can only contribute proposals that are counted in the ahead-by-k tally. A human proposal bypasses the tally entirely.
 
 ### Exemplars: Ground Truth for Learning
 
 Every human-forced decision creates an **exemplar** — a snapshot of:
 - The full context that was available to all specialists
 - All proposals that were submitted
-- All votes that were cast
 - **The human's choice**: which transition, which proposal, with what reasoning
 
 Exemplars serve three purposes:
@@ -75,7 +70,7 @@ Exemplars serve three purposes:
 
 When exemplars are presented to AI specialists, they are **semantically isolated** from DIAL's internals. The specialist does not see:
 - Consensus scores, alignment scores, or thresholds
-- Who proposed what, or who voted how
+- Who proposed what
 - That it is operating within a framework at all
 
 The specialist sees:
@@ -138,7 +133,7 @@ If an AI specialist has strong reasoning that the human is wrong, it should:
 
 ### The Architecture Handles Disagreement Through State Design
 
-When a domain genuinely requires multiple humans to participate, this is modeled through the state machine design. Each human's decision can be its own state transition, or multiple humans can vote with the consensus mechanism determining the outcome.
+When a domain genuinely requires multiple humans to participate, this is modeled through the state machine design. Each human's decision can be its own state transition, or multiple humans can submit proposals with the consensus mechanism determining the outcome.
 
 ### Both Humans Are "Right" in a Distributional Sense
 

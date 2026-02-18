@@ -6,7 +6,7 @@ sidebar_position: 2
 
 This guide covers how to register specialists using the `dialai` library. For the conceptual foundation, see [Specialists](/docs/concepts/specialists).
 
-Specialists are registered using one of three functions: `registerProposer`, `registerVoter`, or `registerArbiter`. Each function accepts configuration for how the specialist produces its output.
+Specialists are registered using one of two functions: `registerProposer` or `registerArbiter`. Each function accepts configuration for how the specialist produces its output.
 
 ## Proposer Registration
 
@@ -26,23 +26,6 @@ registerProposer({
       reasoning: "First available transition",
     };
   },
-});
-```
-
-## Voter Registration
-
-A voter evaluates pairs of proposals and expresses a preference.
-
-```typescript
-import { registerVoter } from "dialai";
-
-registerVoter({
-  specialistId: "quality-voter",
-  machineName: "my-task",
-  strategyFn: async (ctx) => ({
-    voteFor: "A",
-    reasoning: "Proposal A is more aligned with the goal",
-  }),
 });
 ```
 
@@ -67,11 +50,11 @@ See [Consensus Strategies](/docs/concepts/consensus-strategies) for details on t
 
 ## Execution Modes
 
-Proposers and voters support five execution modes. Arbiters support three (no LLM modes). They are mutually exclusive.
+Proposers support five execution modes. Arbiters support three (no LLM modes). They are mutually exclusive.
 
 ### 1. `strategyFn` -- Local Function
 
-You provide an async function. The orchestrator calls it with the appropriate context and expects a complete proposal or vote back.
+You provide an async function. The orchestrator calls it with the appropriate context and expects a complete proposal back.
 
 ```typescript
 registerProposer({
@@ -92,7 +75,7 @@ What happens inside the function is entirely up to you. Call your own LLM, apply
 
 ### 2. `strategyWebhookUrl` -- Remote Function
 
-The orchestrator POSTs the full context to a URL and expects a proposal or vote response. Authentication is HTTP Basic Auth: the username is the `machineName`, the password is the value of the environment variable named by `webhookTokenName`.
+The orchestrator POSTs the full context to a URL and expects a proposal response. Authentication is HTTP Basic Auth: the username is the `machineName`, the password is the value of the environment variable named by `webhookTokenName`.
 
 ```typescript
 registerProposer({
@@ -115,26 +98,21 @@ Content-Type: application/json
 
 The orchestrator waits up to 55 seconds for the webhook to respond.
 
-- **If the webhook responds** with a JSON body containing a valid proposal or vote, the orchestrator submits it on the specialist's behalf.
+- **If the webhook responds** with a JSON body containing a valid proposal, the orchestrator submits it on the specialist's behalf.
 
   Proposer response:
   ```json
   { "transitionName": "approve", "toState": "approved", "reasoning": "Meets criteria" }
   ```
 
-  Voter response:
-  ```json
-  { "voteFor": "A", "reasoning": "Proposal A is more faithful to the prompt" }
-  ```
-
-- **If the webhook does not respond within 55 seconds**, or responds with `202 Accepted`, the orchestrator moves on. The webhook is then responsible for calling the DIAL API (`submitProposal` or `submitVote`) at its own leisure.
+- **If the webhook does not respond within 55 seconds**, or responds with `202 Accepted`, the orchestrator moves on. The webhook is then responsible for calling the DIAL API (`submitProposal`) at its own leisure.
 
 **Required parameters:** `strategyWebhookUrl`, `webhookTokenName`
 **Forbidden parameters:** `strategyFn`, `contextFn`, `contextWebhookUrl`, `modelId`
 
 ### 3. `contextFn` + `modelId` -- Local Context, Orchestrator Calls LLM
 
-You provide an async function that returns a context string. The orchestrator sends that string to the LLM specified by `modelId` along with the decision prompt and parses the response into a proposal or vote.
+You provide an async function that returns a context string. The orchestrator sends that string to the LLM specified by `modelId` along with the decision prompt and parses the response into a proposal.
 
 ```typescript
 registerProposer({
@@ -158,8 +136,8 @@ Your function only provides the context string. The orchestrator handles prompt 
 The orchestrator POSTs the context request to a URL, then sends the returned context to the LLM.
 
 ```typescript
-registerVoter({
-  specialistId: "webhook-context-voter",
+registerProposer({
+  specialistId: "webhook-context-proposer",
   machineName: "document-review",
   modelId: "openai/gpt-4o-mini",
   contextWebhookUrl: "https://my-service.example.com/context",
@@ -213,10 +191,10 @@ Valid parameter combinations:
 
 Invalid configurations are rejected at registration time with descriptive error messages:
 
-- `strategyFn` + `modelId` -- *"modelId is only used with contextFn or contextWebhookUrl. A strategyFn returns proposals/votes directly and does not need a model."*
+- `strategyFn` + `modelId` -- *"modelId is only used with contextFn or contextWebhookUrl. A strategyFn returns proposals directly and does not need a model."*
 - `strategyFn` + `strategyFnName` -- *"Provide either strategyFn (custom function) or strategyFnName (built-in strategy), not both."*
 - `strategyFnName` + `modelId` -- *"modelId is only used with contextFn or contextWebhookUrl. A strategyFnName references a built-in strategy and does not need a model."*
-- `contextFn` without `modelId` -- *"contextFn provides context for an LLM to generate proposals/votes. You must also specify modelId."*
+- `contextFn` without `modelId` -- *"contextFn provides context for an LLM to generate proposals. You must also specify modelId."*
 - `strategyFn` + `contextFn` -- *"Provide either strategyFn (you handle everything) or contextFn + modelId (orchestrator calls the LLM), not both."*
 - `contextWebhookUrl` without `webhookTokenName` -- *"Webhook URLs require webhookTokenName for authentication."*
 - Arbiter with `contextFn` or `contextWebhookUrl` -- *"Arbiters cannot use LLM-based modes. Arbitration must be deterministic."*
@@ -236,26 +214,12 @@ interface ProposerContext {
 }
 ```
 
-### VoterContext
-
-```typescript
-interface VoterContext {
-  sessionId: string;
-  currentState: string;
-  prompt: string;
-  proposalA: Proposal;
-  proposalB: Proposal;
-  history: TransitionRecord[];
-}
-```
-
 ## Specialist ID Conventions
 
 Any naming scheme works, but including the purpose is helpful:
 
 ```
 ai-proposer-1
-ai-voter-gpt4
 human-reviewer
 human-approver-jane
 ```
@@ -264,7 +228,7 @@ To allow a specialist to force arbitration decisions, set `isHuman: true` when r
 
 ```typescript
 // This allows forcing arbitration:
-registerVoter({
+registerProposer({
   specialistId: "reviewer-jane",
   machineName: "document-review",
   isHuman: true,
@@ -274,35 +238,22 @@ registerVoter({
 
 ## Human Specialists
 
-Human specialists are registered with `isHuman: true`. Their votes count like any other vote during consensus evaluation. The key difference is that only human specialists can *force* a transition when consensus isn't reached.
+Human specialists are registered with `isHuman: true`. Their proposals count like any other proposal during consensus evaluation. The key difference is that only human specialists can *force* a transition when consensus isn't reached. Human proposals always win consensus -- that is the override mechanism.
 
-Human specialists can have strategy functions that encode human preferences, or proposals/votes can be submitted directly:
+Human specialists can have strategy functions that encode human preferences, or proposals can be submitted directly:
 
 ```typescript
 // Register a human specialist with a strategy
-registerVoter({
+registerProposer({
   specialistId: "reviewer-jane",
   machineName: "document-review",
   isHuman: true,
   strategyFn: async (ctx) => ({
-    voteFor: "B",
-    reasoning: "Prefer the more conservative approach",
+    transitionName: "approve",
+    toState: "approved",
+    reasoning: "Reviewed and meets all criteria",
   }),
 });
-
-// Or submit votes directly by providing all parameters
-import { submitVote } from "dialai";
-
-await submitVote(
-  session.sessionId,
-  "reviewer-jane",  // must be registered with isHuman: true
-  session.currentRoundId,
-  proposalA.proposalId,
-  proposalB.proposalId,
-  "B",  // Providing voteFor bypasses strategy invocation
-  "I prefer the more conservative approach",
-  { reviewedBy: "jane@example.com" }  // optional metadata
-);
 ```
 
 Humans can also bypass the entire decision cycle using `submitArbitration` with an explicit transition:
@@ -327,12 +278,12 @@ await submitArbitration(
 |-------|------|----------|---------|-------------|
 | `specialistId` | `string` | Yes | -- | Unique identifier for the specialist |
 | `machineName` | `string` | Yes | -- | Which machine this specialist participates in |
-| `isHuman` | `boolean` | No | `false` | Set to `true` to allow forcing arbitration decisions (proposers/voters only) |
-| `strategyFn` | `async (context) => result` | Mode 1 | -- | Local function that returns a proposal, vote, or consensus result |
+| `isHuman` | `boolean` | No | `false` | Set to `true` to allow forcing arbitration decisions (proposers only) |
+| `strategyFn` | `async (context) => result` | Mode 1 | -- | Local function that returns a proposal or consensus result |
 | `strategyFnName` | `string` | Mode 5 | -- | Built-in strategy name (see [Default Strategies](#default-strategies)) |
-| `strategyWebhookUrl` | `string` | Mode 2 | -- | URL to POST context to; expects proposal/vote/consensus response |
-| `contextFn` | `async (context) => string` | Mode 3 | -- | Local function that returns context for the LLM (proposers/voters only) |
-| `contextWebhookUrl` | `string` | Mode 4 | -- | URL to POST context request to; expects context response (proposers/voters only) |
+| `strategyWebhookUrl` | `string` | Mode 2 | -- | URL to POST context to; expects proposal/consensus response |
+| `contextFn` | `async (context) => string` | Mode 3 | -- | Local function that returns context for the LLM (proposers only) |
+| `contextWebhookUrl` | `string` | Mode 4 | -- | URL to POST context request to; expects context response (proposers only) |
 | `modelId` | `string` | Modes 3, 4 | -- | LLM model identifier (e.g., `"openai/gpt-4o-mini"`) |
 | `webhookTokenName` | `string` | Modes 2, 4 | -- | Env var name holding the webhook auth token |
 | `threshold` | `number` | No | varies | Strategy-specific threshold (see [Consensus Strategies](/docs/concepts/consensus-strategies)) |
@@ -407,153 +358,34 @@ function weightedRandom(ctx: ProposerContext) -> Proposal:
     }
 ```
 
-### Voter Strategies
-
-| Strategy | Description | Threshold |
-|----------|-------------|-----------|
-| `preferA` | Always votes for proposal A | -- |
-| `preferB` | Always votes for proposal B | -- |
-| `both` | Always votes BOTH (both acceptable) | -- |
-| `neither` | Always votes NEITHER (neither acceptable) | -- |
-| `random` | Votes randomly between A and B | -- |
-| `randomAll` | Votes randomly between A, B, BOTH, NEITHER | -- |
-| `preferGoal` | Prefers whichever proposal leads closer to goalState | -- |
-| `preferShorterPath` | Prefers the proposal with fewer hops to goalState | -- |
-
-#### `preferA`
-
-```
-function preferA(ctx: VoterContext) -> Vote:
-    return {
-        voteFor: "A",
-        reasoning: "Default preference for proposal A"
-    }
-```
-
-#### `preferB`
-
-```
-function preferB(ctx: VoterContext) -> Vote:
-    return {
-        voteFor: "B",
-        reasoning: "Default preference for proposal B"
-    }
-```
-
-#### `both`
-
-```
-function both(ctx: VoterContext) -> Vote:
-    return {
-        voteFor: "BOTH",
-        reasoning: "Both proposals are acceptable"
-    }
-```
-
-#### `neither`
-
-```
-function neither(ctx: VoterContext) -> Vote:
-    return {
-        voteFor: "NEITHER",
-        reasoning: "Neither proposal is acceptable"
-    }
-```
-
-#### `random`
-
-```
-function random(ctx: VoterContext) -> Vote:
-    choice = random_choice(["A", "B"])
-    return {
-        voteFor: choice,
-        reasoning: f"Random selection: {choice}"
-    }
-```
-
-#### `randomAll`
-
-```
-function randomAll(ctx: VoterContext) -> Vote:
-    choice = random_choice(["A", "B", "BOTH", "NEITHER"])
-    return {
-        voteFor: choice,
-        reasoning: f"Random selection from all options: {choice}"
-    }
-```
-
-#### `preferGoal`
-
-```
-function preferGoal(ctx: VoterContext) -> Vote:
-    # Prefer whichever proposal's toState matches the machine's goalState
-    goalState = ctx.machine.goalState
-
-    if ctx.proposalA.toState == goalState and ctx.proposalB.toState != goalState:
-        return { voteFor: "A", reasoning: "Proposal A reaches goal state" }
-
-    if ctx.proposalB.toState == goalState and ctx.proposalA.toState != goalState:
-        return { voteFor: "B", reasoning: "Proposal B reaches goal state" }
-
-    if ctx.proposalA.toState == goalState and ctx.proposalB.toState == goalState:
-        return { voteFor: "BOTH", reasoning: "Both proposals reach goal state" }
-
-    return { voteFor: "NEITHER", reasoning: "Neither proposal reaches goal state" }
-```
-
-#### `preferShorterPath`
-
-```
-function preferShorterPath(ctx: VoterContext) -> Vote:
-    # Calculate minimum hops to goalState from each proposal's toState
-    hopsA = calculate_min_hops(ctx.machine, ctx.proposalA.toState, ctx.machine.goalState)
-    hopsB = calculate_min_hops(ctx.machine, ctx.proposalB.toState, ctx.machine.goalState)
-
-    if hopsA < hopsB:
-        return { voteFor: "A", reasoning: f"Proposal A is {hopsB - hopsA} hops closer to goal" }
-
-    if hopsB < hopsA:
-        return { voteFor: "B", reasoning: f"Proposal B is {hopsA - hopsB} hops closer to goal" }
-
-    return { voteFor: "BOTH", reasoning: "Both proposals are equidistant from goal" }
-```
-
 ### Arbiter Strategies
 
 | Strategy | Description | Key Parameter |
 |----------|-------------|---------------|
-| `alignmentWeightedMargin` | **Default.** Unified consensus score from all contributions | `consensus_threshold` (0.0–1.0) |
-| `firstProposal` | Immediately selects the first proposal received | — |
-| `mostSimilar` | Compares proposals to human exemplars via semantic similarity | Min similarity (0.0–1.0) |
+| `aheadByK` | **Default.** Counts proposals per transition; consensus when one leads by k | `threshold` (k value, default: 1) |
+| `firstProposal` | Immediately selects the first proposal received | -- |
 
-#### `alignmentWeightedMargin` *(Default)*
+#### `aheadByK` *(Default)*
 
-The default strategy. Every specialist contribution (proposal, selection vote, pairwise vote) adds the specialist's alignment score to the transition it supports. Consensus is reached when one transition's margin of superiority crosses the threshold.
+The default strategy. Counts proposals per transition. Consensus is reached when one transition's endorsement count leads the runner-up by at least k.
 
-See [Consensus Strategies](/docs/concepts/consensus-strategies#alignmentweightedmargin-default) for full documentation.
+See [Consensus Strategies](/docs/concepts/consensus-strategies#aheadbyk-default) for full documentation.
 
 #### `firstProposal`
 
-The simplest arbiter: immediately declares consensus on the first proposal received, with no voting required.
+The simplest arbiter: immediately declares consensus on the first proposal received.
 
 See [Consensus Strategies](/docs/concepts/consensus-strategies#firstproposal) for full documentation.
 
-#### `mostSimilar`
-
-Compares proposals to human exemplars using semantic similarity. No voting required.
-
-See [Consensus Strategies](/docs/concepts/consensus-strategies#mostsimilar) for full documentation.
-
 ### Strategy Combinations
 
-Common combinations of proposer, voter, and arbiter strategies:
+Common combinations of proposer and arbiter strategies:
 
-| Use Case | Proposer | Voter | Arbiter |
-|----------|----------|-------|---------|
-| **Testing/Dev** | `firstAvailable` | `preferA` | `firstProposal` |
-| **Production** | (LLM) | (LLM) | `alignmentWeightedMargin` |
-| **Model selection** | (LLM) | — | `mostSimilar` |
-| **High-stakes** | (LLM) | (LLM) | `alignmentWeightedMargin` (threshold=0.8+) |
+| Use Case | Proposer | Arbiter |
+|----------|----------|---------|
+| **Testing/Dev** | `firstAvailable` | `firstProposal` |
+| **Production** | (LLM) | `aheadByK` (threshold=2) |
+| **High-stakes** | (LLM) | `aheadByK` (threshold=3+) |
 
 ### Implementing Custom Strategies
 
@@ -575,4 +407,4 @@ registerProposer({
 });
 ```
 
-Custom strategies can call external services, use ML models (for proposers/voters), or implement any deterministic logic (for arbiters).
+Custom strategies can call external services, use ML models (for proposers), or implement any deterministic logic (for arbiters).

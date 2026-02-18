@@ -4,13 +4,13 @@ sidebar_position: 8
 
 # AI Agent Experience
 
-DIAL is designed for LLM-driven agents to participate as proposers and voters in decision cycles, to design state machines that encode governance workflows, and to develop custom applications that embed DIAL. This page explains how DIAL is optimized for agents and provides guidance for AI assistants working with the framework.
+DIAL is designed for LLM-driven agents to participate as proposers in decision cycles, to design state machines that encode governance workflows, and to develop custom applications that embed DIAL. This page explains how DIAL is optimized for agents and provides guidance for AI assistants working with the framework.
 
 ## Agents as Participants
 
-The specialist abstraction exists so that LLM agents can register themselves as proposers and voters in a decision cycle. An agent reading a state machine definition can determine what state the session is in, what transitions are available, and what the prompt is asking. It can then submit a proposal or cast a vote using the same API a human would use.
+The specialist abstraction exists so that LLM agents can register themselves as proposers in a decision cycle. An agent reading a state machine definition can determine what state the session is in, what transitions are available, and what the prompt is asking. It can then submit a proposal using the same API a human would use.
 
-This is the point. DIAL does not treat agents as a backend detail or an orchestration layer. Agents sit alongside humans in the decision cycle and are evaluated by the same arbiter under the same rules. The difference is that only humans can force a decision when consensus isn't reached—this is [human primacy](./concepts/human-primacy.md) as a safety constraint on the system.
+This is the point. DIAL does not treat agents as a backend detail or an orchestration layer. Agents sit alongside humans in the decision cycle and their proposals are evaluated by the same arbiter under the same rules. The difference is that human proposals always win—this is [human primacy](./concepts/human-primacy.md) as a safety constraint on the system.
 
 ## Spec-Driven Development
 
@@ -49,7 +49,7 @@ Final state:   done
 Session ID:    a1b2c3d4-...
 ```
 
-The CLI is minimal by design. It demonstrates the exact sequence of API calls an agent would make (create a session, register proposers and voters, solicit proposals, evaluate consensus, execute transitions) in a form that is easy for an agent to read, replicate, and extend.
+The CLI is minimal by design. It demonstrates the exact sequence of API calls an agent would make (create a session, register proposers, solicit proposals, evaluate consensus, execute transitions) in a form that is easy for an agent to read, replicate, and extend.
 
 The help documentation and error messages are written for LLM comprehension. When the CLI fails, it says what went wrong and what the valid inputs are, in plain text that an agent can parse and act on.
 
@@ -66,9 +66,9 @@ The `llms.txt` format allows an agent to ingest the entire DIAL specification in
 
 DIAL's API is **tool-oriented** rather than resource-oriented. The distinction matters for agents.
 
-A resource-oriented API exposes data: "here is a session, here are its proposals, here are its votes." An agent working with a resource-oriented API must figure out the correct sequence of reads and writes to accomplish a goal.
+A resource-oriented API exposes data: "here is a session, here are its proposals." An agent working with a resource-oriented API must figure out the correct sequence of reads and writes to accomplish a goal.
 
-A tool-oriented API exposes actions: `submitProposal`, `submitVote`, `submitArbitration`, `executeTransition`. Each function is a discrete action with a clear purpose. An agent with tool-use capabilities can map these directly to its tool-calling interface.
+A tool-oriented API exposes actions: `submitProposal`, `submitArbitration`, `executeTransition`. Each function is a discrete action with a clear purpose. An agent with tool-use capabilities can map these directly to its tool-calling interface.
 
 The DIAL API is designed as a set of tools an agent needs:
 
@@ -78,9 +78,7 @@ The DIAL API is designed as a set of tools an agent needs:
 | `getSession` | Check the current state |
 | `getSessions` | List all active processes |
 | `registerProposer` | Join a decision process as a proposer |
-| `registerVoter` | Join a decision process as a voter |
 | `submitProposal` | Propose a transition (with roundId) |
-| `submitVote` | Cast a vote between two proposals (with roundId) |
 | `submitArbitration` | Evaluate consensus and execute winning transition |
 | `executeTransition` | Apply a transition directly |
 
@@ -94,7 +92,7 @@ DIAL publishes a [Constitution](/constitution), a detailed description of how AI
 
 ### Why a Constitution Matters
 
-An LLM acting as a DIAL specialist faces a specific problem: it needs to know what "good behavior" means before it encounters any particular decision. The constitution solves this by defining a priority hierarchy (alignment with humans first, faithfulness to the prompt second, honesty third, usefulness fourth), hard constraints (no fabrication, no coordination between specialists, no manipulating the arbiter), and concrete guidance for making proposals and casting votes.
+An LLM acting as a DIAL specialist faces a specific problem: it needs to know what "good behavior" means before it encounters any particular decision. The constitution solves this by defining a priority hierarchy (alignment with humans first, faithfulness to the prompt second, honesty third, usefulness fourth), hard constraints (no fabrication, no coordination between specialists, no manipulating the arbiter), and concrete guidance for making proposals.
 
 Without the constitution, every specialist would invent its own interpretation of what DIAL expects. The system's measurements would reflect inconsistent reasoning rather than genuine alignment differences.
 
@@ -107,7 +105,7 @@ A specialist that has internalized the constitution will:
 - Defer to demonstrated human preferences over its own reasoning
 - Express calibrated confidence rather than fabricating conviction
 - Reflect human-like variance in its output probabilities rather than collapsing to a single answer with artificial certainty
-- Submit NULL proposals or vote NEITHER when genuinely uncertain
+- Submit NULL proposals when genuinely uncertain
 - Cite the decision prompt and session history as evidence
 
 This is also how we use the constitution in fine-tuning. Training data for DIAL specialists is evaluated against the constitution's priority hierarchy. The constitution defines what correct means, and correct means aligned with the human.

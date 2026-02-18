@@ -78,82 +78,26 @@ const goalDirected = async (ctx: ProposerContext) => {
 };
 ```
 
-## Voter Strategy
-
-A voter `strategyFn` receives a `VoterContext` and returns a preference:
-
-```typescript
-const myVoter = async (ctx: VoterContext) => {
-  // ctx.proposalA, ctx.proposalB: Proposal objects with:
-  //   proposalId, sessionId, roundId, specialistId, transitionName, toState, reasoning, isHuman
-  // ctx.currentState: string
-  // ctx.prompt: string
-  // ctx.history: TransitionRecord[]
-
-  // Your logic to compare proposals
-
-  return {
-    voteFor: "A", // "A" | "B" | "BOTH" | "NEITHER"
-    reasoning: "Proposal A better aligns with the decision criteria",
-  };
-};
-```
-
-### Voter strategyFn Signature
-
-```typescript
-strategyFn: async (ctx: VoterContext) => {
-  voteFor: VoteChoice; // "A" | "B" | "BOTH" | "NEITHER"
-  reasoning: string;
-}
-```
-
-### Example: Prefer Goal-Reaching Proposals
-
-```typescript
-const goalVoter = async (ctx: VoterContext) => {
-  const aReachesGoal = ctx.proposalA.toState === "done";
-  const bReachesGoal = ctx.proposalB.toState === "done";
-
-  if (aReachesGoal && !bReachesGoal) {
-    return { voteFor: "A", reasoning: "Proposal A reaches the goal state" };
-  }
-  if (bReachesGoal && !aReachesGoal) {
-    return { voteFor: "B", reasoning: "Proposal B reaches the goal state" };
-  }
-  if (aReachesGoal && bReachesGoal) {
-    return { voteFor: "BOTH", reasoning: "Both proposals reach the goal" };
-  }
-  return { voteFor: "NEITHER", reasoning: "Neither proposal reaches the goal" };
-};
-```
-
 ## Using Strategies with Specialists
 
 Register strategies when creating specialists:
 
 ```typescript
-import { registerProposer, registerVoter } from "dialai";
+import { registerProposer } from "dialai";
 
 registerProposer({
   specialistId: "goal-proposer",
   machineName: "my-task",
   strategyFn: goalDirected,
 });
-
-registerVoter({
-  specialistId: "goal-voter",
-  machineName: "my-task",
-  strategyFn: goalVoter,
-});
 ```
 
 ## Direct Submission
 
-You can also bypass strategies and submit proposals or votes directly by providing all parameters:
+You can also bypass strategies and submit proposals directly by providing all parameters:
 
 ```typescript
-import { submitProposal, submitVote } from "dialai";
+import { submitProposal } from "dialai";
 
 // Submit a proposal directly (providing transitionName bypasses strategy)
 const proposal = await submitProposal(
@@ -164,40 +108,19 @@ const proposal = await submitProposal(
   "Manually approved after review",
   { source: "manual-review" }
 );
-
-// Submit a vote directly (providing voteFor bypasses strategy)
-const vote = await submitVote(
-  sessionId,
-  "manual-voter",
-  session.currentRoundId,
-  proposalA.proposalId,
-  proposalB.proposalId,
-  "A",
-  "Prefer proposal A",
-  { reviewerId: "voter-123" }
-);
 ```
 
 ## Strategy Invocation
 
-To invoke a specialist's registered strategy, simply omit the proposal/vote data:
+To invoke a specialist's registered strategy, simply omit the proposal data:
 
 ```typescript
-import { submitProposal, submitVote } from "dialai";
+import { submitProposal } from "dialai";
 
 // Invoke proposer's strategy (omit transitionName)
 const proposal = await submitProposal(
   sessionId,
   "ai-proposer-1",
   session.currentRoundId
-);
-
-// Invoke voter's strategy (omit voteFor)
-const vote = await submitVote(
-  sessionId,
-  "ai-voter-1",
-  session.currentRoundId,
-  proposalA.proposalId,
-  proposalB.proposalId
 );
 ```

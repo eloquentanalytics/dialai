@@ -14,9 +14,7 @@ The `dialai` library provides functions for creating sessions, registering speci
 | [`getSession`](#getsession) | Retrieve a session by ID |
 | [`getSessions`](#getsessions) | List all sessions |
 | [`registerProposer`](#registerproposer) | Register a proposer specialist |
-| [`registerVoter`](#registervoter) | Register a voter specialist |
 | [`submitProposal`](#submitproposal) | Submit a state transition proposal |
-| [`submitVote`](#submitvote) | Submit a vote comparing proposals |
 | [`registerArbiter`](#registerarbiter) | Register an arbiter specialist |
 | [`submitArbitration`](#submitarbitration) | Evaluate consensus and optionally execute |
 | [`evaluateConsensus`](#evaluateconsensus) | Check if consensus is reached |
@@ -127,40 +125,8 @@ const humanReviewer = await registerProposer({
 ```
 
 Human specialists are identified by `isHuman: true`, which grants:
-- Vote priority in consensus evaluation
+- Human proposals always win consensus
 - Ability to force transitions via `submitArbitration`
-
-### registerVoter
-
-Registers a voter specialist for a machine.
-
-```typescript
-import { registerVoter } from "dialai";
-
-const voter = await registerVoter({
-  specialistId: "ai-voter-1",
-  machineName: "my-task",
-  strategyFn: async (ctx) => ({
-    voteFor: "A",
-    reasoning: "Proposal A is better aligned",
-  }),
-});
-```
-
-**Signature:**
-
-```typescript
-registerVoter(opts: {
-  specialistId: string;
-  machineName: string;
-  strategyFn?: (ctx: VoterContext) => Promise<VoteResult>;
-  strategyWebhookUrl?: string;
-  contextFn?: (ctx: VoterContext) => Promise<string>;
-  contextWebhookUrl?: string;
-  modelId?: string;
-  webhookTokenName?: string;
-}): Promise<Voter>
-```
 
 ### registerArbiter
 
@@ -184,7 +150,7 @@ registerArbiter(opts: {
   specialistId: string;
   machineName: string;
   strategyFn?: (ctx: ArbiterContext) => Promise<ConsensusResult>;
-  strategyFnName?: string;
+  strategyFnName?: string;   // "aheadByK"
   strategyWebhookUrl?: string;
   webhookTokenName?: string;
   threshold?: number;
@@ -192,6 +158,47 @@ registerArbiter(opts: {
 ```
 
 See [registerArbiter](./registerArbiter.md) for full documentation including built-in strategies.
+
+**ArbiterContext:**
+
+The context passed to a custom arbiter strategy function:
+
+```typescript
+interface ArbiterContext {
+  session: Session;
+  proposals: Proposal[];
+  threshold: number;
+}
+```
+
+Example custom arbiter using ahead-by-k logic on proposals:
+
+```typescript
+const arbiter = await registerArbiter({
+  specialistId: "custom-arbiter",
+  machineName: "my-task",
+  strategyFn: async (ctx) => {
+    // Count proposals per transition
+    const counts: Record<string, number> = {};
+    for (const p of ctx.proposals) {
+      counts[p.transitionName] = (counts[p.transitionName] || 0) + 1;
+    }
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    const leader = sorted[0];
+    const runnerUp = sorted[1]?.[1] ?? 0;
+    if (leader[1] - runnerUp >= ctx.threshold) {
+      const winning = ctx.proposals.find(p => p.transitionName === leader[0]);
+      return {
+        consensusReached: true,
+        winningProposalId: winning!.proposalId,
+        reasoning: `${leader[0]} ahead by ${leader[1] - runnerUp}`,
+      };
+    }
+    return { consensusReached: false, reasoning: "No transition ahead by threshold" };
+  },
+  threshold: 2,
+});
+```
 
 ## Decision Functions
 
@@ -250,75 +257,6 @@ submitProposal(
 | `reasoning` | `string` | No | Explanation for the proposal |
 | `metaJson` | `object` | No | Arbitrary client metadata |
 | `costUSD` | `number` | No | Cost in USD to generate this proposal |
-| `latencyMsec` | `number` | No | Time in milliseconds to generate |
-| `numInputTokens` | `number` | No | Input tokens used |
-| `numOutputTokens` | `number` | No | Output tokens used |
-
-Cost tracking fields enable measuring the economic cost of AI delegation.
-
-### submitVote
-
-Creates and stores a vote comparing two proposals. If `voteFor` is omitted, invokes the specialist's registered strategy.
-
-```typescript
-import { submitVote } from "dialai";
-
-// Strategy invocation
-const vote = await submitVote(
-  session.sessionId,
-  "ai-voter-1",
-  session.currentRoundId,  // roundId - omit to use current round; provide to target a specific round
-  proposalA.proposalId,
-  proposalB.proposalId
-);
-
-// Direct submission with all parameters
-const vote = await submitVote(
-  session.sessionId,
-  "ai-voter-1",
-  session.currentRoundId,    // roundId
-  proposalA.proposalId,
-  proposalB.proposalId,
-  "A",                       // voteFor
-  "Proposal A is clearer",   // reasoning
-  { reviewer: "ai-1" },      // metaJson
-  0.002,                     // costUSD
-  150,                       // latencyMsec
-  100,                       // numInputTokens
-  25                         // numOutputTokens
-);
-```
-
-**Signature:**
-
-```typescript
-submitVote(
-  sessionId: string,
-  specialistId: string,
-  roundId?: string,
-  proposalIdA: string,
-  proposalIdB: string,
-  voteFor?: VoteChoice,
-  reasoning?: string,
-  metaJson?: Record<string, unknown>,
-  costUSD?: number,
-  latencyMsec?: number,
-  numInputTokens?: number,
-  numOutputTokens?: number
-): Promise<Vote>
-```
-
-| Param | Type | Required | Description |
-|-------|------|----------|-------------|
-| `sessionId` | `string` | Yes | Session identifier |
-| `specialistId` | `string` | Yes | Who is voting |
-| `roundId` | `string` | No | Omit to use current round; provide to target a specific round (enables staleness detection) |
-| `proposalIdA` | `string` | Yes | First proposal to compare |
-| `proposalIdB` | `string` | Yes | Second proposal to compare |
-| `voteFor` | `VoteChoice` | No | Vote choice (invokes strategy if omitted) |
-| `reasoning` | `string` | No | Explanation for the vote |
-| `metaJson` | `object` | No | Arbitrary client metadata |
-| `costUSD` | `number` | No | Cost in USD to generate this vote |
 | `latencyMsec` | `number` | No | Time in milliseconds to generate |
 | `numInputTokens` | `number` | No | Input tokens used |
 | `numOutputTokens` | `number` | No | Output tokens used |
@@ -475,9 +413,8 @@ runSession(machine: MachineDefinition): Promise<Session>
 1. Creates a session in the initial state
 2. Registers a built-in deterministic proposer (picks the first transition)
 3. Runs one decision cycle:
-   - Solicits proposals from all enabled proposers, checks consensus
-   - Solicits selection voters, checks consensus after each vote
-   - Solicits pairwise voters, checks consensus after each vote
+   - Solicits proposals from all enabled proposers
+   - Checks consensus after proposals are collected
    - If no consensus: returns session (exhausted, waiting for human)
    - If consensus: executes the winning transition
 4. Returns the session (completed or waiting for human)
@@ -487,7 +424,7 @@ runSession(machine: MachineDefinition): Promise<Session>
 The in-memory store is exported for testing and advanced use:
 
 ```typescript
-import { sessions, specialists, proposals, votes, clear } from "dialai";
+import { sessions, specialists, proposals, clear } from "dialai";
 
 // Inspect current state
 console.log(sessions.size);
@@ -502,7 +439,6 @@ clear();
 | `sessions` | `Map<string, Session>` | All sessions by ID |
 | `specialists` | `Map<string, Specialist>` | All registered specialists |
 | `proposals` | `Map<string, Proposal>` | All proposals by ID |
-| `votes` | `Map<string, Vote>` | All votes by ID |
 | `clear` | `() => void` | Clears all maps |
 
 ## Additional References

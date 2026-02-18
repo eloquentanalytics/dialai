@@ -36,7 +36,7 @@ Given any task modeled as a state machine: how do you know — in dollars, time,
 
 ## Starting from the Worst Case
 
-DIAL's design started by staring at the most unoptimized version of that question. The worst case scenario: cross every possible model with every possible prompt, generate exponentially more pairwise votes, then compare all of that to the human choice. A combinatorial explosion.
+DIAL's design started by staring at the most unoptimized version of that question. The worst case scenario: cross every possible model with every possible prompt, generate exponentially more pairwise comparisons, then compare all of that to the human choice. A combinatorial explosion.
 
 Reduce the problem: not every possible model, but a handful that span the range of cost, quality, and latency. Not every possible prompt, but a best-first-pass prompt for each task and state. Now we have a tractable search.
 

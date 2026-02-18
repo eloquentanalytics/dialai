@@ -1,6 +1,6 @@
 ---
 name: dial-decision-cycles
-description: Understand DIAL decision cycles. Use when learning how Propose, Vote, Arbitrate, Execute works.
+description: Understand DIAL decision cycles. Use when learning how Propose, Arbitrate, Execute works.
 user-invocable: false
 ---
 
@@ -11,7 +11,7 @@ The repeating process that drives state transitions.
 ## The Cycle
 
 ```
-Propose -> Vote -> Arbitrate -> Execute -> (repeat)
+Propose -> Arbitrate -> Execute -> (repeat)
 ```
 
 Each cycle attempts to move the session from one state to another.
@@ -33,34 +33,15 @@ Each registered proposer submits a transition proposal.
 - Target state
 - Reasoning
 
-### 2. Vote
+### 2. Arbitrate
 
-Each registered voter compares proposals pairwise and votes.
+The arbiter evaluates consensus using ahead-by-k.
 
-**What voters receive**:
-- The two proposals being compared
-- Current state context
-- Session history
+**How it works**: Proposals are endorsements. The arbiter counts endorsements and applies the ahead-by-k threshold to determine consensus. Human proposals always win.
 
-**What voters return**:
-- Which proposal they prefer (A or B)
-- NEITHER if both are bad
-- Confidence level
+**Human primacy**: When proposals don't produce consensus, only a human specialist can force a decision via `submitArbitration`.
 
-### 3. Arbitrate
-
-The arbiter evaluates consensus using the configured strategy.
-
-**Strategies**:
-| Strategy | Behavior |
-|----------|----------|
-| `majority` | >50% of votes wins |
-| `supermajority` | Configurable threshold (e.g., 66%) |
-| `unanimous` | All voters must agree |
-
-**Human primacy**: When consensus cannot be reached, only a human specialist can force a decision via `submitArbitration`.
-
-### 4. Execute
+### 3. Execute
 
 If consensus is reached, the winning transition is applied.
 
@@ -79,15 +60,13 @@ Verbose output shows:
 ```
 [PROPOSE] ai-proposer: approve -> approved
 [PROPOSE] ai-proposer-2: reject -> draft
-[VOTE] ai-voter: A (approve) - confidence: 0.8
-[VOTE] human-voter: A (approve) - confidence: 1.0
-[ARBITRATE] consensus reached: approve
+[ARBITRATE] consensus reached: approve (ahead-by-k)
 [EXECUTE] draft -> approved
 ```
 
 ## No Consensus
 
-If voting doesn't produce a winner:
+If proposals don't produce consensus:
 - The cycle repeats
 - New proposals are solicited
 - Different proposals may emerge
@@ -96,7 +75,7 @@ Configure max cycles to prevent infinite loops:
 ```json
 {
   "arbiter": {
-    "strategy": "majority",
+    "strategy": "ahead-by-k",
     "maxCycles": 5
   }
 }

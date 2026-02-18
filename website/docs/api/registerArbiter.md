@@ -25,7 +25,6 @@ Define an arbiter in your machine JSON file:
   },
   "specialists": [
     { "role": "proposer", "specialistId": "ai-proposer", "strategyFnName": "firstAvailable" },
-    { "role": "voter", "specialistId": "ai-voter", "strategyFnName": "preferA" },
     { "role": "arbiter", "specialistId": "consensus-arbiter", "strategyFnName": "aheadByK", "threshold": 1 }
   ]
 }
@@ -71,7 +70,7 @@ const arbiter = await registerArbiter({
   specialistId: "consensus-arbiter",
   machineName: "document-review",
   strategyFnName: "aheadByK",
-  threshold: 2,  // Require 2-vote lead for consensus
+  threshold: 2,  // Require 2-proposal lead for consensus
 });
 
 // Using a custom strategy function
@@ -79,16 +78,21 @@ const customArbiter = await registerArbiter({
   specialistId: "custom-arbiter",
   machineName: "document-review",
   strategyFn: async (ctx) => {
-    // Require unanimous votes for consensus
-    const allVotesSame = ctx.votes.every(v => v.voteFor === ctx.votes[0]?.voteFor);
-    if (allVotesSame && ctx.votes.length > 0) {
+    // Count endorsements per transition and require the leader to be ahead by k
+    const counts: Record<string, number> = {};
+    for (const p of ctx.proposals) {
+      counts[p.transitionName] = (counts[p.transitionName] || 0) + 1;
+    }
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    const k = 2;
+    if (sorted.length >= 1 && (sorted.length === 1 || sorted[0][1] - sorted[1][1] >= k)) {
       return {
         consensusReached: true,
-        winningProposalId: ctx.proposals[0].proposalId,
-        reasoning: "Unanimous agreement",
+        winningProposalId: ctx.proposals.find(p => p.transitionName === sorted[0][0])!.proposalId,
+        reasoning: `Transition "${sorted[0][0]}" ahead by ${sorted.length === 1 ? sorted[0][1] : sorted[0][1] - sorted[1][1]} proposals`,
       };
     }
-    return { consensusReached: false, reasoning: "No unanimous agreement" };
+    return { consensusReached: false, reasoning: "No transition ahead by k proposals yet" };
   },
 });
 ```
@@ -99,77 +103,37 @@ See [RegisterArbiterOptions](./types.md#registerarbiteroptions) for the complete
 
 ## Built-in Strategies
 
-Arbiters support five built-in consensus strategies via `strategyFnName`:
+Arbiters support two built-in consensus strategies via `strategyFnName`:
 
 | Strategy | Description | Threshold Usage |
 |----------|-------------|-----------------|
+| `aheadByK` | Consensus when leading transition is ahead by K proposals | `threshold` = minimum proposal lead required |
 | `firstProposal` | Accepts the first valid proposal immediately | Not used |
-| `alignmentWeightedMargin` | Alignment-weighted margin of superiority | `threshold` = minimum margin (0-1) |
-| `aheadByK` | Consensus when leading proposal is ahead by K votes | `threshold` = minimum vote lead required |
-| `mostSimilar` | Consensus based on similarity to human gold examples | `threshold` = minimum similarity score (0-1) |
-| `pairwiseConsensus` | Bradley-Terry model ranking from pairwise votes | `threshold` = minimum win probability |
+
+Each proposal counts as one endorsement of a transition. Human proposals always win consensus immediately, regardless of strategy.
+
+### aheadByK
+
+The default strategy. Counts proposals per transition and declares consensus when one transition is ahead by at least `threshold` proposals. Human proposals always win consensus immediately.
+
+```typescript
+await registerArbiter({
+  specialistId: "proposal-arbiter",
+  machineName: "my-task",
+  strategyFnName: "aheadByK",
+  threshold: 2,  // Need 2-proposal lead
+});
+```
 
 ### firstProposal
 
-The simplest strategy. Accepts the first valid proposal without voting. Useful as a default or when only one proposer is registered.
+The simplest strategy. Accepts the first valid proposal immediately. Useful as a default or when only one proposer is registered.
 
 ```typescript
 await registerArbiter({
   specialistId: "simple-arbiter",
   machineName: "my-task",
   strategyFnName: "firstProposal",
-});
-```
-
-### alignmentWeightedMargin
-
-The alignment-weighted margin of superiority strategy. Groups proposals by transition, scores each with the proposer's alignment score, incorporates selection and pairwise votes weighted by voter alignment, and declares consensus when the leading transition's margin exceeds the threshold.
-
-```typescript
-await registerArbiter({
-  specialistId: "alignment-arbiter",
-  machineName: "my-task",
-  strategyFnName: "alignmentWeightedMargin",
-  threshold: 0.5,  // Margin must exceed 0.5
-});
-```
-
-### aheadByK
-
-Counts votes and declares consensus when one proposal leads by at least `threshold` votes.
-
-```typescript
-await registerArbiter({
-  specialistId: "vote-arbiter",
-  machineName: "my-task",
-  strategyFnName: "aheadByK",
-  threshold: 2,  // Need 2-vote lead
-});
-```
-
-### mostSimilar
-
-Compares proposals to human gold examples and selects the most similar. Useful for tasks with known-good reference outputs.
-
-```typescript
-await registerArbiter({
-  specialistId: "similarity-arbiter",
-  machineName: "my-task",
-  strategyFnName: "mostSimilar",
-  threshold: 0.8,  // Require 80% similarity
-});
-```
-
-### pairwiseConsensus
-
-Uses the Bradley-Terry model to compute rankings from pairwise vote comparisons. More sophisticated than simple vote counting.
-
-```typescript
-await registerArbiter({
-  specialistId: "bt-arbiter",
-  machineName: "my-task",
-  strategyFnName: "pairwiseConsensus",
-  threshold: 0.7,  // Require 70% win probability
 });
 ```
 

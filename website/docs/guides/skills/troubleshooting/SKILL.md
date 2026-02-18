@@ -73,14 +73,13 @@ cat machine.json | jq '.machine.states.draft.transitions | keys'
 **Symptom**: Cycle repeats without progress.
 
 **Causes**:
-- Voters disagree and no majority forms
-- Threshold too high for voter count
-- All voters returning NEITHER
+- Proposals don't converge on a single action
+- Ahead-by-k threshold not met
 
 **Fix**:
-- Lower threshold: `"threshold": 0.5`
-- Add more voters
-- Check voter prompts for clarity
+- Lower the k value
+- Add more proposers to increase endorsement count
+- Check proposer prompts for clarity
 
 ### API Key Errors
 
@@ -129,7 +128,6 @@ npx dialai machine.json --verbose
 
 Shows:
 - Each proposal submitted
-- Each vote cast
 - Consensus evaluation
 - Transition execution
 
@@ -151,9 +149,6 @@ Replace LLM specialists with deterministic ones for predictable behavior:
   "specialists": {
     "proposers": [
       { "id": "test", "strategy": "deterministic", "config": { "action": "approve" } }
-    ],
-    "voters": [
-      { "id": "test-voter", "strategy": "deterministic", "config": { "choice": "A" } }
     ]
   }
 }
@@ -171,12 +166,10 @@ cat machine.json | jq '.machine.states | to_entries | .[] | "\(.key) -> \(.value
 ### Slow Execution
 
 **Causes**:
-- Large number of voters (pairwise voting is O(n^2))
 - Slow API responses
 
 **Fixes**:
-- Reduce voter count
-- Use faster models for non-critical votes
+- Use faster models for routine proposals
 - Add timeout configuration
 
 ### High API Costs

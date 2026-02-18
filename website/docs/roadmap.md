@@ -44,7 +44,7 @@ Create a reference page listing every error code, what triggers it, and how to f
 
 **Status**: Not implemented
 
-Add batch endpoints for common operations: create multiple sessions, solicit proposals from all proposers, collect all votes in one call.
+Add batch endpoints for common operations: create multiple sessions, solicit proposals from all proposers in one call.
 
 > "Wrapping bulk APIs over single-entity APIs enables LLM/agent efficiency, preserves backward compatibility, and keeps systems secure and extensible." — [Stytch](https://stytch.com/blog/if-an-ai-agent-can-'t-figure-out-how-your-api-works-neither-can-your-users/)
 

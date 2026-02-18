@@ -113,10 +113,8 @@ The returned session will have:
 1. Creates a session in `machine.initialState`
 2. If `machine.specialists` is provided, registers those specialists
 3. Otherwise, registers a built-in deterministic proposer (picks first transition)
-4. Runs the solicitation cascade:
-   - Solicits proposals from all enabled proposers, checks consensus
-   - Solicits selection voters, checks consensus after each vote
-   - Solicits pairwise voters, checks consensus after each vote
+4. Runs the proposal solicitation:
+   - Solicits proposals from all enabled proposers, checks consensus after each
    - If no consensus: returns session (exhausted, waiting for human)
    - If consensus: executes the winning transition
 5. Returns the session (completed or waiting for human)

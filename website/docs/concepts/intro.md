@@ -10,11 +10,11 @@ DIAL orchestrates **specialists** — both AI and human — that compete and col
 
 ### Task Specialists, Not Agents
 
-DIAL does not guide a single agent toward completing a task. It simultaneously solicits proposals from an arbitrary number of models, prompts, and strategies — all competing at the same decision point. Each registered proposer independently analyzes the current state and suggests a transition. Voters evaluate proposals. The arbiter maintains a running consensus score and declares a winner when the margin of superiority crosses the threshold.
+DIAL does not guide a single agent toward completing a task. It simultaneously solicits proposals from an arbitrary number of models, prompts, and strategies — all competing at the same decision point. Each registered proposer independently analyzes the current state and suggests a transition. The arbiter maintains a running consensus score and declares a winner when the margin of superiority crosses the threshold.
 
 This is mass simultaneous solicitation, not sequential A/B testing. Specialists are interchangeable and compete on the quality of their contributions, measured against human ground truth.
 
-A DIAL "specialist" is scoped to a specific role in a specific decision. A proposer suggests the best transition; a selection voter picks the best proposal from the field; a pairwise voter evaluates head-to-head matchups. The arbiter orchestrates the entire process. Specialists can be AI models, webhooks, local functions, or humans.
+A DIAL "specialist" is scoped to a specific role in a specific decision. A proposer suggests the best transition; the arbiter orchestrates the entire process. Specialists can be AI models, webhooks, local functions, or humans.
 
 [Learn more about Specialists →](./specialists.md)
 
@@ -26,14 +26,12 @@ A **session** is an instance of a state machine. It starts in an initial state a
 
 ### Specialists
 
-**Specialists** are the pluggable actors that participate in sessions. They fill four roles:
+**Specialists** are the pluggable actors that participate in sessions. They fill two roles:
 
 | Role | Description | Can be AI? | Can be Human? |
 |------|-------------|------------|---------------|
 | **Proposer** | Analyzes state, suggests transitions | Yes | Yes |
-| **Selection Voter** | Sees all proposals, picks the strongest | Yes | Yes |
-| **Pairwise Voter** | Compares two proposals head-to-head | Yes | Yes |
-| **Arbiter** | Orchestrates the cycle, evaluates consensus (built-in) | No | No |
+| **Arbiter** | Counts proposals per transition, evaluates ahead-by-k consensus (built-in) | No | No |
 
 Specialists can be **enabled** or **disabled**. Disabled specialists remain registered (with their alignment history intact) but stop receiving requests. The arbiter can re-enable disabled specialists when needed — for example, if an enabled proposer submits an invalid proposal.
 
@@ -44,17 +42,15 @@ Specialists can be **enabled** or **disabled**. Disabled specialists remain regi
 When a session needs to progress, the **arbiter** works through a sequence of solicitations at a steady pace:
 
 1. **Solicit Proposals**: Call each enabled proposer. Validate and cluster proposals by transition.
-2. **Solicit Selection Voters** *(if no consensus yet)*: Each voter sees all proposals and picks one.
-3. **Solicit Pairwise Voters** *(if still no consensus)*: Each voter evaluates head-to-head matchups.
-4. **Block for Human** *(if exhausted)*: All specialists have responded, no consensus. Wait for a human-forced decision.
+2. **Block for Human** *(if no consensus)*: All specialists have responded, no consensus. Wait for a human-forced decision.
 
-After every arriving proposal or vote, the arbiter re-evaluates the **consensus score**. If one transition's margin of superiority crosses the threshold, consensus is declared immediately — the arbiter doesn't wait for all responses.
+After every arriving proposal, the arbiter re-evaluates the **consensus score**. If one transition's margin of superiority crosses the threshold, consensus is declared immediately — the arbiter doesn't wait for all responses.
 
 [Learn more about the Decision Cycle →](./decision-cycle.md)
 
 ### The Consensus Score
 
-Every contribution — a proposal, a selection vote, a pairwise win — adds the specialist's **alignment score** to the consensus score of the transition it supports. Alignment is a simple measurement: `matching choices / total comparisons` with human ground truth.
+Every contribution — a proposal — adds the specialist's **alignment score** to the consensus score of the transition it supports. Alignment is a simple measurement: `matching choices / total comparisons` with human ground truth.
 
 The arbiter groups proposals by **transition** (not individual proposal). Two proposers that chose the same transition with similar reasoning are supporting the same outcome — their alignment scores combine.
 
@@ -75,7 +71,7 @@ The fundamental principle underlying DIAL:
 
 > **Humans have context that AI cannot access.** AI specialists are judged on their ability to predict what humans would choose. When consensus cannot be reached, only a human can force a decision.
 
-Human alignment is always **1.0** — they are the ground truth. A human vote contributes the maximum possible amount to the consensus score. A human forcing a proposal bypasses the score entirely.
+Human alignment is always **1.0** — they are the ground truth. A human proposal always wins consensus immediately. A human forcing a proposal bypasses the score entirely.
 
 Every human-forced decision creates an **exemplar**: a capture of the full context plus the human's choice. Exemplars are the training data that drive progressive collapse — they improve specialist context through few-shot learning and provide ground truth for alignment measurement.
 
@@ -96,21 +92,6 @@ If alignment degrades, the **trip line** fires: the arbiter reverts to a more de
 
 [See the full process →](/process) · [Implementation details →](/docs/guides/progressive-collapse)
 
-## Quick Reference
-
-### Vote Options
-
-**Selection voters** see all proposals and pick one.
-
-**Pairwise voters** compare two proposals and vote:
-
-| Vote | Meaning |
-|------|---------|
-| **A** | Prefer proposal A |
-| **B** | Prefer proposal B |
-| **BOTH** | Both are acceptable |
-| **NEITHER** | Neither is acceptable |
-
 ## Concepts in This Section
 
 - [Sessions](./sessions.md): State machine instances
@@ -119,5 +100,4 @@ If alignment degrades, the **trip line** fires: the arbiter reverts to a more de
 - [Arbitration](./arbitration.md): The unified consensus score
 - [Consensus Strategies](./consensus-strategies.md): The default algorithm and alternatives
 - [Human Primacy](./human-primacy.md): The foundational principle
-- [Alignment & Consensus](./alignment-vs-voting.md): How alignment scores drive consensus
 - [Related Work](./related-work.md): How DIAL relates to other approaches

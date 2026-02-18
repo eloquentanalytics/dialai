@@ -38,10 +38,9 @@ A session starts in its **initial state** — the starting point defined in the 
 When a session is **not in its goal state**, the [arbiter](./arbitration.md) drives a decision cycle:
 
 1. The arbiter solicits proposals from enabled proposers
-2. If needed, the arbiter solicits selection voters and pairwise voters
-3. The arbiter continuously evaluates the [consensus score](./consensus-strategies.md#alignmentweightedmargin-default)
-4. When consensus is reached (or a human forces a decision), the transition executes
-5. The session moves to a new state and a new round begins
+2. The arbiter counts proposals per transition and checks [ahead-by-k consensus](./consensus-strategies.md#aheadbyk-default) after each arriving proposal
+3. When consensus is reached (or a human submits a proposal, which always wins), the transition executes
+4. The session moves to a new state and a new round begins
 
 Each round produces alignment data: every specialist's contribution is compared against the winning transition, updating their alignment scores.
 

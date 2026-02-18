@@ -59,7 +59,7 @@ Round 1 from pending
 1. Two proposers were registered for the "document-review" machine
 2. Each proposer uses a different built-in strategy
 3. During the decision cycle, both proposers submitted proposals
-4. The proposals were compared through voting
+4. The arbiter counted proposals per transition and found consensus
 
 ## Programmatic Usage
 

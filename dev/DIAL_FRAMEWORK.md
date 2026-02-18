@@ -44,7 +44,7 @@ These JSON string fields hold arbitrary implementation-specific data:
 These string fields are matched by equality but their meaning is implementation-defined:
 
 - `machineName` - Identifies which state machine definition to use. The framework validates it exists but doesn't understand what it represents.
-- `specialistId` - Identifies a specialist (human or AI agent). The framework routes solicitations and tracks proposals/votes by this ID. **Human specialists are identified by including "human" (case-insensitive) anywhere in their specialistId** (e.g., `specialist.sheep.human`, `human_operator_1`). Human votes override all AI votes immediately.
+- `specialistId` - Identifies a specialist (human or AI agent). The framework routes solicitations and tracks proposals by this ID. **Human specialists are identified by including "human" (case-insensitive) anywhere in their specialistId** (e.g., `specialist.sheep.human`, `human_operator_1`). Human proposals always win consensus immediately.
 - `transitionName` / `toStateName` - Identifies transitions and target states in the state machine.
 
 ---
@@ -53,7 +53,7 @@ These string fields are matched by equality but their meaning is implementation-
 
 All specialist roles are implemented as pluggable strategies loaded from `./strategies/{machineName}/{strategyFunctionKey}.ts`.
 
-**Solicitation**: Only proposers and voters are solicited via commands. Arbiters and tools are invoked directly by the framework when needed.
+**Solicitation**: Only proposers are solicited via commands. Arbiters and tools are invoked directly by the framework when needed.
 
 ### Resolution
 
@@ -71,16 +71,6 @@ All specialist roles are implemented as pluggable strategies loaded from `./stra
 **Output:** `SubmitProposalCommand`. The framework adds `sessionId`, `specialistId`, and `fromTransitionExecutionId`.
 
 **Contract:** Always return a command. To decline, set `transitionName` and `toStateName` to null and explain in `reasoning`.
-
-### Voter Strategy Interface
-
-**Input (`VoteDecisionInput`):**
-- `prompt` (string) - From XState machine's `meta.prompt` for the current state
-- `eventStream` (SessionEvent[]) - Full event history for the session
-- `proposalA`, `proposalB` - The two proposals to compare
-- `modelId` (string) - Model identifier from specialist registration
-
-**Output:** `SubmitVoteCommand`. The framework adds `sessionId`, `specialistId`, `proposalIdA`, `proposalIdB`.
 
 ### Tool Strategy Interface
 
@@ -148,37 +138,6 @@ Event Parameters:
 Materializations:
 - `proposals`: Upsert into this table based on the `proposalId`. The fields should be the same as the `event.proposal_submitted` event. This table allows a simple way to represent the current state of the proposal.
 
-### command.submit_vote -> event.vote_submitted
-
-Vote to express a preference between two proposals, either to prefer one over the other, or both or neither.
-
-Validation: Both proposals must have the same `fromTransitionExecutionId`.
-
-API Input:
-- `sessionId` (string, UUID)
-- `specialistId` (string, UUID)
-- `proposalIdA` (string, UUID)
-- `proposalIdB` (string, UUID)
-- `voteFor` (string, enum, [A|B|BOTH|NEITHER])
-- `reasoning` (string, optional) - Explanation of why this vote was cast.
-- `costUSD` (number, optional) - Cost in USD to generate this vote.
-- `latencyMsec` (number, optional) - Time in milliseconds to generate this vote.
-- `numInputTokens` (number, optional) - Number of input tokens used to generate this vote.
-- `numOutputTokens` (number, optional) - Number of output tokens used to generate this vote.
-
-Stored Command (API input + server-generated):
-- `commandCorrelationId` (string, UUID)
-- All API input fields
-- `receivedAtTimestamp` (string, ISO 8601)
-
-Event Parameters:
-- All parameters from the stored command, plus:
-- `voteId` (string, UUID)
-- `votedAtTimestamp` (string, ISO 8601)
-
-Materializations:
-- `votes`: Upsert into this table based on the `voteId`. The fields should be the same as the `event.vote_submitted` event.
-
 ### command.solicit_proposal -> event.proposal_solicited
 
 Request a specialist to submit a proposal. See [Specialist Strategies](#specialist-strategies) for resolution and interface details.
@@ -200,30 +159,6 @@ Event Parameters:
 
 Materializations:
 - `proposal_solicitations`: Upsert into this table based on the `solicitationId`. The fields should be the same as the `event.proposal_solicited` event. This table allows tracking of outstanding proposal requests.
-
-### command.solicit_vote -> event.vote_solicited
-
-Request a specialist to vote on a pair of proposals. See [Specialist Strategies](#specialist-strategies) for resolution details.
-
-API Input:
-- `sessionId` (string, UUID)
-- `specialistId` (string, UUID)
-- `proposalIdA` (string, UUID)
-- `proposalIdB` (string, UUID)
-
-Stored Command (API input + server-generated):
-- `commandCorrelationId` (string, UUID)
-- All API input fields
-- `receivedAtTimestamp` (string, ISO 8601)
-
-Event Parameters:
-- All parameters from the stored command, plus:
-- `solicitationId` (string, UUID)
-- `solicitedAtTimestamp` (string, ISO 8601)
-
-Materializations:
-- `vote_solicitations`: Upsert into this table based on the `solicitationId`. The fields should be the same as the `event.vote_solicited` event. This table allows tracking of outstanding vote requests.
-
 
 ### command.execute_transition -> event.transition_executed
 
@@ -260,13 +195,13 @@ Evaluate consensus using the built-in consensus logic. The framework invokes thi
 
 **Default Arbiter: ahead-by-k**
 
-- Every AI vote counts as one vote (equal)
-- If a human votes, that decision wins immediately (human primacy override)
-- Otherwise, leading proposal must be ahead by k votes
+- Each proposal endorses one transition
+- If a human submits a proposal, that proposal always wins immediately (human primacy)
+- Otherwise, the leading transition must be ahead by k proposals
 
 API Input:
 - `sessionId` (string, UUID, required)
-- `fromTransitionExecutionId` (string, UUID, optional) - Filter proposals/votes to this round
+- `fromTransitionExecutionId` (string, UUID, optional) - Filter proposals to this round
 
 Stored Command (API input + server-generated):
 - `commandCorrelationId` (string, UUID)
@@ -292,7 +227,7 @@ API Input:
 - `specialistId` (string) - Unique identifier for this specialist
 - `machineName` (string) - Session type this specialist is registered for
 - `fromStateName` (string, optional) - If set, specialist is only available in this state. If null/omitted, available in all states.
-- `specialistRole` (string, enum, ['proposer'|'voter'|'tool'])
+- `specialistRole` (string, enum, ['proposer'|'tool'])
 - `strategyFunctionKey` (string) - Strategy function identifier (e.g., "proposer" loads `./strategies/{machineName}/proposer.ts`)
 - `modelId` (string) - Model identifier passed to the strategy
 - `displayName` (string) - Human-readable name for UI display
@@ -335,12 +270,12 @@ Materializations:
 
 ### command.evaluate_alignment -> event.alignment_evaluated
 
-Evaluative command that analyzes a specialist's voting and proposal history against human decisions and calculates an alignment score. Does NOT mutate state — the result event is stored in the event stream only.
+Evaluative command that analyzes a specialist's proposal history against human decisions and calculates an alignment score. Does NOT mutate state — the result event is stored in the event stream only.
 
 **Default Strategy: Agreement-based**
-- Finds vote pairs where specialist and human voted on the same `(proposalIdA, proposalIdB)`
-- Calculates alignment score = matching votes / total comparisons
-- For proposers: did the specialist choose the same transition the human endorsed?
+- Compares specialist proposals against human proposals at the same decision points
+- Calculates alignment score = matching choices / total comparisons
+- Did the specialist choose the same transition the human endorsed?
 
 API Input:
 - `specialistId` (string) - The specialist to evaluate
@@ -365,13 +300,9 @@ Materializations:
 
 ### command.evaluate_accuracy -> event.accuracy_evaluated
 
-Evaluative command that assesses a specialist's recent performance by comparing their proposals/votes against human decisions across all sessions within a machineName. Does NOT mutate state—the result event is stored in the event stream only.
+Evaluative command that assesses a specialist's recent performance by comparing their proposals against human decisions across all sessions within a machineName. Does NOT mutate state—the result event is stored in the event stream only.
 
-**For proposers:** Compares the specialist's proposal against the human-endorsed proposal (identified by which proposal the human voter voted for) on three dimensions: transition name, target state, and parameters.
-
-**For voters:** Compares the specialist's voteFor against the human's voteFor on the same proposal pairs. All three match rates equal the vote agreement rate.
-
-Rounds where the human voted NEITHER are excluded (no ground truth). When the human voted BOTH, a proposer matches if their proposal matches either of the two proposals.
+**For proposers:** Compares the specialist's proposal against the human-endorsed proposal on three dimensions: transition name, target state, and parameters.
 
 API Input:
 - `specialistId` (string) - The specialist to evaluate
@@ -390,10 +321,10 @@ Event Parameters:
 - `specialistId` (string)
 - `machineName` (string)
 - `evaluatedAtTimestamp` (string, ISO 8601)
-- `totalRoundsCompared` (number) - Rounds with comparable data (excludes NEITHER)
-- `transitionMatchRate` (number, 0.0-1.0) - Proposers: transition name match; Voters: vote agreement
-- `stateMatchRate` (number, 0.0-1.0) - Proposers: target state match; Voters: same as transitionMatchRate
-- `paramsMatchRate` (number, 0.0-1.0) - Proposers: params match; Voters: same as transitionMatchRate
+- `totalRoundsCompared` (number) - Rounds with comparable data
+- `transitionMatchRate` (number, 0.0-1.0) - Transition name match rate
+- `stateMatchRate` (number, 0.0-1.0) - Target state match rate
+- `paramsMatchRate` (number, 0.0-1.0) - Params match rate
 - `totalCostUSD` (number) - Aggregate cost from specialist events
 - `avgCostUSD` (number) - Average cost per round
 - `avgLatencyMsec` (number) - Average latency per round
@@ -416,7 +347,7 @@ Query registered specialists for a session type.
 Query Parameters:
 - `storeId` (string, default: 'sheep') - Session type to query
 - `fromStateName` (string, optional) - Filter specialists available in this state (includes specialists with `fromStateName: null` which are available in all states)
-- `specialistRole` (string, enum, optional) - Filter by role: 'proposer', 'voter', or 'tool'
+- `specialistRole` (string, enum, optional) - Filter by role: 'proposer' or 'tool'
 
 Response:
 - Array of `SpecialistSummary` objects from the materialized `specialists` table

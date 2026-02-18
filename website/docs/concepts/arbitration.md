@@ -10,74 +10,58 @@ The **arbiter** is the orchestrator of every decision cycle. It solicits contrib
 
 The arbiter is a fully deterministic, built-in component — never an AI model or a human. It drives the decision cycle by:
 
-1. **Soliciting** proposers, then selection voters, then pairwise voters — at a steady pace
+1. **Soliciting** proposers at a steady pace
 2. **Validating** proposals — rejecting invalid transitions
-3. **Clustering** proposals by transition — combining support for the same transition
-4. **Computing** the consensus score continuously as contributions arrive
-5. **Declaring consensus** when the margin threshold is met
+3. **Clustering** proposals by transition — combining endorsements for the same transition
+4. **Counting** proposals per transition continuously as contributions arrive
+5. **Declaring consensus** when the ahead-by-k threshold is met
 6. **Blocking** for human input when all specialists are exhausted without consensus
 7. **Self-healing** when anomalies occur (re-enabling disabled specialists)
 
 The arbiter does not wait for all responses before evaluating. It re-evaluates after every contribution.
 
-## The Unified Consensus Score
+## Ahead-by-k Consensus
 
 ### How It Works
 
-Every specialist contribution adds to the score of the **transition** it supports. The contribution amount is the specialist's **alignment score** — a measure of how often their past choices matched the human's.
+Every proposal is an endorsement of a transition. The arbiter counts proposals per transition and declares consensus when one transition is ahead of all others by k proposals.
 
 ```
-score(T) = Σ alignment_i × support_i(T)
+count(T) = number of proposals endorsing transition T
 ```
 
-Where:
-- `T` is a transition (e.g., "approve", "reject", "request_changes")
-- `alignment_i` is specialist *i*'s alignment score (0.0 to 1.0)
-- `support_i(T)` is 1 if specialist *i* supports transition T, 0 otherwise (0.5 each for BOTH votes)
-
-### Margin of Superiority
-
-The arbiter doesn't just look at which transition has the highest score. It measures how far the **leader** is ahead of the **runner-up**, normalized by total alignment in play:
-
-```
-margin = (score(leader) − score(runner_up)) / Σ alignment_i
-```
+### The Ahead-by-k Rule
 
 Consensus is reached when:
 
 ```
-margin ≥ consensus_threshold
+count(leader) − count(runner_up) ≥ k
 ```
 
-The **consensus threshold** is controlled by the **risk dial**, a state-level parameter between 0.0 and 1.0:
-- **threshold = 1.0**: Maximum caution. Requires overwhelming superiority. Practically guarantees human involvement.
-- **threshold = 0.5**: Moderate. The leader must have roughly twice the support of the runner-up.
-- **threshold = 0.1**: Aggressive. A modest lead is sufficient.
-- **threshold = 0.0**: Any lead counts. Fastest delegation, lowest safety margin.
+Where k is the **ahead-by-k threshold**, a state-level parameter (default k=1):
+- **k = 1**: A single-proposal lead is sufficient. Fast consensus when proposers agree.
+- **k = 2**: The leader must be ahead by two proposals. More deliberation required.
+- **k = 3+**: Higher thresholds require stronger agreement among proposers.
 
 ### Worked Example
 
 Three proposers submit proposals for a code review task. Two propose "approve" and one proposes "request_changes":
 
-| Specialist | Transition | Alignment |
-|------------|-----------|-----------|
-| Proposer A (GPT-4) | approve | 0.85 |
-| Proposer B (Claude) | approve | 0.78 |
-| Proposer C (Llama) | request_changes | 0.45 |
+| Specialist | Transition |
+|------------|-----------|
+| Proposer A (GPT-4) | approve |
+| Proposer B (Claude) | approve |
+| Proposer C (Llama) | request_changes |
 
-Scores after proposals:
-- **approve**: 0.85 + 0.78 = **1.63**
-- **request_changes**: 0.45
+Counts after proposals:
+- **approve**: 2
+- **request_changes**: 1
 
 ```
-margin = (1.63 − 0.45) / (0.85 + 0.78 + 0.45)
-       = 1.18 / 2.08
-       = 0.567
+lead = count(approve) − count(request_changes) = 2 − 1 = 1
 ```
 
-With `consensus_threshold = 0.5`: ✅ Consensus reached on "approve".
-
-No voters were solicited — proposals alone were sufficient.
+With `k = 1`: ✅ Consensus reached on "approve". The winning proposal is the first proposal submitted for "approve" (Proposer A's).
 
 ## Proposal Clustering
 
@@ -104,18 +88,12 @@ If only one proposer is enabled and it submits an invalid proposal (proposing a 
 
 ### Cascading Re-enablement
 
-If re-enabling proposers doesn't resolve the issue (no valid proposals from anyone), the arbiter escalates:
-
-1. Re-enable all disabled **selection voters** and proceed to selection voting
-2. If still no consensus, re-enable all disabled **pairwise voters** and proceed to pairwise voting
-3. If still no consensus, block for human intervention
+If re-enabling proposers doesn't resolve the issue (no valid proposals from anyone), the arbiter blocks for human intervention.
 
 ```
 Invalid from sole proposer
   → Re-enable all proposers
-    → Still stuck? Re-enable all selection voters
-      → Still stuck? Re-enable all pairwise voters
-        → Still stuck? Block for human
+    → Still stuck? Block for human
 ```
 
 This ensures that pruning is aggressive in the happy path but cannot create permanent dead ends. The arbiter can always recover by broadening the specialist pool.
@@ -128,28 +106,23 @@ After every human-forced decision, the arbiter updates alignment scores for all 
 alignment = matching_choices / total_comparisons
 ```
 
-A "matching choice" means the specialist's proposal or vote aligned with the transition the human ultimately chose. Over time, this simple fraction converges on each specialist's reliability at predicting human judgment.
+A "matching choice" means the specialist's proposal aligned with the transition the human ultimately chose. Over time, this simple fraction converges on each specialist's reliability at predicting human judgment.
 
-### Why Alignment = 0 Blocks Consensus
+### Cold Start
 
-At cold start, every AI specialist has alignment = 0.0. This means:
-- Every proposal contributes 0 to the consensus score
-- Every vote contributes 0 to the consensus score
-- The margin of superiority is always 0/0 (undefined, treated as 0)
-- Consensus is impossible without human participation
+At cold start, the ahead-by-k mechanism still functions normally — if proposers agree on a transition, consensus can be reached regardless of alignment scores. Alignment scores are tracked separately for evaluation and pruning purposes but do not affect the proposal counting mechanism.
 
-This is the designed behavior: the system cannot delegate until humans have provided enough ground truth to calibrate alignment scores. Delegation is *earned*, not configured.
+The system blocks for human input when proposers disagree and no transition achieves the required lead.
 
-## Configuring the Risk Dial
+## Configuring the Ahead-by-k Threshold
 
-The risk dial is the primary configuration knob for each state:
+The k threshold is the primary configuration knob for each state:
 
 | Setting | Behavior | Use When |
 |---------|----------|----------|
-| **High (0.8–1.0)** | Requires near-unanimous aligned support | High-stakes, irreversible decisions |
-| **Moderate (0.4–0.6)** | Balanced deliberation | Standard decisions with adequate training data |
-| **Low (0.1–0.3)** | Quick consensus from aligned specialists | Low-stakes, reversible decisions |
-| **Zero (0.0)** | Any aligned support wins | Testing, development only |
+| **k = 1** | Any single-proposal lead wins | Standard decisions, single-proposer setups |
+| **k = 2** | Leader must be ahead by 2 proposals | Multi-proposer setups where some deliberation is desired |
+| **k = 3+** | Requires strong agreement among proposers | High-stakes decisions with many proposers |
 
 The threshold can be set at the **machine level** (applies to all states) or **per-state** (overrides the default for specific decision points).
 

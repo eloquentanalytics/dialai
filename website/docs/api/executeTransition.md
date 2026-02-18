@@ -4,7 +4,7 @@ sidebar_position: 9
 
 # `executeTransition(sessionId, transitionName, toState, reasoning?): Promise<Session>`
 
-Executes a state transition on a session. Validates the transition is valid from the current state, records it in history, updates `currentState`, and clears all proposals and votes for the session.
+Executes a state transition on a session. Validates the transition is valid from the current state, records it in history, updates `currentState`, and clears all proposals for the session.
 
 ## CLI Usage
 
@@ -48,7 +48,7 @@ History: [
 3. A new history record was created with the transition details
 4. `currentState` was updated to "approved"
 5. A new round ID was generated for the next decision cycle
-6. All proposals and votes for this session were cleared
+6. All proposals for this session were cleared
 7. The updated session was returned
 
 ## Parameters

@@ -34,7 +34,7 @@ There's a deeper relationship: a DIAL machine can be viewed as an abstraction ov
 
 ### Multi-Agent Debate
 
-Multi-agent debate uses multiple AI models to argue and a human to judge. DIAL's selection and pairwise voting are superficially similar, but the purpose differs: debate aims to improve answer quality through adversarial argument; DIAL aims to measure which specialist best predicts the human, with the goal of eventually removing the human from routine decisions entirely.
+Multi-agent debate uses multiple AI models to argue and a human to judge. DIAL's multi-specialist proposal mechanism is superficially similar, but the purpose differs: debate aims to improve answer quality through adversarial argument; DIAL aims to measure which specialist best predicts the human, with the goal of eventually removing the human from routine decisions entirely.
 
 ### Constitutional AI / RLHF
 

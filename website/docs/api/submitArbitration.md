@@ -4,7 +4,7 @@ sidebar_position: 10
 
 # `submitArbitration(sessionId, roundId?, specialistId?, transitionName?, reasoning?, metaJson?, costUSD?, latencyMsec?, numInputTokens?, numOutputTokens?): Promise<ArbitrationResult>`
 
-Evaluates consensus and optionally executes the winning transition. Follows the same unified pattern as `submitProposal` and `submitVote`: if the key decision parameter is omitted, the arbiter's strategy is invoked.
+Evaluates consensus and optionally executes the winning transition. Follows the same unified pattern as `submitProposal`: if the key decision parameter is omitted, the arbiter's strategy is invoked.
 
 ## Signature
 
@@ -41,7 +41,7 @@ submitArbitration(
 - **Without `transitionName`**: Runs consensus guards → if consensus reached, executes winning transition
 - **With `transitionName`**: Forces the transition immediately, but only if `specialistId` refers to a specialist registered with `isHuman: true`
 
-This follows the same pattern as `submitProposal` and `submitVote`:
+This follows the same pattern as `submitProposal`:
 - AI specialists (`isHuman: false`) must omit the key param to invoke their strategy
 - Human specialists (`isHuman: true`) can provide explicit values
 
@@ -51,7 +51,7 @@ When checking for consensus (no `transitionName`), these guards are checked:
 
 1. **Round ID match**: The provided `roundId` must match `session.currentRoundId`
 2. **Proposal existence**: At least one proposal must exist for the current round
-3. **Ahead-by-k threshold**: The leading proposal must be ahead by `k` votes (configurable per-state, default `k=1`)
+3. **Ahead-by-k threshold**: The leading transition must be ahead by `k` proposals (configurable per-state, default `k=1`)
 
 When forcing a transition (with `transitionName`):
 
@@ -141,13 +141,13 @@ console.log(result.executed);   // false
 console.log(result.guardReason); // "Only human specialists can force arbitration"
 ```
 
-### After Each Proposal/Vote
+### After Each Proposal
 
 ```typescript
-import { submitProposal, submitVote, submitArbitration } from "dialai";
+import { submitProposal, submitArbitration } from "dialai";
 
-// Submit a proposal
-const proposal = await submitProposal(
+// Submit proposals
+const proposal1 = await submitProposal(
   session.sessionId,
   "ai-proposer-1",
   session.currentRoundId
@@ -157,13 +157,10 @@ const proposal = await submitProposal(
 let result = await submitArbitration(session.sessionId, session.currentRoundId);
 if (result.executed) return;
 
-// Submit a vote
-const vote = await submitVote(
+const proposal2 = await submitProposal(
   session.sessionId,
-  "ai-voter-1",
-  session.currentRoundId,
-  proposalA.proposalId,
-  proposalB.proposalId
+  "ai-proposer-2",
+  session.currentRoundId
 );
 
 // Check again

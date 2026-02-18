@@ -44,15 +44,14 @@ DIAL targets decisions that humans already make well and measures whether AI spe
 
 ```mermaid
 graph LR
-    A[Propose] --> B[Vote]
-    B --> C[Arbitrate]
-    C --> D[Execute]
-    D --> A
+    A[Propose] --> B[Arbitrate]
+    B --> C[Execute]
+    C --> A
 ```
 
 1. **Model the task as a state machine**: Define states, transitions, and decision prompts
-2. **Register proposers and voters**: AI and human specialists that propose transitions and vote on them
-3. **Run decision cycles**: Propose → Vote → Arbitrate → Execute
+2. **Register proposers**: AI and human specialists that propose transitions
+3. **Run decision cycles**: Propose → Arbitrate → Execute
 4. **Reach rest**: The session is at rest when it reaches its goal state
 
 ## Documentation Structure
@@ -80,7 +79,7 @@ How to use the `dialai` library:
 | Term | Definition |
 |------|------------|
 | **Session** | An instance of a state machine being navigated by specialists |
-| **Specialist** | A pluggable actor (AI or human) that proposes transitions or votes |
-| **Decision Cycle** | The repeating process: Propose → Vote → Arbitrate → Execute |
+| **Specialist** | A pluggable actor (AI or human) that proposes transitions |
+| **Decision Cycle** | The repeating process: Propose → Arbitrate → Execute |
 | **Arbiter** | The built-in logic that evaluates consensus and determines when a proposal wins |
 | **Goal State** | The rest state where the session is headed; no action needed when reached |

@@ -4,194 +4,140 @@ sidebar_position: 12
 
 # Consensus Strategies
 
-DIAL's default consensus mechanism is the **Alignment-Weighted Margin of Superiority** algorithm — a unified approach where every specialist contribution (proposal, selection vote, pairwise vote) feeds into a single consensus score per transition. DIAL also ships with simpler strategies for specific use cases.
+DIAL's consensus mechanism is **Ahead-by-k** — a simple counting approach where each proposal acts as an endorsement of its transition. The first transition to pull ahead of all others by k endorsements wins. DIAL also ships with `firstProposal` as a convenience strategy for testing and single-proposer setups.
 
 ## Overview
 
-| Strategy | Voting Required | Best For | Key Parameter |
-|----------|:---------------:|----------|---------------|
-| `alignmentWeightedMargin` | Optional | **Default.** General use, progressive collapse | `consensus_threshold` (0.0–1.0) |
-| `firstProposal` | No | Testing, single-proposer, bootstrap | — |
-| `mostSimilar` | No | States with reliable exemplars | Minimum similarity (0.0–1.0) |
+In DIAL, every proposal is an endorsement. When a specialist proposes a transition, that counts as one endorsement for that transition. There is no separate evaluation or scoring step — the proposals themselves are the signal.
 
-## `alignmentWeightedMargin` *(Default)*
+Consensus is reached when one transition has accumulated k more endorsements than any other transition. The winning proposal is the **first proposal submitted** for the winning transition.
 
-The default strategy. Every contribution adds the specialist's alignment score to the transition it supports. Consensus is reached when one transition is sufficiently ahead of the rest.
+## `aheadByK` *(Default)*
+
+The default strategy. Each proposal endorses a transition. The arbiter counts endorsements per transition. Consensus is reached when one transition leads all others by at least k endorsements.
 
 ### When to Use
 
-- **Always**, unless you have a specific reason to use a simpler strategy
+- **Always**, unless you have a specific reason to use `firstProposal`
 - Production systems with multiple specialists
 - Any scenario where progressive collapse is desired
-- When you want the system to naturally adapt as alignment improves
+- When you want the system to naturally converge as specialists are pruned
 
 ### How It Works
 
-#### Step 1: Score Each Transition
+#### Step 1: Count Endorsements Per Transition
 
-As proposals and votes arrive, the arbiter accumulates a score for each transition:
-
-```
-score(T) = Σ alignment_i × support_i(T)
-```
-
-Every type of contribution adds to the transition score:
-
-| Contribution | What it supports |
-|-------------|-----------------|
-| **Proposal** for transition T | Adds `alignment_proposer` to score(T) |
-| **Selection vote** for a proposal targeting T | Adds `alignment_voter` to score(T) |
-| **Pairwise vote A** (where A targets T) | Adds `alignment_voter` to score(T) |
-| **Pairwise vote BOTH** (both target T) | Adds `alignment_voter` to score(T) |
-| **Pairwise vote BOTH** (A targets T, B targets U) | Adds `alignment_voter × 0.5` to score(T) and score(U) |
-| **Pairwise vote NEITHER** | Adds nothing |
-
-#### Step 2: Calculate Margin of Superiority
+As proposals arrive, the arbiter counts how many proposals endorse each transition:
 
 ```
-margin = (score(leader) − score(runner_up)) / Σ alignment_i
+endorsements(T) = number of proposals for transition T
 ```
 
-The margin is normalized by total alignment in play, so it's always between 0 and 1 regardless of how many specialists participate.
+Every proposal adds exactly one endorsement to its transition.
+
+#### Step 2: Calculate Lead
+
+```
+lead = endorsements(leader) - endorsements(runner_up)
+```
+
+The lead is the difference in endorsement count between the most-endorsed transition and the second-most-endorsed transition.
 
 #### Step 3: Check Threshold
 
 ```
-consensus when: margin ≥ consensus_threshold
+consensus when: lead >= k
 ```
 
-The **consensus threshold** is the **risk dial** — a state-level parameter that controls how much superiority is required.
+The parameter **k** controls how decisive the lead must be. A higher k requires more agreement before the system will act autonomously.
 
 ### Algorithm
 
 ```
-function alignmentWeightedMargin(ctx) -> ConsensusResult:
+function aheadByK(ctx) -> ConsensusResult:
     if len(ctx.proposals) == 0:
         return { consensusReached: false, reasoning: "No proposals" }
 
-    # Group proposals by transition
-    transition_scores = {}
-    total_alignment = 0
-
+    # Count endorsements per transition
+    endorsements = {}
     for proposal in ctx.proposals:
         T = proposal.transitionName
-        a = alignment(proposal.specialistId)
-        transition_scores[T] = transition_scores.get(T, 0) + a
-        total_alignment += a
-
-    for vote in ctx.selectionVotes:
-        T = voted_proposal.transitionName
-        a = alignment(vote.specialistId)
-        transition_scores[T] = transition_scores.get(T, 0) + a
-        total_alignment += a
-
-    for vote in ctx.pairwiseVotes:
-        a = alignment(vote.specialistId)
-        total_alignment += a
-        if vote.choice == "A":
-            T = vote.proposalA.transitionName
-            transition_scores[T] += a
-        elif vote.choice == "B":
-            T = vote.proposalB.transitionName
-            transition_scores[T] += a
-        elif vote.choice == "BOTH":
-            T_a = vote.proposalA.transitionName
-            T_b = vote.proposalB.transitionName
-            if T_a == T_b:
-                transition_scores[T_a] += a
-            else:
-                transition_scores[T_a] += a * 0.5
-                transition_scores[T_b] += a * 0.5
-        # NEITHER: no score added
-
-    if total_alignment == 0:
-        return { consensusReached: false, reasoning: "No alignment data" }
+        endorsements[T] = endorsements.get(T, 0) + 1
 
     # Find leader and runner-up
-    sorted_transitions = sorted(transition_scores.items(), by: value, desc: true)
-    leader_name, leader_score = sorted_transitions[0]
-    runner_up_score = sorted_transitions[1][1] if len(sorted_transitions) > 1 else 0
+    sorted_transitions = sorted(endorsements.items(), by: value, desc: true)
+    leader_name, leader_count = sorted_transitions[0]
+    runner_up_count = sorted_transitions[1][1] if len(sorted_transitions) > 1 else 0
 
-    margin = (leader_score - runner_up_score) / total_alignment
+    lead = leader_count - runner_up_count
 
-    if margin >= ctx.consensus_threshold:
-        # Find the best proposal for the winning transition
-        best_proposal = highest_alignment_proposal(ctx.proposals, leader_name)
+    if lead >= ctx.k:
+        # Winner is the first proposal submitted for the leading transition
+        first_proposal = earliest_proposal(ctx.proposals, leader_name)
         return {
             consensusReached: true,
-            winningProposalId: best_proposal.proposalId,
-            reasoning: f"Margin {margin:.2f} ≥ threshold {ctx.consensus_threshold}"
+            winningProposalId: first_proposal.proposalId,
+            reasoning: f"Lead {lead} >= k={ctx.k}"
         }
 
     return {
         consensusReached: false,
-        reasoning: f"Margin {margin:.2f} < threshold {ctx.consensus_threshold}"
+        reasoning: f"Lead {lead} < k={ctx.k}"
     }
 ```
 
 ### Proposal Clustering
 
-When multiple proposers choose the same transition, their alignment scores **combine** rather than compete. This is a natural consequence of scoring by transition: "approve" from Proposer A and "approve" from Proposer B both add to `score("approve")`.
+When multiple specialists propose the same transition, their endorsements **add up**. This is a natural consequence of counting by transition: a proposal for "approve" from Specialist A and a proposal for "approve" from Specialist B both increment `endorsements("approve")`.
 
 This has important implications:
-- Two moderately-aligned specialists agreeing on a transition can generate more consensus than one highly-aligned specialist alone
-- Agreement among specialists is rewarded — it's a signal that the transition is correct
-- Disagreement is also informative — two highly-aligned specialists proposing different transitions produces a low margin, surfacing genuine ambiguity
+- Two specialists agreeing on a transition move the system closer to consensus faster than one specialist alone
+- Agreement among specialists is rewarded — it is a signal that the transition is correct
+- Disagreement is informative — two specialists proposing different transitions keeps the lead low, surfacing genuine ambiguity
 
 ### The Cold Start Problem
 
-When all AI specialists have alignment = 0:
-- Every contribution adds 0 to the score
-- `total_alignment = 0`, so the margin is undefined (treated as 0)
+When there are no proposals:
+- All endorsement counts are zero
+- The lead is zero, which is less than any k >= 1
 - Consensus is impossible
 - The system blocks for a human decision
 
-This is intentional: the system cannot delegate until humans have provided ground truth.
+This is intentional: the system cannot delegate until specialists begin proposing.
 
 ### Worked Example: Progressive Consensus
 
-**Round 1** (cold start — all alignment = 0):
+**Round 1** (cold start — single specialist, k=2):
 
-| Specialist | Action | Alignment | Contribution |
-|-----------|--------|-----------|-------------|
-| Proposer A | propose "approve" | 0.0 | 0.0 |
-| Proposer B | propose "reject" | 0.0 | 0.0 |
+| Specialist | Proposal | Endorsements for "approve" |
+|-----------|----------|---------------------------|
+| Specialist A | propose "approve" | 1 |
 
-Scores: approve = 0, reject = 0. **Blocked.** Human forces "approve."
+Lead = 1 - 0 = 1. Less than k=2. **Blocked.** Human forces "approve."
 
-**Round 5** (after calibration):
+**Round 5** (multiple specialists agree, k=2):
 
-| Specialist | Action | Alignment | Contribution |
-|-----------|--------|-----------|-------------|
-| Proposer A | propose "approve" | 0.8 | 0.8 |
-| Proposer B | propose "approve" | 0.6 | 0.6 |
-| Sel. Voter C | picks Proposer A's proposal | 0.7 | 0.7 |
+| Specialist | Proposal | Endorsements for "approve" |
+|-----------|----------|---------------------------|
+| Specialist A | propose "approve" | 1 |
+| Specialist B | propose "approve" | 2 |
+| Specialist C | propose "approve" | 3 |
 
-Scores: approve = 0.8 + 0.6 + 0.7 = **2.1**, no runner-up.
+Lead = 3 - 0 = 3. Greater than or equal to k=2. Consensus reached. The winning proposal is Specialist A's (the first submitted for "approve").
 
-```
-margin = (2.1 − 0) / (0.8 + 0.6 + 0.7) = 2.1 / 2.1 = 1.0
-```
+**Round 50** (champion mode, k=1):
 
-With threshold = 0.5: ✅ Consensus reached at selection voting. Pairwise voters never solicited.
+| Specialist | Proposal | Endorsements for "approve" |
+|-----------|----------|---------------------------|
+| Specialist A | propose "approve" | 1 |
 
-**Round 50** (champion mode):
+All other specialists have been disabled (pruned). With k=1, a single proposal is sufficient.
 
-| Specialist | Action | Alignment | Contribution |
-|-----------|--------|-----------|-------------|
-| Proposer A | propose "approve" | 0.95 | 0.95 |
-
-All other proposers and voters have been disabled (pruned).
-
-```
-margin = (0.95 − 0) / 0.95 = 1.0
-```
-
-Consensus reached on proposals alone. No voting at all.
+Lead = 1 - 0 = 1. Equals k=1. Consensus reached immediately.
 
 ## `firstProposal`
 
-The simplest strategy: immediately declares consensus on the first valid proposal received. No voting, no alignment scoring.
+The simplest strategy: immediately declares consensus on the first valid proposal received. No counting, no waiting.
 
 ### When to Use
 
@@ -219,126 +165,25 @@ function firstProposal(ctx) -> ConsensusResult:
 ### Trade-offs
 
 **Advantages:**
-- Zero latency: no waiting for votes
+- Zero latency: no waiting for additional proposals
 - Simple to reason about
 
 **Disadvantages:**
 - No deliberation: ignores all other proposals
-- No alignment signal: provides no data for measuring specialist quality
 - Bypasses DIAL's core value proposition
-
-## `mostSimilar`
-
-Compares each proposal to human gold examples (exemplars) using semantic similarity. The proposal most similar to past human decisions wins. No voting required.
-
-### When to Use
-
-- You have reliable exemplars for this state
-- Semantic similarity provides clear, unambiguous scores
-- You want fast decisions without voting overhead
-- Model selection scenarios (finding the best model for a state)
-
-### Algorithm
-
-```
-function mostSimilar(ctx) -> ConsensusResult:
-    if ctx.exemplars is empty:
-        return { consensusReached: false, reasoning: "No exemplars" }
-
-    scores = []
-    for proposal in ctx.proposals:
-        similarity = max(
-            semantic_similarity(proposal.reasoning, exemplar.reasoning)
-            for exemplar in ctx.exemplars
-        )
-        scores.append({ proposalId: proposal.proposalId, similarity })
-
-    scores.sort(by: similarity, descending: true)
-
-    if scores[0].similarity < ctx.threshold:
-        return {
-            consensusReached: false,
-            reasoning: f"Best similarity {scores[0].similarity} below threshold {ctx.threshold}"
-        }
-
-    # Check for clear winner
-    if len(scores) >= 2:
-        gap = scores[0].similarity - scores[1].similarity
-        if gap < 0.05:
-            return {
-                consensusReached: false,
-                reasoning: f"No clear winner: top two within {gap} similarity"
-            }
-
-    return {
-        consensusReached: true,
-        winningProposalId: scores[0].proposalId,
-        reasoning: f"Most similar to exemplar (similarity: {scores[0].similarity})"
-    }
-```
-
-## Custom Strategies
-
-You can implement custom consensus strategies using `strategyFn`:
-
-```typescript
-registerArbiter({
-  specialistId: "custom-arbiter",
-  machineName: "my-task",
-  strategyFn: async (ctx: ArbiterContext) => {
-    const winner = myCustomConsensusLogic(ctx.proposals, ctx.votes);
-
-    if (winner) {
-      return {
-        consensusReached: true,
-        winningProposalId: winner.proposalId,
-        reasoning: "Custom consensus reached",
-      };
-    }
-
-    return {
-      consensusReached: false,
-      reasoning: "Custom consensus not reached",
-    };
-  },
-});
-```
-
-Custom strategies must be deterministic — given the same inputs, they must produce the same outputs.
-
-## Strategy Selection
-
-```mermaid
-graph TD
-    A[Need Consensus Strategy] --> B{Testing or<br/>single proposer?}
-    B -->|Yes| C[firstProposal]
-    B -->|No| D{Reliable exemplars<br/>available?}
-    D -->|Yes| E{Want model<br/>selection?}
-    D -->|No| F[alignmentWeightedMargin]
-    E -->|Yes| G[mostSimilar]
-    E -->|No| F
-```
-
-| Scenario | Recommended Strategy |
-|----------|---------------------|
-| Production use, general | `alignmentWeightedMargin` |
-| Progressive collapse desired | `alignmentWeightedMargin` |
-| Testing, dev, bootstrap | `firstProposal` |
-| Model selection against exemplars | `mostSimilar` |
-| Unknown/varying conditions | `alignmentWeightedMargin` |
 
 ## Progressive Collapse
 
-With `alignmentWeightedMargin`, progressive collapse happens naturally within the same algorithm:
+With `aheadByK`, progressive collapse happens naturally:
 
-1. **Cold start**: All alignment = 0. Score is always 0. System blocks for human. Human decisions generate exemplars.
-2. **Calibration**: Alignment scores grow. Contributions start adding nonzero amounts to transition scores. The system may still need voters to reach the threshold.
-3. **Autonomous consensus**: High-alignment proposers generate enough score from proposals alone that selection and pairwise voting are never needed.
-4. **Pruning**: Low-alignment and redundant specialists are disabled. Cost drops. Fewer solicitations per round.
-5. **Champion**: One highly-aligned specialist handles the task solo. Consensus is immediate from a single proposal.
-6. **Collapsed**: A fine-tuned, cheap model replaces the original specialist. Same alignment, fraction of the cost.
+1. **Cold start**: No specialists or untrained specialists. Few proposals arrive. Lead stays below k. System blocks for human. Human decisions generate exemplars.
+2. **Calibration**: More specialists are added. Multiple proposals per round start arriving. If specialists agree, the lead grows and consensus becomes possible.
+3. **Autonomous consensus**: Specialists consistently agree on transitions. The lead reaches k quickly, and the system acts without human intervention.
+4. **Pruning**: Redundant and underperforming specialists are disabled. Fewer proposals per round, but the remaining specialists agree. Cost drops.
+5. **Champion**: One specialist handles the task solo. With k=1, consensus is immediate from a single proposal.
+6. **Collapsed**: A fine-tuned, cheap model replaces the original specialist. Same accuracy, fraction of the cost.
 
-The strategy never changes — the same `alignmentWeightedMargin` algorithm handles every stage. What changes is the **alignment scores** feeding into it.
+The strategy never changes — the same `aheadByK` algorithm handles every stage. What changes is **how many specialists propose** and **how much they agree**.
 
 ## Related Concepts
 

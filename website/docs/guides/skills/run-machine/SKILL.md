@@ -52,13 +52,12 @@ Session ID:     a1b2c3d4-...
 
 1. DIAL creates a session from the machine definition
 2. Registers all specialists defined in the machine
-3. Runs decision cycles (Propose, Vote, Arbitrate, Execute)
+3. Runs decision cycles (Propose, Arbitrate, Execute)
 4. Terminates when `goalState` is reached
 
 ## Verbose Output Shows
 
 - Each proposal submitted by proposers
-- Each vote cast by voters
 - Consensus evaluation results
 - Transition execution details
 

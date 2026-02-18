@@ -52,13 +52,6 @@
             "$ref": "#/$defs/specialistConfig"
           }
         },
-        "voters": {
-          "type": "object",
-          "description": "Voter specialists registered for this state",
-          "additionalProperties": {
-            "$ref": "#/$defs/specialistConfig"
-          }
-        },
         "arbiter": {
           "$ref": "#/$defs/arbiterConfig",
           "description": "Arbiter configuration for this state (overrides machine-level)"
@@ -67,7 +60,7 @@
     },
     "specialistConfig": {
       "type": "object",
-      "description": "Configuration for a specialist (proposer or voter)",
+      "description": "Configuration for a proposer specialist",
       "properties": {
         "strategyFn": {
           "type": "string",
@@ -105,7 +98,7 @@
           "type": "integer",
           "minimum": 1,
           "default": 1,
-          "description": "Votes the leading proposal must be ahead by for consensus"
+          "description": "Proposals the leading transition must be ahead by for consensus"
         },
         "modelId": {
           "type": "string",

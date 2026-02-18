@@ -153,11 +153,6 @@ cat > review.json << 'EOF'
         "ai-reviewer": {
           "modelId": "openai/gpt-4o-mini"
         }
-      },
-      "voters": {
-        "quality-check": {
-          "strategyFn": "async (ctx) => ({ voteFor: 'A', reasoning: 'Approving' })"
-        }
       }
     },
     "needs_work": {
@@ -200,9 +195,6 @@ The CLI accepts JSON files conforming to the `MachineDefinition` type:
           "webhookTokenName": "string"
         }
       },
-      "voters": {
-        "<specialist-id>": { /* same options as proposers */ }
-      },
       "arbiter": {
         "aheadByK": "number (default: 1)"
       }
@@ -220,8 +212,7 @@ The CLI:
 3. Registers a built-in deterministic proposer (picks the first available transition)
 4. Loops until the session reaches the goal state:
    - Solicits proposals from all registered proposers
-   - If 2+ proposals, solicits pairwise votes from all voters
-   - Evaluates consensus
+   - Evaluates consensus (ahead-by-k)
    - Executes the winning transition
 5. Prints the result and exits
 
@@ -233,7 +224,7 @@ The CLI:
 | `Cannot find file: <path>` | File doesn't exist | Check the file path |
 | `Invalid JSON: <message>` | Malformed JSON | Fix the JSON syntax |
 | `No transitions available from current state` | Terminal state without transitions to default | Add transitions or fix machine design |
-| `No consensus reached: <reason>` | Voting didn't produce a winner | Add voters or adjust aheadByK |
+| `No consensus reached: <reason>` | Proposals didn't produce a winner | Add proposers or adjust aheadByK |
 
 ## Related
 

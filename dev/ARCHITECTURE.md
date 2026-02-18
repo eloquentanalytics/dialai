@@ -28,7 +28,7 @@ dialai/
 ├── src/
 │   └── dialai/                 # Core framework implementation
 │       ├── core/               # State machine, session management
-│       ├── specialists/        # Proposer, voter, tool interfaces
+│       ├── specialists/        # Proposer, tool interfaces
 │       ├── strategies/         # Pluggable strategy implementations
 │       ├── arbitration/        # Consensus evaluation logic
 │       ├── types/              # TypeScript type definitions
@@ -181,7 +181,7 @@ Runs on every PR and push to `main`:
 **Integration Tests** - Separate directory:
 - Location: `tests/integration/`
 - Purpose: Test multiple modules working together
-- Example: Full decision cycle (propose → vote → arbitrate → execute)
+- Example: Full decision cycle (propose → arbitrate → execute)
 
 **Fixtures** - Shared test utilities:
 - Location: `tests/fixtures/`

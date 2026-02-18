@@ -4,28 +4,24 @@ sidebar_position: 11
 
 # `evaluateConsensus(sessionId): Promise<ConsensusResult>`
 
-Evaluates whether consensus has been reached for a session without executing any transition. This is a read-only operation that checks the current state of proposals and votes.
+Evaluates whether consensus has been reached for a session without executing any transition. This is a read-only operation that checks the current state of proposals.
 
 ## CLI Usage
 
-Check consensus state programmatically after proposals and votes have been submitted:
+Check consensus state programmatically after proposals have been submitted:
 
 ```typescript
-import { createSession, registerProposer, registerVoter, registerArbiter, submitProposal, submitVote, evaluateConsensus } from "dialai";
+import { createSession, registerProposer, registerArbiter, submitProposal, evaluateConsensus } from "dialai";
 
 // Setup
 const session = await createSession(machine);
 await registerProposer({ specialistId: "p1", machineName: machine.machineName, strategyFnName: "firstAvailable" });
 await registerProposer({ specialistId: "p2", machineName: machine.machineName, strategyFnName: "random" });
-await registerVoter({ specialistId: "v1", machineName: machine.machineName, strategyFnName: "preferA" });
 await registerArbiter({ specialistId: "arbiter", machineName: machine.machineName, strategyFnName: "aheadByK", threshold: 1 });
 
 // Submit proposals
 const propA = await submitProposal(session.sessionId, "p1");
 const propB = await submitProposal(session.sessionId, "p2");
-
-// Submit vote
-await submitVote(session.sessionId, "v1", undefined, propA.proposalId, propB.proposalId);
 
 // Check consensus (read-only)
 const result = await evaluateConsensus(session.sessionId);
@@ -38,7 +34,7 @@ console.log(result);
 {
   consensusReached: true,
   winningProposalId: "abc123-...",
-  reasoning: "Proposal ahead by 1 vote (threshold: 1)"
+  reasoning: "Proposal ahead by 1 (threshold: 1)"
 }
 ```
 
@@ -55,9 +51,8 @@ Or if no consensus:
 ## What Happened
 
 1. The function gathered all proposals for the current round
-2. It gathered all votes comparing those proposals
-3. The registered arbiter's strategy evaluated the votes
-4. The result indicates whether consensus was reached, without modifying any state
+2. The registered arbiter's strategy counted proposals per transition
+3. The result indicates whether consensus was reached, without modifying any state
 
 ## Programmatic Usage
 
@@ -72,7 +67,7 @@ if (result.consensusReached) {
   await submitArbitration(session.sessionId, session.currentRoundId);
 } else {
   console.log("No consensus yet:", result.reasoning);
-  // Request more votes or proposals
+  // Request more proposals or wait for human
 }
 ```
 

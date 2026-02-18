@@ -13,7 +13,7 @@ Every agentic AI system is a state machine: the agent occupies a state, takes an
 This doesn't limit what you can model; it clarifies *where decisions happen* so they can be calibrated. You place decision points at the boundaries where delegation risk matters. An agent's internal tool-call loop can remain opaque—DIAL measures the outcomes at the states you care about.
 
 Open-ended tasks fit naturally:
-- **Document generation**: Proposals *are* the candidate documents. Specialists propose drafts, voters compare them, the human picks or edits the winner.
+- **Document generation**: Proposals *are* the candidate documents. Specialists propose drafts, the human picks or edits the winner.
 - **Agentic workflows**: The goal state is the agent's normal operating mode. It transitions out for decisions that need deliberation and back when resolved.
 - **Research and exploration**: Model as a loop—the agent explores, then a decision determines whether findings are sufficient or more exploration is needed.
 
@@ -123,10 +123,6 @@ transitions: {
 
 A record of proposer specialists registered for this state. Each proposer can be configured with one of four execution modes.
 
-### `voters` (optional)
-
-A record of voter specialists registered for this state. Each voter can be configured with one of four execution modes.
-
 ### `arbiter` (optional)
 
 Arbiter configuration for this state, including consensus threshold and optional reasoning synthesis.
@@ -154,15 +150,6 @@ Machines can include embedded AI specialist and arbiter configuration at the sta
         }
       },
 
-      "voters": {
-        "voter-1": {
-          "strategyFn": "async (ctx) => ({ voteFor: 'A', reasoning: 'Proposal A is more aligned' })"
-        },
-        "llm-voter-2": {
-          "modelId": "openai/gpt-4o-mini"
-        }
-      },
-
       "arbiter": {
         "aheadByK": 2
       }
@@ -179,12 +166,11 @@ Machines can include embedded AI specialist and arbiter configuration at the sta
 | `prompt` | `string` | Decision prompt for this state |
 | `transitions` | `Record<string, string>` | Map of transition names to target states |
 | `proposers` | `Record<string, SpecialistConfig>` | Proposers registered for this state |
-| `voters` | `Record<string, SpecialistConfig>` | Voters registered for this state |
 | `arbiter` | `ArbiterConfig` | Arbiter configuration for this state |
 
 ### Specialist Configuration in JSON
 
-Each proposer or voter supports the same [four execution modes](./registering-specialists.md#execution-modes) as programmatic registration. In JSON, function values are represented as strings:
+Each proposer supports the same [four execution modes](./registering-specialists.md#execution-modes) as programmatic registration. In JSON, function values are represented as strings:
 
 ```json
 {
@@ -207,7 +193,7 @@ Each proposer or voter supports the same [four execution modes](./registering-sp
 }
 ```
 
-**Note:** Human specialists are registered separately via `registerVoter` or `registerProposer` with `isHuman: true`—they are not defined in the machine JSON. See [Registering Specialists](./registering-specialists.md) for the full configuration reference and [Implementing Strategies](./implementing-strategies.md) for strategy function details.
+**Note:** Human specialists are registered separately via `registerProposer` with `isHuman: true`—they are not defined in the machine JSON. Human proposals always win. See [Registering Specialists](./registering-specialists.md) for the full configuration reference and [Implementing Strategies](./implementing-strategies.md) for strategy function details.
 
 ### Arbiter Configuration
 
@@ -215,7 +201,7 @@ The `arbiter` block controls consensus evaluation:
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `aheadByK` | `number` | `1` | Votes the leading proposal must be ahead by |
+| `aheadByK` | `number` | `1` | Proposals the leading transition must be ahead by |
 | `modelId` | `string` | — | LLM for reasoning synthesis (optional) |
 | `contextFn` | `string` | — | Context function for reasoning synthesis |
 
@@ -324,7 +310,7 @@ const agentLoop: MachineDefinition = {
 
 ### Document Generation
 
-For open-ended generation tasks, the specialist proposals *are* the candidate outputs. Voters compare drafts, and the human selects or edits the winner.
+For open-ended generation tasks, the specialist proposals *are* the candidate outputs. Each proposal endorses a transition, and the leading transition wins once it is ahead by k. The human can always override by proposing directly.
 
 ```typescript
 const docGen: MachineDefinition = {

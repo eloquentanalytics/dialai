@@ -20,13 +20,13 @@ A framework for *programming*, not prompting, language models. Optimizers like M
 
 **[github.com/tensorzero/tensorzero](https://github.com/tensorzero/tensorzero)** · Apache 2.0
 
-Unifies an LLM gateway, observability, and optimization. Collects human feedback in production to optimize prompts and models with built-in A/B testing. Its optimization loop (inference, feedback, optimize) mirrors DIAL's cycle (propose, vote, consensus, refine).
+Unifies an LLM gateway, observability, and optimization. Collects human feedback in production to optimize prompts and models with built-in A/B testing. Its optimization loop (inference, feedback, optimize) mirrors DIAL's cycle (propose, consensus, refine).
 
 ### TextGrad
 
 **[github.com/zou-group/textgrad](https://github.com/zou-group/textgrad)** · Stanford / Zou Group
 
-Backpropagates textual feedback from LLMs to improve components of compound AI systems, using PyTorch-like abstractions on natural language. Like DIAL, it iteratively improves outputs using feedback signals: TextGrad via "textual gradients," DIAL via vote results and alignment scores.
+Backpropagates textual feedback from LLMs to improve components of compound AI systems, using PyTorch-like abstractions on natural language. Like DIAL, it iteratively improves outputs using feedback signals: TextGrad via "textual gradients," DIAL via consensus results and alignment scores.
 
 ## Evaluation
 
@@ -34,7 +34,7 @@ Backpropagates textual feedback from LLMs to improve components of compound AI s
 
 **[github.com/UKGovernmentBEIS/inspect_ai](https://github.com/UKGovernmentBEIS/inspect_ai)** · UK AI Safety Institute
 
-Structured, reproducible LLM evaluations with opinionated primitives (Dataset, Task, Solver, Scorer) and 100+ built-in evals. Its Solver/Scorer pattern parallels DIAL's Specialist/Vote pattern, and both support multi-turn agent workflows with customizable scoring.
+Structured, reproducible LLM evaluations with opinionated primitives (Dataset, Task, Solver, Scorer) and 100+ built-in evals. Its Solver/Scorer pattern parallels DIAL's Specialist/Consensus pattern, and both support multi-turn agent workflows with customizable scoring.
 
 ### promptfoo
 
@@ -60,7 +60,7 @@ Multi-agent cooperation via automated chat, with AgentOptimizer for iteratively 
 
 **[github.com/crewAIInc/crewAI](https://github.com/crewAIInc/crewAI)**
 
-Role-based multi-agent orchestration with "Crews" and "Flows." Its role-based design parallels DIAL's proposer/voter roles, and a CrewAI agent can serve as a DIAL specialist.
+Role-based multi-agent orchestration with "Crews" and "Flows." Its role-based design parallels DIAL's proposer roles, and a CrewAI agent can serve as a DIAL specialist.
 
 ## Agent Training
 
@@ -68,7 +68,7 @@ Role-based multi-agent orchestration with "Crews" and "Flows." Its role-based de
 
 **[github.com/microsoft/agent-lightning](https://github.com/microsoft/agent-lightning)** · Microsoft · MIT
 
-Makes agents trainable via reinforcement learning with hierarchical credit assignment, determining how much each LLM call contributed to the outcome. Like DIAL, it decomposes multi-step behavior into individually evaluable decisions, using RL rewards where DIAL uses human-alignment votes.
+Makes agents trainable via reinforcement learning with hierarchical credit assignment, determining how much each LLM call contributed to the outcome. Like DIAL, it decomposes multi-step behavior into individually evaluable decisions, using RL rewards where DIAL uses human-alignment scores.
 
 ### ADAS
 

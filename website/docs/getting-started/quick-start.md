@@ -78,13 +78,12 @@ That's it. One cycle, done.
 
 ## Step 3: Add a Human Specialist
 
-The real point of DIAL is that humans can participate. Let's walk through the full API to see how a human votes to complete the task.
+The real point of DIAL is that humans can participate. Let's walk through the full API to see how a human submits a proposal.
 
 ```typescript
 import {
   createSession,
   submitProposal,
-  submitVote,
   submitArbitration,
 } from "dialai";
 
@@ -93,8 +92,8 @@ const session = await createSession(machine);
 console.log(session.currentState);   // "pending"
 console.log(session.currentRoundId); // "e5f6g7h8-..."
 
-// Two specialists each submit a proposal
-const proposalComplete = await submitProposal(
+// Two AI specialists each submit a proposal
+const proposalA = await submitProposal(
   session.sessionId,
   "ai-specialist",
   session.currentRoundId,
@@ -103,7 +102,7 @@ const proposalComplete = await submitProposal(
   { source: "automated-check" }
 );
 
-const proposalWait = await submitProposal(
+const proposalB = await submitProposal(
   session.sessionId,
   "contrarian-ai",
   session.currentRoundId,
@@ -111,28 +110,16 @@ const proposalWait = await submitProposal(
   "I agree, let's complete it"
 );
 
-// A human votes for proposal A (complete)
-await submitVote(
-  session.sessionId,
-  "human-reviewer",
-  session.currentRoundId,
-  proposalComplete.proposalId,
-  proposalWait.proposalId,
-  "A",
-  "Yes, let's complete this task",
-  { reviewedBy: "jane@example.com" }
-);
-
-// Submit arbitration - checks for consensus
+// Submit arbitration - checks for consensus (both propose "complete", ahead by k=1)
 const result = await submitArbitration(session.sessionId, session.currentRoundId);
-console.log(result.executed);    // true (human vote created consensus)
+console.log(result.executed);    // true (both proposers agreed)
 console.log(result.toState);     // "done"
 
 console.log(session.currentState); // "done"
 console.log(session.history);      // [{ fromState: "pending", toState: "done", ... }]
 ```
 
-Human votes count like any other vote during consensus evaluation. **Human primacy** means that when AI cannot reach consensus, only a human can force a decision by calling `submitArbitration` with an explicit transition.
+**Human primacy** means that when AI cannot reach consensus, a human can force a decision by calling `submitArbitration` with an explicit transition. A human proposal always wins.
 
 ## Step 4: Use the CLI
 
@@ -155,10 +142,9 @@ Session ID:     a1b2c3d4-...
 
 1. **Session created** in `initialState` (`pending`) with a fresh `currentRoundId`
 2. **Proposers solicited**: each returns a proposed transition (`complete`)
-3. **Votes solicited** (if 2+ proposals): pairwise comparisons
-4. **Arbitration submitted**: guards checked, ahead-by-k consensus evaluated
-5. **Transition executed**: `currentState` moves to `done`, `currentRoundId` regenerated
-6. **Cycle repeats** until `currentState === goalState` (already there, done)
+3. **Arbitration submitted**: guards checked, ahead-by-k consensus evaluated
+4. **Transition executed**: `currentState` moves to `done`, `currentRoundId` regenerated
+5. **Cycle repeats** until `currentState === goalState` (already there, done)
 
 ## Next Steps
 

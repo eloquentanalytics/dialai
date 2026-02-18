@@ -49,7 +49,7 @@
 - Dollar-denominated cost data per decision
 - Alignment percentages against human baseline
 - Break-even horizon calculations
-- Auditability: every decision, every vote, every transition is recorded
+- Auditability: every decision, every proposal, every transition is recorded
 
 ---
 
@@ -122,7 +122,7 @@ DSPy optimizes prompts but doesn't measure ongoing human alignment. TensorZero o
 
 > **DIAL** (Dynamic Integration between AI and Labor) measures whether AI can reliably replace human decisions — and at what cost.
 >
-> Model any decision process as a state machine. Register AI and human specialists. DIAL runs decision cycles where specialists propose transitions, vote on them, and reach consensus. Over time, the system progressively delegates to the most human-aligned AI specialist while tracking exact cost and quality data.
+> Model any decision process as a state machine. Register AI and human specialists. DIAL runs decision cycles where specialists propose transitions and reach consensus. Over time, the system progressively delegates to the most human-aligned AI specialist while tracking exact cost and quality data.
 >
 > The result: for every step in your process, you know whether AI can handle it, which model does it best, what it costs, and how often a human needs to check.
 

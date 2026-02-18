@@ -15,7 +15,7 @@ This directory contains modular skills that AI agents can download and use to in
 | [run-machine](./run-machine/SKILL.md) | Execute a DIAL state machine from the CLI |
 | [create-machine](./create-machine/SKILL.md) | Create a state machine definition JSON |
 | [add-specialists](./add-specialists/SKILL.md) | Configure AI and human specialists |
-| [decision-cycles](./decision-cycles/SKILL.md) | Understand Propose, Vote, Arbitrate, Execute |
+| [decision-cycles](./decision-cycles/SKILL.md) | Understand Propose, Arbitrate, Execute |
 | [programmatic-usage](./programmatic-usage/SKILL.md) | Use DIAL in TypeScript/JavaScript code |
 | [mcp-server](./mcp-server/SKILL.md) | Run DIAL as an MCP server |
 | [troubleshooting](./troubleshooting/SKILL.md) | Debug common issues |

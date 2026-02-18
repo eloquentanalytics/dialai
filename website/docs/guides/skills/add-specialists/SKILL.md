@@ -1,6 +1,6 @@
 ---
 name: dial-add-specialists
-description: Add AI or human specialists to a DIAL machine. Use when configuring proposers and voters.
+description: Add AI or human specialists to a DIAL machine. Use when configuring proposers.
 ---
 
 # Add Specialists
@@ -36,19 +36,6 @@ Configure AI and human participants in a decision process.
 | `systemPrompt` | No | Custom instructions for the specialist |
 | `temperature` | No | Sampling temperature (default: 0.7) |
 
-## AI Voter
-
-```json
-{
-  "id": "ai-voter",
-  "strategy": "llm",
-  "config": {
-    "model": "claude-sonnet-4-20250514",
-    "systemPrompt": "Vote for the proposal that best serves the project goals."
-  }
-}
-```
-
 ## Human Specialist
 
 ```json
@@ -65,7 +52,7 @@ npx dialai machine.json --human
 
 ## Deterministic Specialist
 
-Always proposes or votes for a specific action:
+Always proposes a specific action:
 
 ```json
 {
@@ -83,60 +70,37 @@ Useful for testing or default behaviors.
 
 ### Human Override
 
-AI proposes, human decides:
+AI proposes, human has final say:
 
 ```json
 {
   "specialists": {
     "proposers": [
-      { "id": "ai", "strategy": "llm", "config": {"model": "claude-sonnet-4-20250514"} }
-    ],
-    "voters": [
+      { "id": "ai", "strategy": "llm", "config": {"model": "claude-sonnet-4-20250514"} },
       { "id": "human", "strategy": "human" }
     ]
   }
 }
 ```
 
+Human proposals always win. AI specialists must use strategy invocation.
+
 ### AI Consensus
 
-Multiple AI voters must agree:
+Multiple AI proposers with ahead-by-k:
 
 ```json
 {
   "specialists": {
     "proposers": [
-      { "id": "ai-proposer", "strategy": "llm", "config": {"model": "claude-sonnet-4-20250514"} }
-    ],
-    "voters": [
-      { "id": "ai-voter-1", "strategy": "llm", "config": {"model": "claude-sonnet-4-20250514"} },
-      { "id": "ai-voter-2", "strategy": "llm", "config": {"model": "claude-sonnet-4-20250514"} },
-      { "id": "ai-voter-3", "strategy": "llm", "config": {"model": "claude-sonnet-4-20250514"} }
+      { "id": "ai-proposer-1", "strategy": "llm", "config": {"model": "claude-sonnet-4-20250514"} },
+      { "id": "ai-proposer-2", "strategy": "llm", "config": {"model": "claude-sonnet-4-20250514"} },
+      { "id": "ai-proposer-3", "strategy": "llm", "config": {"model": "claude-sonnet-4-20250514"} }
     ]
   },
   "arbiter": {
-    "strategy": "supermajority",
-    "threshold": 0.66
+    "strategy": "ahead-by-k",
+    "k": 2
   }
 }
 ```
-
-### Mixed Panel
-
-AI and human voters together:
-
-```json
-{
-  "specialists": {
-    "proposers": [
-      { "id": "ai-proposer", "strategy": "llm", "config": {"model": "claude-sonnet-4-20250514"} }
-    ],
-    "voters": [
-      { "id": "ai-voter", "strategy": "llm", "config": {"model": "claude-sonnet-4-20250514"} },
-      { "id": "human-voter", "strategy": "human" }
-    ]
-  }
-}
-```
-
-Human specialists can provide explicit votes and force arbitration decisions. AI specialists must use strategy invocation.

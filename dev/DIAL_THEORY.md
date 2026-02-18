@@ -27,14 +27,14 @@
 
 - Sessions as finite state machines with a default state.
 - Drift: the system is not in its default state and must act.
-- Specialists: proposers and voters — human or AI. Arbitration is built-in via `evaluateConsensus`.
+- Specialists: proposers — human or AI. Each proposal endorses a transition. Arbitration is built-in via `evaluateConsensus`.
 - Alignment score: a per-specialist, per-state measure of how often the specialist's choice matches the human's choice. Starts at 0% (no data). Rises with demonstrated alignment.
 - The risk dial r in [0,1]: a state-level parameter that governs how much demonstrated alignment is required before the system acts autonomously.
 - The alignment score measures demonstrated ability to predict the human's choice. It is not a measure of task competence — it is a measure of human-alignment under the axiom that the human's choice is the correct one.
 
 ## The Search Space: From Combinatorial Explosion to Tractable Optimization
 
-- **The naive formulation.** The most unoptimized version of the question "which AI can do this task?" is a combinatorial explosion. Cross every possible model with every possible prompt, generate exponentially more pairwise votes, then compare all of that to the human choice. This is intractable — but it is the honest worst case, and DIAL's design started by staring at it directly.
+- **The naive formulation.** The most unoptimized version of the question "which AI can do this task?" is a combinatorial explosion. Cross every possible model with every possible prompt, generate exponentially more pairwise comparisons, then compare all of that to the human choice. This is intractable — but it is the honest worst case, and DIAL's design started by staring at it directly.
 - **The tractable reduction.** DIAL reduces the explosion to a manageable search by constraining two axes:
   - Not every possible model, but a **handful that span the range of cost, quality, and latency** — from cheap/fast/small to expensive/slow/large. This covers the cost-quality frontier without exhaustive enumeration.
   - Not every possible prompt, but a **best-first-pass prompt per state** — the decision prompt lives in the state machine's metadata, shared by all specialists for that state.
@@ -80,17 +80,17 @@ This is not "prompt engineering by hand." The counseling pattern is structured, 
 
 ## The Decision Cycle
 
-- Five phases: proposal solicitation, proposal submission, pairwise voting, arbitration, execution.
-- **Adaptive pairwise voting via Swiss tournament pairing.** The system does not exhaustively enumerate all O(N²) proposal pairs before evaluating consensus. Instead, it uses a Swiss tournament pairing algorithm to distribute votes: proposals with similar accumulated support are paired first (where the outcome is most uncertain and informative), voters are round-robined through the selected pairs, and the consensus condition is checked after each vote. If the ahead-by-k threshold is met, voting stops immediately — remaining pairs are never evaluated. The O(N²) exhaustive comparison is the theoretical worst case; the system is designed expecting consensus to resolve well before reaching it. In practice, a small number of votes from aligned specialists is often sufficient to cross the threshold, and the cost of voting scales with the difficulty of reaching agreement, not with the number of proposals.
-- The ahead-by-k consensus: how votes accumulate, how the risk dial governs the autonomy threshold.
-- Human votes as immediate consensus triggers — because the human is always right.
+- Three phases: proposal solicitation, consensus check (ahead-by-k), execution.
+- Each proposal endorses a transition. The arbiter counts proposals per transition and checks if the leading transition is ahead by k endorsements. Consensus is checked after each arriving proposal. If the ahead-by-k threshold is met, the cycle stops — remaining solicitations are unnecessary.
+- The ahead-by-k consensus: how proposal endorsements accumulate, how the risk dial governs the autonomy threshold.
+- Human proposals as immediate consensus triggers — because the human is always right. A human proposal always wins.
 - The cycle as a repeated process that generates observable data about how well each AI specialist predicts the human.
 
 ### Semantic Isolation: What the LLM Actually Sees
 
-The LLM specialist is deliberately isolated from the framework's orchestration semantics. It does not know it is in DIAL. It does not know it is a "proposer" or a "voter" in a multi-agent system. Its context window contains:
+The LLM specialist is deliberately isolated from the framework's orchestration semantics. It does not know it is in DIAL. It does not know it is a "proposer" in a multi-agent system. Its context window contains:
 
-1. **History** — A flat sequence of (transition name, metaJSON, reasoning) tuples representing the session's prior moves. This is presented as domain-native narrative: "here is what has happened so far." The specialist sees decisions and their outcomes, not proposals and votes.
+1. **History** — A flat sequence of (transition name, metaJSON, reasoning) tuples representing the session's prior moves. This is presented as domain-native narrative: "here is what has happened so far." The specialist sees decisions and their outcomes, not the internal deliberation mechanics.
 
 2. **Exemplars** — Past decisions from this or similar sessions where a human's choice is known. Presented as: "in a similar situation, this was decided." Not: "another specialist proposed this." The exemplar is (context, human-chosen transition), framed as domain precedent.
 
@@ -102,7 +102,7 @@ The specialist's **output** is a tool call: the tool name is the chosen transiti
 
 This semantic isolation is a deliberate design choice with three consequences:
 
-- **The specialist reasons about the domain, not the framework.** It evaluates game states, document qualities, ticket severities — whatever the task is. It never reasons about "proposers," "voters," or "consensus."
+- **The specialist reasons about the domain, not the framework.** It evaluates game states, document qualities, ticket severities — whatever the task is. It never reasons about "proposers," "consensus," or "endorsements."
 - **Exemplars appear as domain precedent, not as system artifacts.** "In this situation, the decision was X" — not "a human specialist overrode the system and selected X." The learning signal is clean.
 - **The framework is fully substitutable.** Because the LLM has no coupling to DIAL's mechanics, the same prompt and context assembly can be used with any orchestration layer. DIAL's value is in the measurement, not in the LLM's awareness of it.
 
@@ -151,7 +151,7 @@ Not all exemplars are equally valuable. A human's forced decision at a state whe
 
 - At each decision point, proposals define a discrete distribution over candidate transitions.
 - The field is oriented toward what the human would choose. There is no separate "correct" answer — the human's choice is the correct answer, by axiom.
-- Voting concentrates mass: each vote is evidence about which transition the human would endorse.
+- Proposal endorsements concentrate mass: each proposal is evidence about which transition the human would endorse.
 - The risk dial governs how much the system trusts AI-generated evidence about the human's likely choice.
 - Support function S(p_i) and the consensus condition S(p_i) - max S(p_j) >= k.
 - At r=0: only human evidence counts (the system has no confidence in predicting the human). At r=1: AI evidence counts fully (the system trusts that high-alignment AI specialists predict the human reliably).
@@ -160,8 +160,8 @@ Not all exemplars are equally valuable. A human's forced decision at a state whe
 
 - After rounds with human participation, the system measures each specialist's alignment.
 - Alignment score = matching choices / total comparisons with human. A specialist that agrees with the human 90% of the time has an alignment score of 90%. The remaining 10% is not "the human being wrong" — it is the specialist failing to predict the human. The specialist's context was insufficient to reach the same conclusion the human reached.
-- For proposers: did the specialist choose the same transition the human endorsed? For voters: did the specialist vote for the proposal the human chose?
-- Alignment scores are descriptive, not prescriptive — they measure past performance but do not change how votes are tallied. Every AI vote counts as one vote. The alignment score informs delegation decisions, not consensus mechanics.
+- For proposers: did the specialist choose the same transition the human endorsed?
+- Alignment scores are descriptive, not prescriptive — they measure past performance but do not change how proposals are counted. Every proposal counts as one endorsement. The alignment score informs delegation and pruning decisions, not consensus mechanics.
 - This creates a feedback loop: human decisions generate training signal, alignment scores update, delegation thresholds are approached.
 
 ## The Collapse
@@ -169,19 +169,19 @@ Not all exemplars are equally valuable. A human's forced decision at a state whe
 ### Concentration
 - As a specialist demonstrates consistent human alignment, its alignment score rises.
 - When a specialist's alignment score exceeds the risk dial threshold, the system is confident enough to delegate to that specialist without human participation.
-- The full voting apparatus becomes redundant — the system has empirical evidence that this specialist predicts the human reliably.
+- The full deliberation apparatus becomes redundant — the system has empirical evidence that this specialist predicts the human reliably.
 
 ### Levels of Collapse (The Dial Settings)
-- **Full deliberation** (r low, or alignment scores low): All specialists propose, all vote, human required. Expensive, slow, maximum confidence. The human decides directly.
-- **Automated voting** (r moderate, alignment demonstrated): The proposal/voting system runs on its own. Multiple AI specialists still deliberate, but their accumulated alignment with human judgment is sufficient for consensus without human participation. The system is confident the AI committee will reach the same conclusion the human would.
-- **Single champion** (r high, one specialist dominant): One hyper-trusted specialist — the one with the highest demonstrated human-alignment — proposes alone. The field has collapsed to a single predictor of the human. Cheap guardrails replace expensive voting.
+- **Full deliberation** (r low, or alignment scores low): All specialists propose, human required when no consensus. Expensive, slow, maximum confidence. The human decides directly.
+- **Autonomous consensus** (r moderate, alignment demonstrated): The proposal system runs on its own. Multiple AI specialists still propose, but their accumulated alignment with human judgment means they agree often enough for ahead-by-k consensus without human participation.
+- **Single champion** (r high, one specialist dominant): One hyper-trusted specialist — the one with the highest demonstrated human-alignment — proposes alone. With k=1, a single proposal is enough. The field has collapsed to a single predictor of the human.
 - **Deterministic execution**: The terminal state. Every reachable state has a champion. The DIAL structure is functionally a LangGraph — one function call per state. The deliberation machinery exists only as a safety net.
 
 ### What Collapse Means
 - The collapse is the system's progressive discovery that certain decisions are narrow enough for AI to handle. The AI doesn't become "better" at the task — it demonstrates that it can predict what the human would do, for that particular class of decision.
 - The decisions that resist collapse — where AI specialists cannot reliably predict the human — are precisely the decisions that require the human's broader context. DIAL surfaces this distinction empirically rather than requiring it to be specified at design time.
-- At each point along the collapse, the system has accumulated precise data: the cost in dollars (API spend per proposal, per vote), the cost in time (latency per decision cycle), and the quality (alignment rate with human choices). This gives an exact answer to the question: "what does it cost to delegate this decision to AI, and at what quality level?"
-- **Break-even horizon.** The calibration cost — running multiple specialists, collecting votes, requiring human participation during cold start — is a fixed upfront investment that amortizes across all future decisions of that type. For a decision made at frequency F with human cost-per-decision C_h, the break-even point is the number of decisions N where: `calibration_cost < (C_h - C_ai) × N`. Because C_h is dominated by human time (salary, attention, latency) and C_ai is dominated by API costs (cents per call), the gap widens with decision value and frequency. For any moderately high-value recurring decision, the economics are unambiguously favorable — the question is not *whether* calibration pays for itself but *how quickly*. DIAL's cost tracking (per-proposal and per-vote USD, latency, and token counts) provides the data to compute this break-even point empirically rather than estimating it.
+- At each point along the collapse, the system has accumulated precise data: the cost in dollars (API spend per proposal), the cost in time (latency per decision cycle), and the quality (alignment rate with human choices). This gives an exact answer to the question: "what does it cost to delegate this decision to AI, and at what quality level?"
+- **Break-even horizon.** The calibration cost — running multiple specialists, requiring human participation during cold start — is a fixed upfront investment that amortizes across all future decisions of that type. For a decision made at frequency F with human cost-per-decision C_h, the break-even point is the number of decisions N where: `calibration_cost < (C_h - C_ai) × N`. Because C_h is dominated by human time (salary, attention, latency) and C_ai is dominated by API costs (cents per call), the gap widens with decision value and frequency. For any moderately high-value recurring decision, the economics are unambiguously favorable — the question is not *whether* calibration pays for itself but *how quickly*. DIAL's cost tracking (per-proposal USD, latency, and token counts) provides the data to compute this break-even point empirically rather than estimating it.
 - The human's ongoing role after collapse is quality control — periodic participation that generates new alignment data, confirms the champion is still predicting correctly, and feeds the trip line. DIAL quantifies the cost of this quality control too: how often must a human participate to maintain confidence?
 
 ### Node-by-Node Collapse
@@ -227,7 +227,7 @@ The nirvana state represents the **theoretical minimum cost** for AI execution o
 The following are interpretive lenses — theoretical frameworks that DIAL's mechanics can be mapped onto after the fact. They were not used to derive the framework's design. They are included because they suggest testable predictions and connect DIAL to established research traditions, not because they add formal rigor the plain-language description lacks. Each section states a concrete prediction the lens generates; if we cannot state one, the lens does not belong here.
 
 ### Mechanism Design / Social Choice Theory
-- DIAL as a dynamic voting mechanism where the electorate evolves based on track record of predicting the human.
+- DIAL as a dynamic consensus mechanism where the specialist pool evolves based on track record of predicting the human.
 - Dictator emergence that is empirically justified — the dictator is the specialist that best predicts the human.
 - Arrow's impossibility theorem doesn't apply: dictatorial outcomes are explicitly the goal (when earned).
 - The risk dial as the mechanism designer's tradeoff between convergence speed and misalignment risk.

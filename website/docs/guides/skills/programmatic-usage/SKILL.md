@@ -32,9 +32,7 @@ console.log('Final state:', session.currentState);
 | `getSession` | Check session state |
 | `getSessions` | List all active sessions |
 | `registerProposer` | Add a proposer to a session |
-| `registerVoter` | Add a voter to a session |
 | `submitProposal` | Submit a transition proposal (with roundId) |
-| `submitVote` | Cast a vote (with roundId) |
 | `submitArbitration` | Evaluate consensus and execute transition |
 | `executeTransition` | Apply a transition directly |
 
@@ -44,9 +42,7 @@ console.log('Final state:', session.currentState);
 import {
   createSession,
   registerProposer,
-  registerVoter,
   submitProposal,
-  submitVote,
   submitArbitration,
   getSession
 } from 'dialai';
@@ -63,10 +59,6 @@ async function runMachine(machineDefinition: MachineDefinition) {
     config: { model: 'claude-sonnet-4-20250514' }
   });
 
-  await registerVoter(session.sessionId, 'human-voter', {
-    strategy: 'human'
-  });
-
   // 3. Run decision cycles until goal
   let current = await getSession(session.sessionId);
 
@@ -78,9 +70,6 @@ async function runMachine(machineDefinition: MachineDefinition) {
       current.currentRoundId
     );
     console.log('Proposal:', proposal);
-
-    // Submit vote (strategy invocation - omit voteFor)
-    // Note: if only one proposal, voting may be skipped
 
     // Submit arbitration - evaluates and executes if consensus
     const result = await submitArbitration(
@@ -179,7 +168,6 @@ import type {
   MachineDefinition,
   Session,
   Proposal,
-  Vote,
   TransitionRecord,
   ArbitrationResult
 } from 'dialai';

@@ -13,14 +13,10 @@ import type {
   TransitionRecord,
   Specialist,
   Proposer,
-  Voter,
   ProposerContext,
-  VoterContext,
   Proposal,
-  Vote,
   ConsensusResult,
   ArbitrationResult,
-  VoteChoice,
 } from "dialai";
 ```
 
@@ -104,7 +100,7 @@ interface TransitionRecord {
 Union type for all specialist roles.
 
 ```typescript
-type Specialist = Proposer | Voter | Arbiter;
+type Specialist = Proposer | Arbiter;
 ```
 
 ### Proposer
@@ -132,30 +128,6 @@ interface Proposer {
 }
 ```
 
-### Voter
-
-A specialist that votes on proposals.
-
-```typescript
-interface Voter {
-  role: "voter";
-  specialistId: string;
-  machineName: string;
-  isHuman?: boolean;              // If true, can force arbitration decisions
-  strategyFn?: (ctx: VoterContext) => Promise<{
-    voteFor: VoteChoice;
-    reasoning: string;
-  }>;
-  strategyFnName?: string;        // Built-in strategy name
-  strategyWebhookUrl?: string;
-  contextFn?: (ctx: VoterContext) => Promise<string>;
-  contextWebhookUrl?: string;
-  modelId?: string;
-  webhookTokenName?: string;
-  threshold?: number;             // Strategy-specific threshold
-}
-```
-
 ### Arbiter
 
 A specialist that evaluates consensus and determines winning proposals.
@@ -170,7 +142,7 @@ interface Arbiter {
     winningProposalId?: string;
     reasoning: string;
   }>;
-  strategyFnName?: string;        // Built-in: "mostSimilar", "aheadByK", "pairwiseConsensus"
+  strategyFnName?: string;        // Built-in: "aheadByK"
   strategyWebhookUrl?: string;
   webhookTokenName?: string;
   threshold?: number;             // Strategy-specific threshold
@@ -211,36 +183,6 @@ const proposerStrategy = async (ctx: ProposerContext) => {
 };
 ```
 
-### VoterContext
-
-Context provided to voter strategy functions.
-
-```typescript
-interface VoterContext {
-  sessionId: string;            // Current session ID
-  currentState: string;         // Current state name
-  prompt: string;               // Decision prompt for this state
-  proposalA: Proposal;          // First proposal to compare
-  proposalB: Proposal;          // Second proposal to compare
-  history: TransitionRecord[];  // All previous transitions
-}
-```
-
-**Example usage in a strategy function:**
-
-```typescript
-const voterStrategy = async (ctx: VoterContext) => {
-  // Compare the two proposals
-  if (ctx.proposalA.toState === "approved") {
-    return { voteFor: "A", reasoning: "Proposal A leads to approval" };
-  }
-  if (ctx.proposalB.toState === "approved") {
-    return { voteFor: "B", reasoning: "Proposal B leads to approval" };
-  }
-  return { voteFor: "NEITHER", reasoning: "Neither proposal leads to approval" };
-};
-```
-
 ### ArbiterContext
 
 Context provided to arbiter strategy functions.
@@ -252,8 +194,6 @@ interface ArbiterContext {
   currentState: string;         // Current state name
   prompt: string;               // Decision prompt for this state
   proposals: Proposal[];        // All proposals in this round
-  votes: Vote[];                // All votes in this round
-  humanGoldExamples?: HumanGoldExample[];  // Human gold examples (for mostSimilar)
   history: TransitionRecord[];  // All previous transitions
   threshold: number;            // Configured threshold for this arbiter
 }
@@ -263,8 +203,11 @@ interface ArbiterContext {
 
 ```typescript
 const arbiterStrategy = async (ctx: ArbiterContext) => {
-  // Simple ahead-by-k logic
-  const tallies = countVotes(ctx.proposals, ctx.votes);
+  // Simple ahead-by-k logic counting proposals per transition
+  const tallies: Record<string, number> = {};
+  for (const p of ctx.proposals) {
+    tallies[p.proposalId] = (tallies[p.proposalId] ?? 0) + 1;
+  }
   const sorted = Object.entries(tallies).sort((a, b) => b[1] - a[1]);
 
   if (sorted.length < 2) {
@@ -276,7 +219,7 @@ const arbiterStrategy = async (ctx: ArbiterContext) => {
     return {
       consensusReached: true,
       winningProposalId: sorted[0][0],
-      reasoning: `Proposal ahead by ${lead} votes (threshold: ${ctx.threshold})`,
+      reasoning: `Proposal ahead by ${lead} proposals (threshold: ${ctx.threshold})`,
     };
   }
 
@@ -309,44 +252,6 @@ interface Proposal {
 ```
 
 The cost tracking fields enable measuring the economic cost of AI delegation. DIAL tracks these per-specialist to answer: what does it cost to delegate this decision to AI?
-
-### Vote
-
-A vote comparing two proposals.
-
-```typescript
-interface Vote {
-  voteId: string;           // UUID generated on creation
-  sessionId: string;        // Session this vote belongs to
-  roundId: string;          // Round this vote belongs to
-  specialistId: string;     // Who cast this vote
-  isHuman: boolean;         // Whether cast by a human specialist
-  proposalIdA: string;      // First proposal being compared
-  proposalIdB: string;      // Second proposal being compared
-  voteFor: VoteChoice;      // The vote choice
-  reasoning: string;        // Why this vote was cast
-  metaJson?: Record<string, unknown>;  // Arbitrary client metadata
-  costUSD?: number;         // Cost in USD to generate this vote
-  latencyMsec?: number;     // Time in milliseconds to generate
-  numInputTokens?: number;  // Input tokens used
-  numOutputTokens?: number; // Output tokens used
-}
-```
-
-### VoteChoice
-
-The possible vote values.
-
-```typescript
-type VoteChoice = "A" | "B" | "BOTH" | "NEITHER";
-```
-
-| Value | Meaning |
-|-------|---------|
-| `"A"` | Prefer proposal A (+1 to A's tally) |
-| `"B"` | Prefer proposal B (+1 to B's tally) |
-| `"BOTH"` | Both acceptable (+1 to both tallies) |
-| `"NEITHER"` | Neither acceptable (+0 to both tallies) |
 
 ### ConsensusResult
 
@@ -420,34 +325,6 @@ interface RegisterProposerOptions {
 }
 ```
 
-### RegisterVoterOptions
-
-Options for `registerVoter()`.
-
-```typescript
-interface RegisterVoterOptions {
-  specialistId: string;    // Required: unique identifier
-  machineName: string;     // Required: which machine to participate in
-
-  // Execution mode (exactly one required):
-  strategyFn?: (ctx: VoterContext) => Promise<{
-    voteFor: VoteChoice;
-    reasoning: string;
-  }>;
-  strategyWebhookUrl?: string;
-  strategyFnName?: string;  // Built-in: "preferA", "preferB", "both", "neither", "random", "randomAll", "preferGoal", "preferShorterPath"
-
-  // For LLM-based modes:
-  modelId?: string;
-  contextFn?: (ctx: VoterContext) => Promise<string>;
-  contextWebhookUrl?: string;
-  webhookTokenName?: string;
-
-  // For built-in strategies:
-  threshold?: number;  // Strategy-specific threshold
-}
-```
-
 ### RegisterArbiterOptions
 
 Options for `registerArbiter()`.
@@ -464,7 +341,7 @@ interface RegisterArbiterOptions {
     reasoning: string;
   }>;
   strategyWebhookUrl?: string;
-  strategyFnName?: string;  // Built-in strategy: "mostSimilar", "aheadByK", "pairwiseConsensus"
+  strategyFnName?: string;  // Built-in strategy: "aheadByK"
 
   // For webhooks:
   webhookTokenName?: string;
@@ -478,15 +355,15 @@ interface RegisterArbiterOptions {
 
 ## Execution Modes
 
-Proposers and voters support five execution modes. Arbiters support three (no LLM modes). Exactly one must be configured.
+Proposers support five execution modes. Arbiters support three (no LLM modes). Exactly one must be configured.
 
-| Mode | Parameters | Proposer | Voter | Arbiter |
-|------|------------|:--------:|:-----:|:-------:|
-| **1. Local Strategy** | `strategyFn` | ✓ | ✓ | ✓ |
-| **2. Webhook Strategy** | `strategyWebhookUrl`, `webhookTokenName` | ✓ | ✓ | ✓ |
-| **3. Local Context + LLM** | `contextFn`, `modelId` | ✓ | ✓ | ✗ |
-| **4. Webhook Context + LLM** | `contextWebhookUrl`, `webhookTokenName`, `modelId` | ✓ | ✓ | ✗ |
-| **5. Built-in Strategy** | `strategyFnName`, `threshold?` | ✓ | ✓ | ✓ |
+| Mode | Parameters | Proposer | Arbiter |
+|------|------------|:--------:|:-------:|
+| **1. Local Strategy** | `strategyFn` | ✓ | ✓ |
+| **2. Webhook Strategy** | `strategyWebhookUrl`, `webhookTokenName` | ✓ | ✓ |
+| **3. Local Context + LLM** | `contextFn`, `modelId` | ✓ | ✗ |
+| **4. Webhook Context + LLM** | `contextWebhookUrl`, `webhookTokenName`, `modelId` | ✓ | ✗ |
+| **5. Built-in Strategy** | `strategyFnName`, `threshold?` | ✓ | ✓ |
 
 Arbiters cannot use LLM-based modes because arbitration must be deterministic and auditable.
 

@@ -19,17 +19,12 @@ src/dialai/
       session.test.ts              # DIAL_001–DIAL_010
       machine-validation.test.ts   # DIAL_011–DIAL_025
       register-proposer.test.ts    # DIAL_026–DIAL_037
-      register-voter.test.ts       # DIAL_036–DIAL_048
       register-arbiter.test.ts     # DIAL_049–DIAL_055
       submit-proposal.test.ts      # DIAL_056–DIAL_071
-      submit-vote.test.ts          # DIAL_072–DIAL_088
-      submit-selection-vote.test.ts # DIAL_089–DIAL_103
       execute-transition.test.ts   # DIAL_104–DIAL_114
       evaluate-consensus.test.ts   # DIAL_115–DIAL_127
       submit-arbitration.test.ts   # DIAL_128–DIAL_142
       strategy-proposer.test.ts    # DIAL_143–DIAL_150
-      strategy-voter.test.ts       # DIAL_151–DIAL_164
-      strategy-selection-voter.test.ts # DIAL_165–DIAL_170
       strategy-arbiter.test.ts     # DIAL_171–DIAL_197
       alignment.test.ts            # DIAL_198–DIAL_211
       exemplars.test.ts            # DIAL_212–DIAL_222
@@ -64,7 +59,7 @@ src/dialai/
 ### Three Layers of Parallelism
 
 **Layer 1 — File-level parallelism (automatic)**
-Vitest runs every test *file* in a separate worker thread by default. With 42 test files,
+Vitest runs every test *file* in a separate worker thread by default. With 37 test files,
 Vitest will saturate all CPU cores.
 
 **Layer 2 — Test-level concurrency within a file (`describe.concurrent`)**
@@ -130,7 +125,7 @@ export default defineConfig({
 | **`isolate: false`** | Library uses `store.clear()`. Each test calls it in setup. Removes VM overhead per file. |
 | **`maxConcurrency: 20`** | Pure sync/async logic with zero I/O. Higher than default 5 is safe. |
 | **`describe.concurrent`** | Unit tests are independent. Running concurrently within a file cuts per-file time. |
-| **42 small files** | More files = more workers saturated. Prevents single-file bottleneck. |
+| **37 small files** | More files = more workers saturated. Prevents single-file bottleneck. |
 | **Factory functions** | Each test calls `twoStateMachine()` etc. No shared mutable state. |
 | **`store.clear()` per test** | Since `isolate: false`, tests share module-level store. Clear prevents contamination. |
 | **Integration/E2E: selective concurrency** | Multi-step flows use `describe` (sequential) with `beforeEach(() => clear())`. |
@@ -187,24 +182,12 @@ export default defineConfig({
 | DIAL_036 | registers proposer with optional threshold | `threshold` stored for built-in strategies |
 | DIAL_037 | proposer stored in specialists map | After registration, `getSpecialist(id)` returns the proposer |
 
-### 4. Specialist Registration — Voters (`registerVoter`)
-
-| ID | Test Name | Description |
-|----|-----------|-------------|
-| DIAL_038 | registers pairwise voter with strategyFn | Mode 1 with `voterType: "pairwise"` (or default) |
-| DIAL_039 | registers pairwise voter with strategyFnName | Built-in like `"preferA"` works |
-| DIAL_040 | registers selection voter with selectionStrategyFn | `voterType: "selection"` + `selectionStrategyFn` succeeds |
-| DIAL_041 | registers selection voter with strategyFnName | `voterType: "selection"` + `strategyFnName: "preferFirst"` |
-| DIAL_042 | voterType defaults to "pairwise" | Omitting `voterType` results in `"pairwise"` |
-| DIAL_043 | registers human voter | `isHuman: true` stored |
-| DIAL_048 | voter accepts all built-in pairwise strategies | `preferA`, `preferB`, `both`, `neither`, `random`, `randomAll`, `preferGoal`, `preferShorterPath` all register |
-
 ### 5. Specialist Registration — Arbiters (`registerArbiter`)
 
 | ID | Test Name | Description |
 |----|-----------|-------------|
 | DIAL_049 | registers arbiter with strategyFn | Deterministic function accepted, `role: "arbiter"` |
-| DIAL_050 | registers arbiter with strategyFnName | Built-in like `"alignmentWeightedMargin"` accepted |
+| DIAL_050 | registers arbiter with strategyFnName | Built-in like `"aheadByK"` accepted |
 | DIAL_051 | registers arbiter with strategyWebhookUrl | Webhook mode accepted |
 
 ### 6. Proposal Submission (`submitProposal`)
@@ -219,35 +202,8 @@ export default defineConfig({
 | DIAL_066 | proposal stores toState from transition definition | Target state matches `machine.states[currentState].transitions[name]` |
 | DIAL_068 | rejects proposal for non-existent session | Error: `Session not found` |
 | DIAL_069 | rejects proposal from non-registered specialist | Error: `Specialist not found` |
-| DIAL_070 | rejects proposal from non-proposer specialist | Error: `Specialist X is not a proposer` when specialist is a voter |
+| DIAL_070 | rejects proposal from non-proposer specialist | Error: `Specialist X is not a proposer` when specialist is not a proposer |
 | DIAL_071 | rejects direct proposal for invalid transition | Error: `Invalid transition "X" from state "Y"` |
-
-### 7. Vote Submission (`submitVote`)
-
-| ID | Test Name | Description |
-|----|-----------|-------------|
-| DIAL_072 | submits vote via strategyFn invocation | When `voteFor` omitted, specialist's `strategyFn` is invoked |
-| DIAL_073 | submits direct vote with voteFor | When `voteFor` provided ("A"), stored directly |
-| DIAL_074 | accepts all valid voteFor values | `test.each(["A", "B", "BOTH", "NEITHER"])` — all accepted |
-| DIAL_078 | vote gets unique voteId | Each vote has a distinct UUID |
-| DIAL_079 | vote stores proposalIdA and proposalIdB | References to compared proposals preserved |
-| DIAL_083 | vote stores cost tracking fields | `costUSD`, `latencyMsec`, etc. |
-| DIAL_084 | strategyFn receives correct VoterContext | Context includes `sessionId`, `currentState`, `prompt`, `proposalA`, `proposalB`, `history` |
-| DIAL_087 | rejects vote from non-voter specialist | Error: `Specialist X is not a voter` |
-| DIAL_088 | rejects vote with missing proposalIdA or proposalIdB | Error: `Both proposalIdA and proposalIdB are required` |
-
-### 8. Selection Vote Submission (`submitSelectionVote`)
-
-| ID | Test Name | Description |
-|----|-----------|-------------|
-| DIAL_089 | submits selection vote via selectionStrategyFn | When `selectedProposalId` omitted, voter's `selectionStrategyFn` invoked |
-| DIAL_090 | submits selection vote via strategyFnName | Voter with `strategyFnName` resolves to selection voter strategy |
-| DIAL_091 | submits direct selection vote with selectedProposalId | When `selectedProposalId` provided, stored directly |
-| DIAL_092 | selection vote gets unique selectionVoteId | Distinct UUID |
-| DIAL_097 | selection vote stores cost tracking fields | All cost fields stored |
-| DIAL_098 | selectionStrategyFn receives correct SelectionVoterContext | Context includes `sessionId`, `currentState`, `prompt`, `machineName`, `proposals[]`, `history` |
-| DIAL_102 | rejects when no selection strategy available | Error: `No selection strategy for voter` |
-| DIAL_103 | rejects when no proposal selected (strategy returns nothing) | Error: `No proposal selected` |
 
 ### 9. Transition Execution (`executeTransition`)
 
@@ -257,8 +213,6 @@ export default defineConfig({
 | DIAL_105 | records transition in history | `history` gains entry with `transitionName`, `reasoning`, `executionTimestamp` |
 | DIAL_106 | generates new roundId after transition | `currentRoundId` differs from pre-transition value |
 | DIAL_107 | clears proposals after transition | Old round's proposals deleted from store |
-| DIAL_108 | clears votes after transition | Old round's votes deleted from store |
-| DIAL_109 | clears selection votes after transition | Old round's selection votes deleted from store |
 | DIAL_110 | rejects transition not in current state | Error: `Invalid transition "X" from state "Y"` |
 | DIAL_111 | rejects when current state has no transitions | Error: `No transitions available from state "X"` |
 | DIAL_112 | rejects toState mismatch | Error: `State mismatch: transition "X" should go to "Y", not "Z"` when provided `toState` doesn't match definition |
@@ -273,13 +227,7 @@ export default defineConfig({
 | DIAL_117 | is read-only — does not execute transition | After `evaluateConsensus`, session `currentState` unchanged |
 | DIAL_118 | returns winningProposalId when consensus reached | Identifies the winning proposal |
 | DIAL_119 | returns reasoning explaining consensus decision | Non-empty reasoning string |
-| DIAL_120 | human selection vote wins immediately | Human selection vote bypasses arbiter strategy, returns consensus with that proposal |
-| DIAL_121 | human pairwise vote "A" wins immediately | Human pairwise vote for A bypasses arbiter, returns proposalIdA |
-| DIAL_122 | human pairwise vote "B" wins immediately | Human pairwise vote for B returns proposalIdB |
-| DIAL_123 | human pairwise vote "BOTH" does not shortcut | BOTH has no single winner, falls through to arbiter |
-| DIAL_124 | human pairwise vote "NEITHER" does not shortcut | NEITHER has no winner, falls through to arbiter |
 | DIAL_125 | builds alignment scores in arbiter context | `ctx.alignmentScores` populated from `getAllAlignmentRecords` |
-| DIAL_126 | includes selection votes in arbiter context | `ctx.selectionVotes` populated |
 | DIAL_127 | arbiter threshold defaults to 1 when not set | `arbiter.threshold ?? 1` used |
 
 ### 11. Arbitration (`submitArbitration`)
@@ -293,8 +241,8 @@ export default defineConfig({
 | DIAL_132 | human can force transition via transitionName | With `transitionName` + human `specialistId`, bypasses consensus |
 | DIAL_133 | forced transition requires isHuman specialist | Returns `guardsPass: false`, reason: "Only human specialists can force arbitration" |
 | DIAL_134 | forced transition validates transition is valid | Invalid transition returns `guardsPass: false` with transition error |
-| DIAL_135 | forced transition creates exemplar | `createExemplar` called with full round context |
-| DIAL_136 | forced transition updates alignment for all specialists | `updateAlignmentAfterHumanDecision` called with proposals, votes, selectionVotes |
+| DIAL_135 | forced transition creates exemplar | `createExemplar` called with proposals from the round |
+| DIAL_136 | forced transition updates alignment for all specialists | `updateAlignmentAfterHumanDecision` called with proposals from the round |
 | DIAL_137 | forced transition executes immediately | Session state updates, `executed: true` |
 | DIAL_138 | returns isHuman=true for human-forced decisions | `ArbitrationResult.isHuman` reflects forced human decision |
 | DIAL_139 | returns all cost tracking fields | `arbitrationId`, `costUSD`, `latencyMsec`, etc. populated |
@@ -315,61 +263,15 @@ export default defineConfig({
 | DIAL_149 | firstAvailable throws with no transitions | Error: "No transitions available from current state" |
 | DIAL_150 | all proposer strategies return ProposerStrategyResult shape | `transitionName`, `toState`, `reasoning` all present |
 
-### 13. Built-in Voter Strategies (Pairwise)
-
-| ID | Test Name | Description |
-|----|-----------|-------------|
-| DIAL_151 | deterministic strategies return correct values | `test.each([["preferA","A"],["preferB","B"],["both","BOTH"],["neither","NEITHER"]])` |
-| DIAL_155 | random returns A or B only | Over many runs, only A and B appear (not BOTH/NEITHER) |
-| DIAL_156 | randomAll returns A, B, BOTH, or NEITHER | Over many runs, all four appear |
-| DIAL_157 | preferGoal prefers proposal closer to goal | Heuristic-based comparison of proposals |
-| DIAL_158 | preferGoal with equal proposals | Returns a valid choice |
-| DIAL_159 | preferShorterPath prefers shorter transition name | Based on `transitionName.length` comparison |
-| DIAL_160 | preferShorterPath with equal lengths | Returns a valid choice |
-| DIAL_161 | preferA includes reasoning with proposal info | Reasoning references `ctx.proposalA.transitionName` |
-| DIAL_162 | all pairwise strategies return VoterStrategyResult shape | `voteFor` and `reasoning` both present |
-
-### 14. Built-in Selection Voter Strategies
-
-| ID | Test Name | Description |
-|----|-----------|-------------|
-| DIAL_165 | preferFirst selects earliest proposal by createdAt | Sorts by timestamp, picks first |
-| DIAL_166 | preferFirst throws with no proposals | Error: "No proposals to select from" |
-| DIAL_167 | preferHighestAlignment selects proposal from best-aligned specialist | Uses `getAlignmentScore` per proposal's specialistId |
-| DIAL_168 | preferHighestAlignment falls back to first when no alignment data | All alignment 0, picks first proposal |
-| DIAL_170 | all selection strategies return SelectionVoterStrategyResult shape | `selectedProposalId` and `reasoning` both present |
-
 ### 15. Built-in Arbiter Strategies
 
 | ID | Test Name | Description |
 |----|-----------|-------------|
 | DIAL_171 | firstProposal: returns first proposal by timestamp | Sorts by `createdAt`, picks earliest |
 | DIAL_172 | firstProposal: no proposals returns consensusReached=false | Reasoning: "No proposals received" |
-| DIAL_173 | aheadByK: single proposal with no votes and threshold<=1 | Consensus reached: "Single proposal with no competing proposals" |
-| DIAL_174 | aheadByK: single proposal needs support when votes exist | Counts supporting votes vs threshold |
-| DIAL_175 | aheadByK: multiple proposals tallied correctly | Votes counted per proposal, lead >= threshold = consensus |
-| DIAL_176 | aheadByK: BOTH vote adds +1 to both proposals | Both proposals get a full vote |
-| DIAL_177 | aheadByK: NEITHER vote adds nothing | No tallies change |
+| DIAL_173 | aheadByK: single proposal with threshold<=1 reaches consensus | Consensus reached: "Single proposal with no competing proposals" |
+| DIAL_175 | aheadByK: multiple proposals counted per transition correctly | Proposals counted per transition, lead >= threshold = consensus |
 | DIAL_178 | aheadByK: default threshold is 1 | `ctx.threshold ?? 1` |
-| DIAL_179 | pairwiseConsensus: single proposal wins immediately | No matchups needed |
-| DIAL_180 | pairwiseConsensus: win rate calculation correct | Wins / matchups per proposal |
-| DIAL_181 | pairwiseConsensus: BOTH gives 0.5 to each | Half-credit for each |
-| DIAL_182 | pairwiseConsensus: NEITHER gives 0 to each | No wins awarded |
-| DIAL_183 | pairwiseConsensus: default threshold is 0.75 | 75% win rate required |
-| DIAL_184 | mostSimilar: exact transition match gives 0.5 base similarity | Matching transitionName = 0.5 + Jaccard on reasoning |
-| DIAL_185 | mostSimilar: no gold examples returns consensusReached=false | Reasoning: "No human gold examples available" |
-| DIAL_186 | mostSimilar: no proposals returns consensusReached=false | |
-| DIAL_187 | mostSimilar: similarity below threshold returns false | Best score below `ctx.threshold ?? 0.8` |
-| DIAL_188 | mostSimilar: requires clear winner (gap >= 0.05) | Top two within 0.05 returns false |
-| DIAL_189 | alignmentWeightedMargin: consensus with margin above threshold | `(leader - runner_up) / totalAlignment >= threshold` |
-| DIAL_190 | alignmentWeightedMargin: no consensus below threshold | Margin < threshold |
-| DIAL_191 | alignmentWeightedMargin: cold start blocks (totalAlignment 0) | "Cold start: no alignment data available" |
-| DIAL_192 | alignmentWeightedMargin: proposal clustering combines scores | Two proposers same transition: alignment scores add |
-| DIAL_193 | alignmentWeightedMargin: single transition margin is 1.0 | No runner-up, margin = leader / total = 1.0 |
-| DIAL_194 | alignmentWeightedMargin: BOTH vote same transition gets full alignment | Both proposals target same transition, full score |
-| DIAL_195 | alignmentWeightedMargin: BOTH vote different transitions splits 0.5 each | Half alignment to each transition |
-| DIAL_196 | alignmentWeightedMargin: NEITHER vote adds nothing | No score to either |
-| DIAL_197 | alignmentWeightedMargin: selection votes scored by alignment | Selection vote adds voter's alignment to selected proposal's transition |
 
 ### 16. Alignment Score Tracking
 
@@ -385,9 +287,6 @@ export default defineConfig({
 | DIAL_205 | updateAlignment skips human specialists | No alignment record created for human |
 | DIAL_206 | alignment score is matchingChoices/totalComparisons | After 18 matches in 20 comparisons gives 0.9 |
 | DIAL_207 | updateAlignmentAfterHumanDecision checks proposers | Proposer that matched human transition gets `matched: true` |
-| DIAL_208 | updateAlignmentAfterHumanDecision checks pairwise voters | Voter who voted for matching proposal gets `matched: true` |
-| DIAL_209 | updateAlignmentAfterHumanDecision checks selection voters | Selection voter who selected matching proposal gets `matched: true` |
-| DIAL_210 | updateAlignmentAfterHumanDecision: BOTH vote matched when either matches | If either A or B matches human and vote is BOTH, matched |
 | DIAL_211 | getAllAlignmentRecords filters by machineName | Only records for specified machine returned |
 
 ### 17. Exemplar Creation and Storage
@@ -399,7 +298,7 @@ export default defineConfig({
 | DIAL_214 | exemplar stores machineName and state | Correct values |
 | DIAL_215 | exemplar stores context (ProposerContext) | Full `sessionId`, `currentState`, `prompt`, `transitions`, `history` |
 | DIAL_216 | exemplar stores humanTransitionName and humanToState | Human's chosen transition and target |
-| DIAL_217 | exemplar stores copies of proposals, votes, and selectionVotes | All three arrays are copies (not references) — mutation of originals doesn't affect exemplar |
+| DIAL_217 | exemplar stores copies of proposals | Proposals array is a copy (not a reference) — mutation of originals doesn't affect exemplar |
 | DIAL_220 | exemplar stores createdAt timestamp | Date field present |
 | DIAL_221 | getExemplars returns all exemplars for a machine | Filtered by machineName |
 | DIAL_222 | getExemplars filters by state when provided | Optional state parameter narrows results |
@@ -410,8 +309,6 @@ export default defineConfig({
 |----|-----------|-------------|
 | DIAL_223 | evaluateAlignment returns correct score from exemplars | Compares specialist's proposals against human transitions in exemplars |
 | DIAL_224 | evaluateAlignment counts matching proposals | Proposal with same transitionName as exemplar's humanTransitionName |
-| DIAL_225 | evaluateAlignment counts matching pairwise votes | Vote for proposal matching human transition |
-| DIAL_226 | evaluateAlignment counts matching selection votes | Selection of proposal matching human transition |
 | DIAL_227 | evaluateAlignment with maxRounds limits exemplars checked | Only first N exemplars evaluated |
 | DIAL_228 | evaluateAlignment returns 0 with no exemplars | `totalExemplars: 0, alignmentScore: 0` |
 | DIAL_230 | evaluateAccuracy returns transitionMatchRate | Correct ratio of matching transitions |
@@ -430,10 +327,7 @@ export default defineConfig({
 | DIAL_239 | enableSpecialist throws for unknown specialist | Error: `Specialist not found` |
 | DIAL_241 | newly registered specialist has enabled undefined (treated as true) | `enabled` defaults to undefined, which `getEnabledProposers` treats as enabled |
 | DIAL_242 | disabled proposer excluded from getEnabledProposers | `enabled: false` filtered out |
-| DIAL_243 | disabled voter excluded from getEnabledVoters | `enabled: false` filtered out |
 | DIAL_244 | disabled arbiter excluded from getEnabledArbiter | Returns undefined when sole arbiter disabled |
-| DIAL_245 | getEnabledVoters filters by voterType | `voterType: "pairwise"` or `"selection"` filter works |
-| DIAL_246 | getEnabledVoters without voterType returns all enabled voters | Both pairwise and selection included |
 | DIAL_247 | re-enabling a disabled specialist works | `disableSpecialist` then `enableSpecialist` restores |
 | DIAL_248 | enable/disable does not affect alignment history | Alignment records unchanged after disable/re-enable |
 
@@ -445,12 +339,9 @@ export default defineConfig({
 | DIAL_250 | getSpecialist returns undefined for unknown ID | Not an error, returns undefined |
 | DIAL_251 | getProposers returns all proposers for a machine | Filtered by machineName and role |
 | DIAL_252 | getProposers returns empty array for unknown machine | No error |
-| DIAL_253 | getVoters returns all voters for a machine | Both pairwise and selection voters |
 | DIAL_254 | getArbiter returns arbiter for a machine | Single arbiter returned |
 | DIAL_255 | getArbiter returns undefined when no arbiter registered | No error |
 | DIAL_256 | getProposalsForRound returns proposals for session+round | Filtered by both sessionId and roundId |
-| DIAL_257 | getVotesForRound returns votes for session+round | Filtered by both |
-| DIAL_258 | getSelectionVotesForRound returns selection votes for session+round | Filtered by both |
 | DIAL_259 | round query helpers return empty arrays for unknown round | No error |
 
 ### 21. Engine Helpers (`getEffectiveThreshold`, `selectChampion`)
@@ -470,7 +361,7 @@ export default defineConfig({
 
 | ID | Test Name | Description |
 |----|-----------|-------------|
-| DIAL_268 | clear() empties all 7 maps | sessions, specialists, proposals, votes, alignmentRecords, exemplars, selectionVotes |
+| DIAL_268 | clear() empties all 5 maps | sessions, specialists, proposals, alignmentRecords, exemplars |
 | DIAL_274 | alignmentRecords map keyed by specialistId:machineName | Key format is `"specialistId:machineName"` |
 | DIAL_276 | clear() allows fresh test isolation | After clear, all operations work as if fresh start |
 
@@ -483,20 +374,16 @@ export default defineConfig({
 | ID | Test Name | Description |
 |----|-----------|-------------|
 | DIAL_277 | single proposer unanimous consensus | One proposer with alignment 0.9, threshold 0.5, margin 1.0, consensus on proposal alone |
-| DIAL_278 | two proposers agree — combined score consensus | Both propose same transition, alignment scores add, consensus without voters |
-| DIAL_279 | two proposers disagree — selection voter breaks tie | Selection voter's alignment tips score for one transition |
-| DIAL_280 | two proposers disagree — pairwise voter breaks tie | Pairwise "A" vote adds alignment to proposal A, crossing threshold |
+| DIAL_278 | two proposers agree — combined proposal count consensus | Both propose same transition, proposal counts add, consensus reached |
 | DIAL_281 | proposals clustered by transition not by proposal ID | Two proposals for "approve" (different reasoning) cluster together |
 | DIAL_282 | consensus triggers transition execution via arbitration | `submitArbitration` after consensus leads to session advancing |
-| DIAL_283 | full solicitation cascade: proposals → selection → pairwise | Engine solicits in correct order, checking consensus after each phase |
-| DIAL_284 | human selection vote short-circuits consensus | Human selection vote in evaluateConsensus returns immediately |
 
 ### 24. Cold Start — Human Decision Flow
 
 | ID | Test Name | Description |
 |----|-----------|-------------|
 | DIAL_285 | cold start: all AI proposals contribute 0 alignment | New specialists, all alignment 0, every score = 0 |
-| DIAL_286 | cold start: alignmentWeightedMargin returns "Cold start" | Reasoning indicates human input required |
+| DIAL_286 | cold start: aheadByK returns "Cold start" | Reasoning indicates human input required |
 | DIAL_287 | cold start: human force decision succeeds | Human specialist with `isHuman: true` forces transition |
 | DIAL_288 | cold start: exemplar generated on force | Exemplar created with full round context |
 | DIAL_289 | cold start: alignment scores update for all participants | Every specialist's contribution compared to human choice |
@@ -510,7 +397,6 @@ export default defineConfig({
 | DIAL_292 | alignment decreases with mismatches | Specialist matching 5/10 gives 0.5 |
 | DIAL_293 | high-alignment specialist reaches consensus faster | Higher alignment = more likely to cross margin at same threshold |
 | DIAL_294 | low-alignment specialist insufficient alone | 0.3 alignment at threshold 0.5 never reaches threshold without help |
-| DIAL_295 | alignment score determines voting weight in consensus | Voter with 0.9 alignment outweighs voter with 0.3 alignment |
 
 ### 26. Specialist Execution Modes Integration
 
@@ -553,7 +439,6 @@ export default defineConfig({
 
 | ID | Test Name | Description |
 |----|-----------|-------------|
-| DIAL_328 | human pairwise vote adds alignment 1.0 | Human vote outweighs low-alignment AI votes |
 | DIAL_330 | human force bypasses consensus score entirely | Human can force different transition than consensus winner |
 
 ---
@@ -597,7 +482,7 @@ export default defineConfig({
 
 | ID | Test Name | Description |
 |----|-----------|-------------|
-| DIAL_363 | selfHeal re-enables all disabled proposers and voters | After calling selfHeal, all specialists enabled |
+| DIAL_363 | selfHeal re-enables all disabled proposers | After calling selfHeal, all specialists enabled |
 | DIAL_364 | champion fast path failure triggers selfHeal | Champion fails to reach consensus, selfHeal called |
 | DIAL_365 | self-healing preserves alignment history | Re-enabled specialists retain their alignment scores |
 | DIAL_366 | disabled specialists not solicited in runSession | `getEnabledProposers` filters them out |
@@ -631,7 +516,7 @@ export default defineConfig({
 | DIAL_379 | alignment tracked per machine | Same specialist has independent alignment records for different machines |
 | DIAL_380 | exemplars scoped per machine | `getExemplars("A")` doesn't return machine B's exemplars |
 | DIAL_381 | concurrent sessions on different machines | Two sessions on different machines run independently |
-| DIAL_382 | concurrent sessions on same machine | Two sessions share specialists but have independent proposals/votes |
+| DIAL_382 | concurrent sessions on same machine | Two sessions share specialists but have independent proposals |
 
 ### 38. Complex State Machine Topologies
 
@@ -649,8 +534,6 @@ export default defineConfig({
 |----|-----------|-------------|
 | DIAL_388 | ProposerContext does not contain consensus scores | No scoring internals in context |
 | DIAL_389 | ProposerContext does not contain alignment scores | No alignment values visible |
-| DIAL_390 | VoterContext does not contain threshold values | Risk dial not visible to voters |
-| DIAL_391 | SelectionVoterContext does not contain alignment data | No alignment in selection context |
 | DIAL_392 | exemplars in ProposerContext are domain-native | History records contain transitions, not scoring metadata |
 
 ### 40. Edge Cases and Error Recovery
@@ -663,7 +546,6 @@ export default defineConfig({
 | DIAL_396 | specialist strategyFn returns malformed proposal | Strategy result missing fields causes error |
 | DIAL_397 | empty transitions on non-goal state | `executeTransition` throws "No transitions available" |
 | DIAL_398 | very large number of proposals in single round | Performance/correctness with 100+ proposals |
-| DIAL_399 | very large number of votes in single round | Performance/correctness with 100+ votes |
 | DIAL_400 | rapid sequential submitProposal calls | All stored correctly without race conditions |
 | DIAL_401 | submitArbitration called with no proposals | guardsPass=false, executed=false |
 | DIAL_402 | submitArbitration called twice in same round | Second call after transition sees stale roundId |
@@ -671,14 +553,12 @@ export default defineConfig({
 | DIAL_404 | Unicode in reasoning and prompt fields | International characters handled |
 | DIAL_405 | extremely long reasoning strings | No truncation or corruption |
 | DIAL_406 | proposal submitted to wrong session | Only affects the correct session |
-| DIAL_407 | vote referencing non-existent proposalIds | Error: `Proposal not found` |
 
 ### 41. Consensus Math Verification (Exact Calculations)
 
 | ID | Test Name | Description |
 |----|-----------|-------------|
 | DIAL_408 | worked example: 2 proposers, threshold 0.5, both agree | Score = 0.9+0.6 = 1.5, margin = 1.0 >= 0.5 |
-| DIAL_409 | worked example: 2 proposers disagree, 1 selection voter breaks tie | Verify exact margin after selection vote |
 | DIAL_410 | worked example: 3 proposers, 2 agree, 1 disagrees | Cluster of 2 vs solo — verify exact margin |
 | DIAL_414 | boundary: margin exactly equals threshold | Consensus reached (>= not >) |
 | DIAL_415 | boundary: margin one epsilon below threshold | Consensus not reached |
