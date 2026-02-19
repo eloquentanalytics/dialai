@@ -67,6 +67,38 @@ export async function createSession(
   };
 
   sessions.set(session.sessionId, session);
+
+  // Auto-register per-state specialists that have a strategyFnName (built-in strategy)
+  for (const stateDef of Object.values(normalized.states)) {
+    if (!stateDef.specialists) continue;
+    for (const spec of stateDef.specialists) {
+      if (specialists.has(spec.specialistId)) continue;
+      if (!spec.strategyFnName) continue;
+
+      const machineName = spec.machineName ?? normalized.machineName;
+      if (spec.role === "proposer") {
+        await registerProposer({
+          specialistId: spec.specialistId,
+          machineName,
+          isHuman: spec.isHuman,
+          strategyFnName: spec.strategyFnName,
+          strategyWebhookUrl: spec.strategyWebhookUrl,
+          webhookTokenName: spec.webhookTokenName,
+          threshold: spec.threshold,
+        });
+      } else if (spec.role === "arbiter") {
+        await registerArbiter({
+          specialistId: spec.specialistId,
+          machineName,
+          strategyFnName: spec.strategyFnName,
+          strategyWebhookUrl: spec.strategyWebhookUrl,
+          webhookTokenName: spec.webhookTokenName,
+          threshold: spec.threshold,
+        });
+      }
+    }
+  }
+
   return session;
 }
 
@@ -289,6 +321,73 @@ export function getEnabledArbiter(machineName: string): Arbiter | undefined {
   const arbiter = getArbiter(machineName);
   if (arbiter && arbiter.enabled === false) return undefined;
   return arbiter;
+}
+
+// ============================================================================
+// State-Aware Specialist Lookup
+// ============================================================================
+
+/**
+ * Gets proposers declared in the current state's specialists array.
+ * Falls back to getProposers(machineName) if state has no specialists.
+ * Respects both state-level `disabled` and global `enabled` flags.
+ */
+export function getProposersForState(session: Session): Proposer[] {
+  const stateDef = session.machine.states[session.currentState];
+  if (!stateDef?.specialists) {
+    return getProposers(session.machineName);
+  }
+
+  const result: Proposer[] = [];
+  for (const spec of stateDef.specialists) {
+    if (spec.role !== "proposer") continue;
+    const registered = specialists.get(spec.specialistId);
+    if (!registered || registered.role !== "proposer") continue;
+    result.push(registered);
+  }
+  return result;
+}
+
+/**
+ * Gets enabled proposers for the current state.
+ * Filters out specialists that are disabled at the state level or globally.
+ */
+export function getEnabledProposersForState(session: Session): Proposer[] {
+  const stateDef = session.machine.states[session.currentState];
+  if (!stateDef?.specialists) {
+    return getEnabledProposers(session.machineName);
+  }
+
+  // Build a set of disabled specialist IDs from state definition
+  const disabledInState = new Set<string>();
+  for (const spec of stateDef.specialists) {
+    if (spec.disabled) disabledInState.add(spec.specialistId);
+  }
+
+  return getProposersForState(session).filter(
+    (p) => p.enabled !== false && !disabledInState.has(p.specialistId)
+  );
+}
+
+/**
+ * Gets the arbiter declared in the current state's specialists array.
+ * Falls back to getArbiter(machineName).
+ */
+export function getArbiterForState(session: Session): Arbiter | undefined {
+  const stateDef = session.machine.states[session.currentState];
+  if (!stateDef?.specialists) {
+    return getArbiter(session.machineName);
+  }
+
+  for (const spec of stateDef.specialists) {
+    if (spec.role !== "arbiter") continue;
+    const registered = specialists.get(spec.specialistId);
+    if (registered && registered.role === "arbiter") {
+      return registered;
+    }
+  }
+  // Fall back to machine-level arbiter
+  return getArbiter(session.machineName);
 }
 
 // ============================================================================
@@ -523,7 +622,7 @@ export async function evaluateConsensus(
   sessionId: string
 ): Promise<ConsensusResult> {
   const session = await getSession(sessionId);
-  const arbiter = getArbiter(session.machineName);
+  const arbiter = getArbiterForState(session);
 
   if (!arbiter) {
     throw new Error(`No arbiter registered for machine: ${session.machineName}`);
@@ -537,8 +636,10 @@ export async function evaluateConsensus(
     arbiter.threshold ?? 1
   );
 
-  // Build alignment scores for context
-  const records = getAllAlignmentRecords(session.machineName);
+  // Build alignment scores for context (per-state if state has specialists)
+  const stateDef = session.machine.states[session.currentState];
+  const stateParam = stateDef?.specialists ? session.currentState : undefined;
+  const records = getAllAlignmentRecords(session.machineName, stateParam);
   const alignmentScores: Record<string, number> = {};
   for (const r of records) {
     alignmentScores[r.specialistId] = r.alignmentScore;
@@ -729,15 +830,17 @@ export async function submitArbitration(
         roundProposals
       );
 
-      // Update alignment for all specialists
+      // Update alignment for all specialists (per-state if applicable)
+      const stateHasSpecs = !!currentStateDef?.specialists;
       updateAlignmentAfterHumanDecision(
         session.machineName,
         path.transitionName,
-        roundProposals
+        roundProposals,
+        stateHasSpecs ? session.currentState : undefined
       );
 
       // Emit decision record before executeTransition deletes proposals
-      const arbiter = getArbiter(session.machineName);
+      const arbiter = getArbiterForState(session);
       emitDecisionRecord(
         session, effectiveRoundId,
         path.transitionName, path.toState, true,
@@ -800,7 +903,7 @@ export async function submitArbitration(
       }
 
       // Emit decision record before executeTransition deletes proposals
-      const evalArbiter = getArbiter(session.machineName);
+      const evalArbiter = getArbiterForState(session);
       emitDecisionRecord(
         session, effectiveRoundId,
         winningProposal.transitionName, winningProposal.toState, false,

@@ -25,13 +25,16 @@ export function isHumanSpecialist(specialistId: string): boolean {
  */
 export function getAlignmentScore(
   specialistId: string,
-  machineName: string
+  machineName: string,
+  state?: string
 ): number {
   if (isHumanSpecialist(specialistId)) {
     return 1.0;
   }
 
-  const key = `${specialistId}:${machineName}`;
+  const key = state
+    ? `${specialistId}:${machineName}:${state}`
+    : `${specialistId}:${machineName}`;
   const record = alignmentRecords.get(key);
   if (!record) return 0;
   return record.alignmentScore;
@@ -43,12 +46,15 @@ export function getAlignmentScore(
 export function updateAlignment(
   specialistId: string,
   machineName: string,
-  matched: boolean
+  matched: boolean,
+  state?: string
 ): void {
   // Don't track alignment for human specialists
   if (isHumanSpecialist(specialistId)) return;
 
-  const key = `${specialistId}:${machineName}`;
+  const key = state
+    ? `${specialistId}:${machineName}:${state}`
+    : `${specialistId}:${machineName}`;
   const existing = alignmentRecords.get(key);
 
   if (existing) {
@@ -61,6 +67,7 @@ export function updateAlignment(
     alignmentRecords.set(key, {
       specialistId,
       machineName,
+      state,
       matchingChoices: matched ? 1 : 0,
       totalComparisons: 1,
       alignmentScore: matched ? 1 : 0,
@@ -97,7 +104,8 @@ export function computeAlignmentUpdates(
 export function updateAlignmentAfterHumanDecision(
   machineName: string,
   humanTransitionName: string,
-  proposals: Proposal[]
+  proposals: Proposal[],
+  state?: string
 ): void {
   // Build set of human specialist IDs
   const allSpecialistIds = new Set<string>();
@@ -115,7 +123,7 @@ export function updateAlignmentAfterHumanDecision(
   );
 
   for (const { specialistId, matched } of updates) {
-    updateAlignment(specialistId, machineName, matched);
+    updateAlignment(specialistId, machineName, matched, state);
   }
 }
 
@@ -123,9 +131,14 @@ export function updateAlignmentAfterHumanDecision(
  * Returns all alignment records for a machine.
  */
 export function getAllAlignmentRecords(
-  machineName: string
+  machineName: string,
+  state?: string
 ): AlignmentRecord[] {
   return [...alignmentRecords.values()].filter(
-    (r) => r.machineName === machineName
+    (r) => {
+      if (r.machineName !== machineName) return false;
+      if (state !== undefined) return r.state === state;
+      return true;
+    }
   );
 }

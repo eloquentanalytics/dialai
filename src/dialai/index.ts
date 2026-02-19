@@ -69,6 +69,10 @@ export {
   disableSpecialist,
   getEnabledProposers,
   getEnabledArbiter,
+  // State-aware specialist lookup
+  getProposersForState,
+  getEnabledProposersForState,
+  getArbiterForState,
   // Strategy resolution
   resolveProposerStrategy,
   resolveArbiterStrategy,
@@ -164,12 +168,16 @@ import type { CollapseMetrics } from "./types.js";
  * Convenience wrapper: computes collapse metrics for a machine
  * by reading from the in-memory stores.
  */
-export function getCollapseMetrics(machineName: string): CollapseMetrics {
+export function getCollapseMetrics(machineName: string, state?: string): CollapseMetrics {
   const decisions = [...decisionLog.values()].filter(
     (d) => d.machineName === machineName
   );
   const alignment = [...alignmentRecords.values()].filter(
-    (r) => r.machineName === machineName
+    (r) => {
+      if (r.machineName !== machineName) return false;
+      if (state !== undefined) return r.state === state;
+      return true;
+    }
   );
   return computeCollapseMetrics(decisions, alignment);
 }

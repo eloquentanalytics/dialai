@@ -1,41 +1,21 @@
 #!/usr/bin/env npx tsx
 /**
- * river-crossing.ts — Wolf-Goat-Cabbage as a DIAL state machine
+ * river-crossing.ts — Wolf-Goat-Cabbage as a 2-state DIAL machine
  *
- * Demonstrates progressive collapse with constraint reasoning: a "human"
- * (optimal solver) trains two mock-LLM proposers through repeated puzzle
- * solves. The key insight — bringing the goat back — defeats greedy
- * heuristics, making human training more dramatic than Hanoi.
+ * Demonstrates progressive collapse with per-state specialists and
+ * constraint reasoning. Board state reconstructed from transition history.
  *
- * Uses tick-based orchestration: each call to tick() does one atomic thing
- * per session (solicit one proposer, evaluate consensus, or report needs_human).
+ * Machine design: 2 states — "unsolved" and "solved". All crossing
+ * transitions loop back to "unsolved"; "declare_solved" goes to "solved".
  *
- * State encoding: 4-char string "FWGC" where each char is 0 (left) or 1 (right).
- *   F=Farmer, W=Wolf, G=Goat, C=Cabbage.
- *   e.g. "0000" = all on left (start), "1111" = all on right (goal).
+ * State encoding: 4 items [F,W,G,C] each on side 0 (left) or 1 (right).
+ * Safety: Wolf+Goat alone → wolf eats goat. Goat+Cabbage alone → eaten.
  *
- * Safety rules (when farmer is away):
- *   Wolf + Goat on same side without Farmer → wolf eats goat
- *   Goat + Cabbage on same side without Farmer → goat eats cabbage
- *
- * Four moves (farmer always crosses):
- *   cross_alone  — farmer only
- *   take_wolf    — farmer + wolf (wolf must be on farmer's side)
- *   take_goat    — farmer + goat (goat must be on farmer's side)
- *   take_cabbage — farmer + cabbage (cabbage must be on farmer's side)
- *
- * Only moves producing safe states are valid transitions.
- *
- * Optimal solution (7 moves):
- *   0000 →take_goat→ 1010 →cross_alone→ 0010 →take_wolf→ 1110
- *   →take_goat→ 0100 →take_cabbage→ 1101 →cross_alone→ 0101 →take_goat→ 1111
- *
- * Three specialists:
- *   "human-optimal"  — registered as human, forces optimal moves via BFS.
- *                       Disabled as a proposer so tick() only solicits LLMs.
- *   "llm-cautious"   — learns from exemplars; greedy fallback prefers
- *                       moving items right (fails at bring-goat-back step).
- *   "llm-greedy"     — random valid move every time (never learns).
+ * Three specialists (declared on the "unsolved" state):
+ *   "human-optimal"  — isHuman, disabled. Forces BFS-optimal moves.
+ *   "llm-cautious"   — learns from exemplars; greedy: prefers taking
+ *                       items right (fails at bring-goat-back step).
+ *   "llm-greedy"     — random valid move (never learns).
  *
  * Usage:
  *   npx tsx examples/river-crossing.ts
@@ -44,9 +24,7 @@
 import {
   createSession,
   registerProposer,
-  registerArbiter,
-  disableSpecialist,
-  getEnabledProposers,
+  getEnabledProposersForState,
   submitArbitration,
   tick,
   getAlignmentScore,
@@ -56,19 +34,20 @@ import {
 } from "../src/dialai/index.js";
 import type {
   MachineDefinition,
+  TransitionRecord,
   ProposerContext,
   ProposerStrategyResult,
 } from "../src/dialai/index.js";
 
 // ============================================================================
-// Puzzle Logic
+// Puzzle Logic (history-based)
 // ============================================================================
 
 const ITEM_SHORT = ["F", "W", "G", "C"] as const;
 
 interface Move {
   name: string;
-  item: number | null; // index in FWGC array, null = farmer only
+  item: number | null; // index in FWGC, null = farmer only
 }
 
 const MOVES: Move[] = [
@@ -78,67 +57,48 @@ const MOVES: Move[] = [
   { name: "take_cabbage", item: 3 },
 ];
 
-function parseState(state: string): number[] {
-  return state.split("").map(Number);
-}
-
-function encodeState(items: number[]): string {
-  return items.join("");
-}
-
-/**
- * A state is safe if, when the farmer is away from a group,
- * wolf+goat aren't alone together and goat+cabbage aren't alone together.
- */
-function isSafe(state: string): boolean {
-  const [f, w, g, c] = parseState(state);
-  // Wolf eats goat if on same side without farmer
+function isSafe(items: number[]): boolean {
+  const [f, w, g, c] = items;
   if (w === g && f !== w) return false;
-  // Goat eats cabbage if on same side without farmer
   if (g === c && f !== g) return false;
   return true;
 }
 
-/**
- * Apply a move to a state. Returns new state or null if invalid/unsafe.
- * The farmer always crosses. If an item is specified, it must be on the
- * farmer's current side.
- */
-function applyMove(state: string, move: Move): string | null {
-  const items = parseState(state);
-  const farmerSide = items[0];
-
-  // If taking an item, it must be on the farmer's current side
-  if (move.item !== null && items[move.item] !== farmerSide) return null;
-
-  // Farmer crosses
-  items[0] = 1 - farmerSide;
-  // Item crosses (if any)
-  if (move.item !== null) items[move.item] = 1 - farmerSide;
-
-  const newState = encodeState(items);
-  return isSafe(newState) ? newState : null;
+function applyMoveToItems(items: number[], move: Move): number[] | null {
+  const result = [...items];
+  const farmerSide = result[0];
+  if (move.item !== null && result[move.item] !== farmerSide) return null;
+  result[0] = 1 - farmerSide;
+  if (move.item !== null) result[move.item] = 1 - farmerSide;
+  return isSafe(result) ? result : null;
 }
 
-/**
- * Get all valid moves from a state (only those producing safe states).
- */
-function getValidMoves(state: string): Array<{ move: Move; target: string }> {
-  const results: Array<{ move: Move; target: string }> = [];
+/** Replay transition history to reconstruct current board. */
+function replayMoves(history: TransitionRecord[]): number[] {
+  let items = [0, 0, 0, 0]; // all on left bank
+  for (const { transitionName } of history) {
+    const move = MOVES.find((m) => m.name === transitionName);
+    if (!move) continue; // skip declare_solved
+    const next = applyMoveToItems(items, move);
+    if (next) items = next;
+  }
+  return items;
+}
+
+function getValidMoves(items: number[]): Array<{ move: Move; target: number[] }> {
+  const results: Array<{ move: Move; target: number[] }> = [];
   for (const move of MOVES) {
-    const target = applyMove(state, move);
-    if (target !== null) {
-      results.push({ move, target });
-    }
+    const target = applyMoveToItems(items, move);
+    if (target !== null) results.push({ move, target });
   }
   return results;
 }
 
-/**
- * Pretty-print a state: "L:[F,W,C] R:[G]"
- */
-function formatState(state: string): string {
-  const items = parseState(state);
+function isSolved(items: number[]): boolean {
+  return items.every((i) => i === 1);
+}
+
+function formatItems(items: number[]): string {
   const left: string[] = [];
   const right: string[] = [];
   for (let i = 0; i < 4; i++) {
@@ -149,93 +109,43 @@ function formatState(state: string): string {
 }
 
 // ============================================================================
-// Machine Definition Generator
-// ============================================================================
-
-function generateRiverCrossingMachine(): MachineDefinition {
-  const states: MachineDefinition["states"] = {};
-
-  // Enumerate all 16 possible states (2^4 FWGC combinations)
-  for (let bits = 0; bits < 16; bits++) {
-    const state = [
-      (bits >> 3) & 1,
-      (bits >> 2) & 1,
-      (bits >> 1) & 1,
-      bits & 1,
-    ].join("");
-
-    // Skip unsafe states entirely — they can never be entered
-    if (!isSafe(state)) continue;
-
-    // Goal state is terminal
-    if (state === "1111") {
-      states[state] = {};
-      continue;
-    }
-
-    const validMoves = getValidMoves(state);
-    const transitions: Record<string, string> = {};
-    for (const { move, target } of validMoves) {
-      transitions[move.name] = target;
-    }
-
-    const moveNames = validMoves.map((v) => v.move.name).join(", ");
-    states[state] = {
-      prompt:
-        `River crossing: move all to right bank. ${formatState(state)}. ` +
-        `Valid: ${moveNames || "none"}.`,
-      transitions,
-    };
-  }
-
-  return {
-    machineName: "river-crossing",
-    initialState: "0000",
-    goalState: "1111",
-    states,
-  };
-}
-
-// ============================================================================
-// BFS Optimal Solver (the "human")
+// Optimal Solver (the "human")
 // ============================================================================
 
 function buildOptimalMoveTable(): Map<string, string> {
   const goal = "1111";
   const table = new Map<string, string>();
 
-  // Collect all safe, non-goal states
   const safeStates: string[] = [];
   for (let bits = 0; bits < 16; bits++) {
-    const state = [
-      (bits >> 3) & 1,
-      (bits >> 2) & 1,
-      (bits >> 1) & 1,
-      bits & 1,
-    ].join("");
-    if (isSafe(state) && state !== goal) safeStates.push(state);
+    const items = [(bits >> 3) & 1, (bits >> 2) & 1, (bits >> 1) & 1, bits & 1];
+    const state = items.join("");
+    if (isSafe(items) && state !== goal) safeStates.push(state);
   }
 
   for (const start of safeStates) {
-    const visited = new Set<string>([start]);
-    const queue: Array<{ state: string; firstMove: string }> = [];
+    const startItems = start.split("").map(Number);
+    const visited = new Set([start]);
+    const queue: Array<{ items: number[]; firstMove: string }> = [];
 
-    for (const { move, target } of getValidMoves(start)) {
-      if (target === goal) { table.set(start, move.name); break; }
-      if (!visited.has(target)) {
-        visited.add(target);
-        queue.push({ state: target, firstMove: move.name });
+    for (const { move, target } of getValidMoves(startItems)) {
+      const key = target.join("");
+      if (key === goal) { table.set(start, move.name); break; }
+      if (!visited.has(key)) {
+        visited.add(key);
+        queue.push({ items: target, firstMove: move.name });
       }
     }
     if (table.has(start)) continue;
 
     while (queue.length > 0) {
-      const { state: curr, firstMove } = queue.shift()!;
+      const { items: curr, firstMove } = queue.shift()!;
       for (const { target } of getValidMoves(curr)) {
-        if (target === goal) { table.set(start, firstMove); break; }
-        if (!visited.has(target)) {
-          visited.add(target);
-          queue.push({ state: target, firstMove });
+        const key = target.join("");
+        if (key === goal) { table.set(start, firstMove); break; }
+        if (!visited.has(key)) {
+          visited.add(key);
+          queue.push({ items: target, firstMove });
         }
       }
       if (table.has(start)) break;
@@ -247,12 +157,10 @@ function buildOptimalMoveTable(): Map<string, string> {
 
 const OPTIMAL_TABLE = buildOptimalMoveTable();
 
-function getOptimalMove(
-  state: string,
-  transitions: Record<string, string>
-): ProposerStrategyResult {
-  const moveName = OPTIMAL_TABLE.get(state);
-  if (!moveName) throw new Error(`No optimal move from "${state}"`);
+function getOptimalMove(items: number[], transitions: Record<string, string>): ProposerStrategyResult {
+  const key = items.join("");
+  const moveName = OPTIMAL_TABLE.get(key);
+  if (!moveName) throw new Error(`No optimal move from "${key}"`);
   return {
     transitionName: moveName,
     toState: transitions[moveName],
@@ -261,52 +169,45 @@ function getOptimalMove(
 }
 
 // ============================================================================
-// Mock LLM Proposer Strategies
+// Strategy Functions (history-based)
 // ============================================================================
 
 const MACHINE_NAME = "river-crossing";
 
-/**
- * "LLM Cautious" — learns from exemplars. If the current state has a human
- * exemplar, replays the human's choice. Otherwise greedy heuristic that
- * prefers moving items to the right bank (toward goal).
- *
- * This heuristic intentionally fails at step 4 where you need to bring
- * the goat back — demonstrating why human training matters.
- */
-async function llmCautiousStrategy(
-  ctx: ProposerContext
-): Promise<ProposerStrategyResult> {
-  const stateExemplars = getExemplars(MACHINE_NAME, ctx.currentState);
-  if (stateExemplars.length > 0) {
-    const ex = stateExemplars[stateExemplars.length - 1];
-    return {
-      transitionName: ex.humanTransitionName,
-      toState: ctx.transitions[ex.humanTransitionName],
-      reasoning: `Learned: replay ${ex.humanTransitionName}`,
-    };
+/** LLM Cautious — replays exemplar if available, else greedy heuristic. */
+async function llmCautiousStrategy(ctx: ProposerContext): Promise<ProposerStrategyResult> {
+  const items = replayMoves(ctx.history);
+
+  if (isSolved(items)) {
+    return { transitionName: "declare_solved", toState: ctx.transitions["declare_solved"], reasoning: "Solved" };
   }
 
-  // Greedy fallback: prefer moves that take items to the right bank
-  const transitionNames = Object.keys(ctx.transitions);
-  const items = parseState(ctx.currentState);
-  const farmerSide = items[0];
-
-  // "Move right" = farmer going from left(0) to right(1) with an item
-  if (farmerSide === 0) {
-    // Prefer taking an item over crossing alone
-    const withItem = transitionNames.filter((t) => t !== "cross_alone");
-    if (withItem.length > 0) {
-      const chosen = withItem[0];
+  // Check exemplars for matching board state
+  const stateExemplars = getExemplars(MACHINE_NAME, "unsolved");
+  for (const ex of [...stateExemplars].reverse()) {
+    const exItems = replayMoves(ex.context.history);
+    if (exItems.join("") === items.join("")) {
       return {
-        transitionName: chosen,
-        toState: ctx.transitions[chosen],
-        reasoning: `Greedy: ${chosen} (move item right)`,
+        transitionName: ex.humanTransitionName,
+        toState: ctx.transitions[ex.humanTransitionName],
+        reasoning: `Learned: replay ${ex.humanTransitionName}`,
       };
     }
   }
 
-  // If farmer is on right, or no "take" moves available, pick first transition
+  // Greedy fallback: prefer taking items to right bank
+  const transitionNames = Object.keys(ctx.transitions).filter((t) => t !== "declare_solved");
+  if (items[0] === 0) {
+    const withItem = transitionNames.filter((t) => t !== "cross_alone");
+    if (withItem.length > 0) {
+      return {
+        transitionName: withItem[0],
+        toState: ctx.transitions[withItem[0]],
+        reasoning: `Greedy: ${withItem[0]} (move item right)`,
+      };
+    }
+  }
+
   const chosen = transitionNames[0];
   return {
     transitionName: chosen,
@@ -315,19 +216,59 @@ async function llmCautiousStrategy(
   };
 }
 
-/**
- * "LLM Greedy" — random valid move every time. Never learns.
- */
-async function llmGreedyStrategy(
-  ctx: ProposerContext
-): Promise<ProposerStrategyResult> {
-  const transitionNames = Object.keys(ctx.transitions);
-  const chosen =
-    transitionNames[Math.floor(Math.random() * transitionNames.length)];
+/** LLM Greedy — random valid move. */
+async function llmGreedyStrategy(ctx: ProposerContext): Promise<ProposerStrategyResult> {
+  const items = replayMoves(ctx.history);
+
+  if (isSolved(items)) {
+    return { transitionName: "declare_solved", toState: ctx.transitions["declare_solved"], reasoning: "Solved" };
+  }
+
+  const transitionNames = Object.keys(ctx.transitions).filter((t) => t !== "declare_solved");
+  const chosen = transitionNames[Math.floor(Math.random() * transitionNames.length)];
   return {
     transitionName: chosen,
     toState: ctx.transitions[chosen],
     reasoning: `Random: ${chosen}`,
+  };
+}
+
+// ============================================================================
+// Machine Definition (2-state, per-state specialists)
+// ============================================================================
+
+function buildRiverCrossingMachine(): MachineDefinition {
+  // Compute valid transitions from each safe non-goal state
+  const transitions: Record<string, string> = {};
+  const startItems = [0, 0, 0, 0];
+  for (const { move } of getValidMoves(startItems)) {
+    transitions[move.name] = "unsolved";
+  }
+  // We need ALL possible moves since board is reconstructed from history.
+  // Include all 4 moves — invalid ones are simply no-ops (strategy picks valid ones).
+  const allTransitions: Record<string, string> = {};
+  for (const move of MOVES) {
+    allTransitions[move.name] = "unsolved";
+  }
+  allTransitions["declare_solved"] = "solved";
+
+  return {
+    machineName: MACHINE_NAME,
+    initialState: "unsolved",
+    goalState: "solved",
+    states: {
+      unsolved: {
+        prompt: "River crossing: move all items (Farmer, Wolf, Goat, Cabbage) to right bank",
+        transitions: allTransitions,
+        specialists: [
+          { role: "proposer", specialistId: "human-optimal", isHuman: true, disabled: true },
+          { role: "proposer", specialistId: "llm-cautious" },
+          { role: "proposer", specialistId: "llm-greedy" },
+          { role: "arbiter", specialistId: "river-arbiter", strategyFnName: "aheadByK", threshold: 0.4 },
+        ],
+      },
+      solved: {},
+    },
   };
 }
 
@@ -341,34 +282,19 @@ interface SolveResult {
   aiDecisions: number;
 }
 
-/**
- * Solve the puzzle once using tick-based orchestration.
- *
- * Each call to tick() does one atomic thing:
- *   'solicited'  — one LLM proposer submitted a proposal
- *   'advanced'   — consensus reached, transition executed (AI decision)
- *   'needs_human' — all proposals in, no consensus (human must force)
- *
- * Training mode: after all LLMs are solicited, human forces before tick
- * evaluates consensus. This ensures exemplars and alignment are tracked.
- *
- * Non-training mode: tick handles the full cycle. Human intervenes only
- * when consensus isn't reached.
- */
 async function solvePuzzle(
   machine: MachineDefinition,
   training: boolean,
   verbose: boolean
 ): Promise<SolveResult> {
-  // Session object is a live reference — stays current after transitions
   const session = await createSession(machine);
-  const proposerCount = getEnabledProposers(MACHINE_NAME).length;
+  const proposerCount = getEnabledProposersForState(session).length;
   let humanDecisions = 0;
   let aiDecisions = 0;
   let moves = 0;
   let solicitedThisRound = 0;
 
-  while (session.currentState !== "1111") {
+  while (session.currentState !== "solved") {
     if (moves > 30) {
       if (verbose) console.log("      !! safety valve (>30 moves)");
       break;
@@ -376,70 +302,85 @@ async function solvePuzzle(
 
     const results = await tick();
     const r = results.find((t) => t.sessionId === session.sessionId);
-    if (!r) break; // terminal
+    if (!r) break;
 
     if (r.status === "solicited") {
       solicitedThisRound++;
 
-      // Training: once all LLMs have submitted, human forces
       if (training && solicitedThisRound >= proposerCount) {
-        const state = session.currentState;
-        const transitions = machine.states[state]?.transitions ?? {};
-        const optimal = getOptimalMove(state, transitions);
-        const result = await submitArbitration({
-          sessionId: session.sessionId,
-          roundId: session.currentRoundId,
-          specialistId: "human-optimal",
-          transitionName: optimal.transitionName,
-          reasoning: optimal.reasoning,
-        });
+        const items = replayMoves(session.history);
+        const transitions = machine.states["unsolved"]?.transitions ?? {};
+
+        if (isSolved(items)) {
+          await submitArbitration({
+            sessionId: session.sessionId,
+            roundId: session.currentRoundId,
+            specialistId: "human-optimal",
+            transitionName: "declare_solved",
+            reasoning: "Human: puzzle solved",
+          });
+        } else {
+          const optimal = getOptimalMove(items, transitions);
+          await submitArbitration({
+            sessionId: session.sessionId,
+            roundId: session.currentRoundId,
+            specialistId: "human-optimal",
+            transitionName: optimal.transitionName,
+            reasoning: optimal.reasoning,
+          });
+        }
         humanDecisions++;
         moves++;
         solicitedThisRound = 0;
         if (verbose) {
           console.log(
-            `      ${String(moves).padStart(2)}. ${formatState(state)} ` +
-              `─${optimal.transitionName}─▸ ${formatState(result.toState!)}  [TRAIN]`
+            `      ${String(moves).padStart(2)}. ${formatItems(replayMoves(session.history.slice(0, -1)))} ─▸ ${formatItems(replayMoves(session.history))}  [TRAIN]`
           );
         }
       }
       continue;
     }
 
-    // Past solicitation phase — reset counter
     solicitedThisRound = 0;
 
     if (r.status === "advanced") {
-      // AI consensus reached and transition executed
       moves++;
       aiDecisions++;
       if (verbose) {
         console.log(
-          `      ${String(moves).padStart(2)}. ${formatState(r.previousState!)} ` +
-            `─${r.transitionName!}─▸ ${formatState(r.currentState)}  [AI]`
+          `      ${String(moves).padStart(2)}. ${formatItems(replayMoves(session.history.slice(0, -1)))} ─${r.transitionName!}─▸ ${formatItems(replayMoves(session.history))}  [AI]`
         );
       }
       continue;
     }
 
     if (r.status === "needs_human") {
-      // No consensus — human forces optimal move
-      const state = session.currentState;
-      const transitions = machine.states[state]?.transitions ?? {};
-      const optimal = getOptimalMove(state, transitions);
-      const result = await submitArbitration({
-        sessionId: session.sessionId,
-        roundId: session.currentRoundId,
-        specialistId: "human-optimal",
-        transitionName: optimal.transitionName,
-        reasoning: optimal.reasoning,
-      });
+      const items = replayMoves(session.history);
+      const transitions = machine.states["unsolved"]?.transitions ?? {};
+
+      if (isSolved(items)) {
+        await submitArbitration({
+          sessionId: session.sessionId,
+          roundId: session.currentRoundId,
+          specialistId: "human-optimal",
+          transitionName: "declare_solved",
+          reasoning: "Human: puzzle solved",
+        });
+      } else {
+        const optimal = getOptimalMove(items, transitions);
+        await submitArbitration({
+          sessionId: session.sessionId,
+          roundId: session.currentRoundId,
+          specialistId: "human-optimal",
+          transitionName: optimal.transitionName,
+          reasoning: optimal.reasoning,
+        });
+      }
       humanDecisions++;
       moves++;
       if (verbose) {
         console.log(
-          `      ${String(moves).padStart(2)}. ${formatState(state)} ` +
-            `─${optimal.transitionName}─▸ ${formatState(result.toState!)}  [HUMAN]`
+          `      ${String(moves).padStart(2)}. ${formatItems(replayMoves(session.history.slice(0, -1)))} ─▸ ${formatItems(replayMoves(session.history))}  [HUMAN]`
         );
       }
     }
@@ -454,27 +395,28 @@ async function solvePuzzle(
 
 async function main(): Promise<void> {
   console.log("=== Wolf-Goat-Cabbage River Crossing — DIAL Progressive Collapse Demo ===\n");
-  console.log("4 entities (FWGC), 4 moves per state (some invalid/unsafe). Optimal: 7 moves.\n");
-  console.log("Specialists:");
-  console.log("  human-optimal   forces BFS-optimal moves (isHuman=true)");
+  console.log("2-state machine with per-state specialists. Board reconstructed from history.\n");
+  console.log("Specialists (on 'unsolved' state):");
+  console.log("  human-optimal   forces BFS-optimal moves (isHuman=true, disabled)");
   console.log("  llm-cautious    learns from exemplars, greedy fallback (move items right)");
   console.log("  llm-greedy      random valid move (never learns)\n");
   console.log("Arbiter: aheadByK, threshold=0.4\n");
 
-  const machine = generateRiverCrossingMachine();
+  const machine = buildRiverCrossingMachine();
   const TRAINING_ROUNDS = 3;
   const TOTAL_ROUNDS = 10;
 
-  // Register specialists (persist across sessions via global store)
-  // Human is registered but disabled — tick() only solicits LLM proposers.
-  // Human forces via submitArbitration when needed.
+  // Register specialists with custom strategyFn (not auto-registered by createSession)
   await registerProposer({
     specialistId: "human-optimal",
     machineName: MACHINE_NAME,
     isHuman: true,
-    strategyFn: async (ctx) => getOptimalMove(ctx.currentState, ctx.transitions),
+    strategyFn: async (ctx) => {
+      const items = replayMoves(ctx.history);
+      if (isSolved(items)) return { transitionName: "declare_solved", toState: ctx.transitions["declare_solved"], reasoning: "Solved" };
+      return getOptimalMove(items, ctx.transitions);
+    },
   });
-  disableSpecialist("human-optimal");
 
   await registerProposer({
     specialistId: "llm-cautious",
@@ -486,12 +428,8 @@ async function main(): Promise<void> {
     machineName: MACHINE_NAME,
     strategyFn: llmGreedyStrategy,
   });
-  await registerArbiter({
-    specialistId: "river-arbiter",
-    machineName: MACHINE_NAME,
-    strategyFnName: "aheadByK",
-    threshold: 0.4,
-  });
+
+  // Arbiter auto-registered by createSession (has strategyFnName: "aheadByK")
 
   // ── Phase 1: Training ────────────────────────────────────────────────
   console.log("─── Phase 1: Cold Start Training ──────────────────────────────────────");
@@ -512,8 +450,8 @@ async function main(): Promise<void> {
     if (verbose) console.log(`    Solve #${i} (step-by-step):`);
 
     const r = await solvePuzzle(machine, true, verbose);
-    const ca = getAlignmentScore("llm-cautious", MACHINE_NAME);
-    const ga = getAlignmentScore("llm-greedy", MACHINE_NAME);
+    const ca = getAlignmentScore("llm-cautious", MACHINE_NAME, "unsolved");
+    const ga = getAlignmentScore("llm-greedy", MACHINE_NAME, "unsolved");
 
     results.push({ iteration: i, phase: "train", ...r, cautiousAlign: ca, greedyAlign: ga });
 
@@ -533,8 +471,8 @@ async function main(): Promise<void> {
     if (verbose) console.log(`    Solve #${i} (step-by-step):`);
 
     const r = await solvePuzzle(machine, false, verbose);
-    const ca = getAlignmentScore("llm-cautious", MACHINE_NAME);
-    const ga = getAlignmentScore("llm-greedy", MACHINE_NAME);
+    const ca = getAlignmentScore("llm-cautious", MACHINE_NAME, "unsolved");
+    const ga = getAlignmentScore("llm-greedy", MACHINE_NAME, "unsolved");
 
     results.push({ iteration: i, phase: "live", ...r, cautiousAlign: ca, greedyAlign: ga });
 
@@ -574,8 +512,8 @@ async function main(): Promise<void> {
       `(${totalH} human, ${totalA} AI)`
   );
 
-  const records = getAllAlignmentRecords(MACHINE_NAME);
-  console.log("\n  Final alignment:");
+  const records = getAllAlignmentRecords(MACHINE_NAME, "unsolved");
+  console.log("\n  Final alignment (per-state: unsolved):");
   for (const r of records) {
     console.log(
       `    ${r.specialistId.padEnd(16)} ` +
@@ -585,17 +523,11 @@ async function main(): Promise<void> {
 
   console.log();
   if (last && last.humanDecisions === 0 && last.moves === 7) {
-    console.log(
-      "  ** FULL COLLAPSE: AI solves optimally (7 moves) with zero human intervention. **"
-    );
+    console.log("  ** FULL COLLAPSE: AI solves optimally (7 moves) with zero human intervention. **");
   } else if (last && last.humanDecisions === 0) {
-    console.log(
-      `  ** FULL COLLAPSE: AI solves autonomously (${last.moves} moves). **`
-    );
+    console.log(`  ** FULL COLLAPSE: AI solves autonomously (${last.moves} moves). **`);
   } else if (first && last && last.humanDecisions < first.humanDecisions) {
-    console.log(
-      `  ** PARTIAL COLLAPSE: human decisions ${first.humanDecisions} → ${last.humanDecisions}. **`
-    );
+    console.log(`  ** PARTIAL COLLAPSE: human decisions ${first.humanDecisions} → ${last.humanDecisions}. **`);
   } else {
     console.log("  ** Collapse not yet achieved. **");
   }
@@ -603,14 +535,12 @@ async function main(): Promise<void> {
   // ── Collapse Metrics ─────────────────────────────────────────────────
   console.log("\n─── Collapse Metrics ──────────────────────────────────────────────────\n");
 
-  const metrics = getCollapseMetrics(MACHINE_NAME);
+  const metrics = getCollapseMetrics(MACHINE_NAME, "unsolved");
   console.log(
     `  Collapse ratio: ${(metrics.collapseRatio * 100).toFixed(1)}% overall, ` +
       `${(metrics.recentCollapseRatio * 100).toFixed(1)}% recent`
   );
-  console.log(
-    `  Avg consensus margin: ${metrics.averageConsensusMargin.toFixed(3)}`
-  );
+  console.log(`  Avg consensus margin: ${metrics.averageConsensusMargin.toFixed(3)}`);
 
   if (metrics.signals.length > 0) {
     console.log("\n  Active signals:");

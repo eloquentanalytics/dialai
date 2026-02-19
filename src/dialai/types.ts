@@ -36,6 +36,8 @@ export interface StateDefinition {
   transitions?: Record<string, string>;
   /** Consensus threshold override for this state (risk dial) */
   consensusThreshold?: number;
+  /** Per-state specialist declarations (overrides machine-level when present) */
+  specialists?: SpecialistDefinition[];
 }
 
 /**
@@ -89,6 +91,8 @@ export interface SpecialistDefinition {
   specialistId: string;
   machineName?: string;
   isHuman?: boolean;
+  /** Per-state: don't solicit but still registered */
+  disabled?: boolean;
   strategyFn?: string;
   strategyFnName?: string;
   strategyWebhookUrl?: string;
@@ -344,6 +348,8 @@ export interface AlignmentRecord {
   specialistId: string;
   /** The machine this alignment is for */
   machineName: string;
+  /** When present, alignment is tracked per-state */
+  state?: string;
   /** Number of times specialist matched human choice */
   matchingChoices: number;
   /** Total number of comparisons */

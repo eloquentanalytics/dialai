@@ -13,9 +13,12 @@ import {
   getSessions,
   registerProposer,
   registerArbiter,
+  getSpecialist,
   getProposers,
   getArbiter,
   getEnabledProposers,
+  getEnabledProposersForState,
+  getArbiterForState,
   enableSpecialist,
   submitProposal,
   submitArbitration,
@@ -25,6 +28,7 @@ import {
 import { getAlignmentScore } from "./alignment.js";
 import type {
   MachineDefinition,
+  Proposer,
   Session,
   TickResult,
 } from "./types.js";
@@ -44,7 +48,7 @@ export function getEffectiveThreshold(session: Session): number {
   if (session.machine.consensusThreshold !== undefined) {
     return session.machine.consensusThreshold;
   }
-  const arbiter = getArbiter(session.machineName);
+  const arbiter = getArbiterForState(session);
   if (arbiter?.threshold !== undefined) {
     return arbiter.threshold;
   }
@@ -57,14 +61,16 @@ export function getEffectiveThreshold(session: Session): number {
  */
 export function selectChampion(
   machineName: string,
-  threshold: number
+  threshold: number,
+  proposers?: Proposer[],
+  state?: string
 ): string | undefined {
-  const proposers = getEnabledProposers(machineName);
+  const effectiveProposers = proposers ?? getEnabledProposers(machineName);
   let bestId: string | undefined;
   let bestScore = -1;
 
-  for (const p of proposers) {
-    const score = getAlignmentScore(p.specialistId, machineName);
+  for (const p of effectiveProposers) {
+    const score = getAlignmentScore(p.specialistId, machineName, state);
     if (score >= threshold && score > bestScore) {
       bestScore = score;
       bestId = p.specialistId;
@@ -106,9 +112,11 @@ async function tickOneSession(session: Session): Promise<TickResult | null> {
   );
   const submitted = new Set(roundProposals.map((p) => p.specialistId));
 
-  // Get enabled proposers, champion-first ordering
-  const enabledProposers = getEnabledProposers(machineName);
-  const championId = selectChampion(machineName, CHAMPION_THRESHOLD);
+  // Get enabled proposers (state-aware), champion-first ordering
+  const enabledProposers = getEnabledProposersForState(session);
+  const stateDef = session.machine.states[session.currentState];
+  const stateParam = stateDef?.specialists ? session.currentState : undefined;
+  const championId = selectChampion(machineName, CHAMPION_THRESHOLD, enabledProposers, stateParam);
 
   const ordered = championId
     ? [
@@ -148,7 +156,7 @@ async function tickOneSession(session: Session): Promise<TickResult | null> {
     if (result.executed) {
       // Trip line: if champion degraded, self-heal
       if (championId) {
-        const currentScore = getAlignmentScore(championId, machineName);
+        const currentScore = getAlignmentScore(championId, machineName, stateParam);
         if (currentScore < CHAMPION_THRESHOLD) {
           selfHeal(machineName);
         }
@@ -220,11 +228,45 @@ export async function runSession(
   // Use the normalized machine from the session
   const normalizedMachine = session.machine;
 
-  // Register specialists from machine definition
+  // Register specialists from machine definition (machine-level)
   if (normalizedMachine.specialists && normalizedMachine.specialists.length > 0) {
     for (const spec of normalizedMachine.specialists) {
       const machineName = spec.machineName ?? normalizedMachine.machineName;
 
+      if (spec.role === "proposer") {
+        await registerProposer({
+          specialistId: spec.specialistId,
+          machineName,
+          isHuman: spec.isHuman,
+          strategyFnName: spec.strategyFnName,
+          strategyWebhookUrl: spec.strategyWebhookUrl,
+          webhookTokenName: spec.webhookTokenName,
+          threshold: spec.threshold,
+        });
+      } else if (spec.role === "arbiter") {
+        await registerArbiter({
+          specialistId: spec.specialistId,
+          machineName,
+          strategyFnName: spec.strategyFnName,
+          strategyWebhookUrl: spec.strategyWebhookUrl,
+          webhookTokenName: spec.webhookTokenName,
+          threshold: spec.threshold,
+        });
+      }
+    }
+  }
+
+  // Register per-state specialists (deduplicated, strategyFnName only)
+  // Note: createSession already auto-registers these, but runSession may be
+  // called on machines created before createSession was updated. This ensures
+  // backward compat.
+  for (const stateDef of Object.values(normalizedMachine.states)) {
+    if (!stateDef.specialists) continue;
+    for (const spec of stateDef.specialists) {
+      if (getSpecialist(spec.specialistId)) continue;
+      if (!spec.strategyFnName) continue;
+
+      const machineName = spec.machineName ?? normalizedMachine.machineName;
       if (spec.role === "proposer") {
         await registerProposer({
           specialistId: spec.specialistId,

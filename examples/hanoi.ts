@@ -1,30 +1,21 @@
 #!/usr/bin/env npx tsx
 /**
- * hanoi.ts — Tower of Hanoi as a DIAL state machine
+ * hanoi.ts — Tower of Hanoi as a 2-state DIAL machine
  *
- * Demonstrates progressive collapse: a "human" (optimal solver) trains two
- * mock-LLM proposers through repeated puzzle solves. Over iterations, the
- * AI specialists build alignment and progressively take over decisions.
+ * Demonstrates progressive collapse with per-state specialists.
  *
- * Uses tick-based orchestration: each call to tick() does one atomic thing
- * per session (solicit one proposer, evaluate consensus, or report needs_human).
+ * Machine design: 2 states — "unsolved" and "solved". All move transitions
+ * loop back to "unsolved"; "declare_solved" goes to "solved". Puzzle state
+ * is reconstructed from transition history.
  *
- * State encoding: 3 disks on 3 pegs (A=0, B=1, C=2).
- *   State string = position of disk0 (smallest), disk1 (medium), disk2 (largest).
- *   e.g. "000" = all on peg A, "222" = all on peg C (goal).
+ * Three specialists (declared on the "unsolved" state):
+ *   "human-optimal"  — isHuman, disabled at state level. Forces optimal
+ *                       moves via submitArbitration when AI can't reach consensus.
+ *   "llm-careful"    — reconstructs board from history, replays exemplar
+ *                       choices or falls back to a greedy heuristic.
+ *   "llm-random"     — random valid move from reconstructed board state.
  *
- * Six moves always presented: A→B, A→C, B→A, B→C, C→A, C→B.
- *   Invalid moves (empty source peg, or larger-on-smaller) loop back to
- *   the same state — wasting a turn.
- *
- * Three specialists:
- *   "human-optimal"  — registered as human, forces optimal moves when
- *                       AI consensus fails. Uses BFS shortest path.
- *                       Disabled as a proposer so tick() only solicits LLMs.
- *   "llm-careful"    — mock LLM that learns from exemplars: replays the
- *                       human's choice if the current state was seen before,
- *                       falls back to a greedy heuristic otherwise.
- *   "llm-impulsive"  — mock LLM that picks a random valid move every time.
+ * Arbiter: aheadByK, threshold=0.4 (declared on the state).
  *
  * Usage:
  *   npx tsx examples/hanoi.ts
@@ -33,9 +24,7 @@
 import {
   createSession,
   registerProposer,
-  registerArbiter,
-  disableSpecialist,
-  getEnabledProposers,
+  getEnabledProposersForState,
   submitArbitration,
   tick,
   getAlignmentScore,
@@ -45,12 +34,13 @@ import {
 } from "../src/dialai/index.js";
 import type {
   MachineDefinition,
+  TransitionRecord,
   ProposerContext,
   ProposerStrategyResult,
 } from "../src/dialai/index.js";
 
 // ============================================================================
-// Hanoi Puzzle Logic
+// Puzzle Logic (history-based)
 // ============================================================================
 
 const PEG_NAMES = ["A", "B", "C"] as const;
@@ -66,22 +56,23 @@ const MOVES = [
 
 type Move = (typeof MOVES)[number];
 
-function parseState(state: string): number[] {
-  return state.split("").map(Number);
-}
+const MOVE_MAP = new Map(MOVES.map((m) => [m.name, m]));
 
-function encodeState(disks: number[]): string {
-  return disks.join("");
+/** Replay transition history to reconstruct current disk positions. */
+function replayMoves(history: TransitionRecord[]): number[] {
+  const disks = [0, 0, 0]; // all on peg A (3 disks)
+  for (const { transitionName } of history) {
+    const move = MOVE_MAP.get(transitionName);
+    if (!move) continue; // skip declare_solved
+    applyMoveToDisks(disks, move.from, move.to);
+  }
+  return disks;
 }
 
 function getPegStacks(disks: number[]): number[][] {
   const pegs: number[][] = [[], [], []];
-  for (let d = 0; d < disks.length; d++) {
-    pegs[disks[d]].push(d);
-  }
-  for (const peg of pegs) {
-    peg.sort((a, b) => a - b);
-  }
+  for (let d = 0; d < disks.length; d++) pegs[disks[d]].push(d);
+  for (const peg of pegs) peg.sort((a, b) => a - b);
   return pegs;
 }
 
@@ -92,22 +83,21 @@ function isMoveValid(disks: number[], fromPeg: number, toPeg: number): boolean {
   return pegs[fromPeg][0] < pegs[toPeg][0];
 }
 
-function applyMove(state: string, fromPeg: number, toPeg: number): string {
-  const disks = parseState(state);
-  if (!isMoveValid(disks, fromPeg, toPeg)) return state;
+function applyMoveToDisks(disks: number[], fromPeg: number, toPeg: number): void {
+  if (!isMoveValid(disks, fromPeg, toPeg)) return;
   const pegs = getPegStacks(disks);
-  const diskToMove = pegs[fromPeg][0];
-  disks[diskToMove] = toPeg;
-  return encodeState(disks);
+  disks[pegs[fromPeg][0]] = toPeg;
 }
 
-function getValidMoves(state: string): Move[] {
-  const disks = parseState(state);
+function getValidMoves(disks: number[]): Move[] {
   return MOVES.filter((m) => isMoveValid(disks, m.from, m.to));
 }
 
-function formatState(state: string): string {
-  const disks = parseState(state);
+function isSolved(disks: number[]): boolean {
+  return disks.every((d) => d === 2);
+}
+
+function formatDisks(disks: number[]): string {
   const pegs = getPegStacks(disks);
   const labels = ["s", "M", "L"];
   return PEG_NAMES.map(
@@ -116,96 +106,59 @@ function formatState(state: string): string {
 }
 
 // ============================================================================
-// Machine Definition Generator
-// ============================================================================
-
-function generateHanoiMachine(): MachineDefinition {
-  const states: MachineDefinition["states"] = {};
-
-  for (let d0 = 0; d0 < 3; d0++) {
-    for (let d1 = 0; d1 < 3; d1++) {
-      for (let d2 = 0; d2 < 3; d2++) {
-        const state = `${d0}${d1}${d2}`;
-        const transitions: Record<string, string> = {};
-        for (const move of MOVES) {
-          transitions[move.name] = applyMove(state, move.from, move.to);
-        }
-        const valid = getValidMoves(state).map((m) => m.name).join(", ");
-        states[state] = {
-          prompt:
-            `Hanoi: move all disks A→C. ${formatState(state)}. ` +
-            `Valid: ${valid || "none"}. Invalid moves waste a turn.`,
-          transitions,
-        };
-      }
-    }
-  }
-
-  states["222"] = {};
-
-  return {
-    machineName: "hanoi",
-    initialState: "000",
-    goalState: "222",
-    states,
-  };
-}
-
-// ============================================================================
-// BFS Optimal Solver (the "human")
+// Optimal Solver (the "human")
 // ============================================================================
 
 function buildOptimalMoveTable(): Map<string, string> {
-  const goal = "222";
   const table = new Map<string, string>();
+  const goal = "222";
 
-  const allStates: string[] = [];
   for (let d0 = 0; d0 < 3; d0++)
     for (let d1 = 0; d1 < 3; d1++)
-      for (let d2 = 0; d2 < 3; d2++) allStates.push(`${d0}${d1}${d2}`);
+      for (let d2 = 0; d2 < 3; d2++) {
+        const state = `${d0}${d1}${d2}`;
+        if (state === goal) continue;
+        const visited = new Set([state]);
+        const queue: Array<{ state: string; firstMove: string }> = [];
 
-  for (const start of allStates) {
-    if (start === goal) continue;
-    const visited = new Set<string>([start]);
-    const queue: Array<{ state: string; firstMove: string }> = [];
+        for (const move of MOVES) {
+          const disks = state.split("").map(Number);
+          if (!isMoveValid(disks, move.from, move.to)) continue;
+          applyMoveToDisks(disks, move.from, move.to);
+          const next = disks.join("");
+          if (next === goal) { table.set(state, move.name); break; }
+          if (!visited.has(next)) {
+            visited.add(next);
+            queue.push({ state: next, firstMove: move.name });
+          }
+        }
+        if (table.has(state)) continue;
 
-    for (const move of MOVES) {
-      const next = applyMove(start, move.from, move.to);
-      if (next === start) continue;
-      if (next === goal) { table.set(start, move.name); break; }
-      if (!visited.has(next)) {
-        visited.add(next);
-        queue.push({ state: next, firstMove: move.name });
-      }
-    }
-    if (table.has(start)) continue;
-
-    while (queue.length > 0) {
-      const { state: curr, firstMove } = queue.shift()!;
-      for (const move of MOVES) {
-        const next = applyMove(curr, move.from, move.to);
-        if (next === curr) continue;
-        if (next === goal) { table.set(start, firstMove); break; }
-        if (!visited.has(next)) {
-          visited.add(next);
-          queue.push({ state: next, firstMove });
+        while (queue.length > 0) {
+          const { state: curr, firstMove } = queue.shift()!;
+          for (const move of MOVES) {
+            const disks = curr.split("").map(Number);
+            if (!isMoveValid(disks, move.from, move.to)) continue;
+            applyMoveToDisks(disks, move.from, move.to);
+            const next = disks.join("");
+            if (next === goal) { table.set(state, firstMove); break; }
+            if (!visited.has(next)) {
+              visited.add(next);
+              queue.push({ state: next, firstMove });
+            }
+          }
+          if (table.has(state)) break;
         }
       }
-      if (table.has(start)) break;
-    }
-  }
-
   return table;
 }
 
 const OPTIMAL_TABLE = buildOptimalMoveTable();
 
-function getOptimalMove(
-  state: string,
-  transitions: Record<string, string>
-): ProposerStrategyResult {
-  const moveName = OPTIMAL_TABLE.get(state);
-  if (!moveName) throw new Error(`No optimal move from "${state}"`);
+function getOptimalMove(disks: number[], transitions: Record<string, string>): ProposerStrategyResult {
+  const stateKey = disks.join("");
+  const moveName = OPTIMAL_TABLE.get(stateKey);
+  if (!moveName) throw new Error(`No optimal move from "${stateKey}"`);
   return {
     transitionName: moveName,
     toState: transitions[moveName],
@@ -214,38 +167,38 @@ function getOptimalMove(
 }
 
 // ============================================================================
-// Mock LLM Proposer Strategies
+// Strategy Functions (history-based)
 // ============================================================================
 
 const MACHINE_NAME = "hanoi";
 
-/**
- * "LLM Careful" — learns from exemplars. If the current state has a human
- * exemplar, replays the human's choice. Otherwise greedy heuristic.
- */
-async function llmCarefulStrategy(
-  ctx: ProposerContext
-): Promise<ProposerStrategyResult> {
-  const stateExemplars = getExemplars(MACHINE_NAME, ctx.currentState);
-  if (stateExemplars.length > 0) {
-    const ex = stateExemplars[stateExemplars.length - 1];
-    return {
-      transitionName: ex.humanTransitionName,
-      toState: ctx.transitions[ex.humanTransitionName],
-      reasoning: `Learned: replay ${ex.humanTransitionName}`,
-    };
+/** LLM Careful — replays exemplar if available, else greedy heuristic. */
+async function llmCarefulStrategy(ctx: ProposerContext): Promise<ProposerStrategyResult> {
+  const disks = replayMoves(ctx.history);
+
+  if (isSolved(disks)) {
+    return { transitionName: "declare_solved", toState: ctx.transitions["declare_solved"], reasoning: "Solved" };
   }
 
-  // Greedy fallback: prefer moves to goal peg (C=2)
-  const validMoves = getValidMoves(ctx.currentState);
-  const toGoal = validMoves.filter((m) => m.to === 2);
-  const chosen = toGoal.length > 0 ? toGoal[0] : validMoves[0];
+  // Check exemplars for matching history length (proxy for board state)
+  const stateExemplars = getExemplars(MACHINE_NAME, "unsolved");
+  for (const ex of stateExemplars.reverse()) {
+    const exDisks = replayMoves(ex.context.history);
+    if (exDisks.join("") === disks.join("")) {
+      return {
+        transitionName: ex.humanTransitionName,
+        toState: ctx.transitions[ex.humanTransitionName],
+        reasoning: `Learned: replay ${ex.humanTransitionName}`,
+      };
+    }
+  }
+
+  // Greedy fallback: prefer moves toward goal peg (C=2)
+  const valid = getValidMoves(disks);
+  const toGoal = valid.filter((m) => m.to === 2);
+  const chosen = toGoal.length > 0 ? toGoal[0] : valid[0];
   if (!chosen) {
-    return {
-      transitionName: MOVES[0].name,
-      toState: ctx.transitions[MOVES[0].name],
-      reasoning: "Greedy fallback: no valid moves",
-    };
+    return { transitionName: "A_to_B", toState: ctx.transitions["A_to_B"], reasoning: "Greedy fallback" };
   }
   return {
     transitionName: chosen.name,
@@ -254,25 +207,53 @@ async function llmCarefulStrategy(
   };
 }
 
-/**
- * "LLM Impulsive" — random valid move every time.
- */
-async function llmImpulsiveStrategy(
-  ctx: ProposerContext
-): Promise<ProposerStrategyResult> {
-  const validMoves = getValidMoves(ctx.currentState);
-  if (validMoves.length === 0) {
-    return {
-      transitionName: MOVES[0].name,
-      toState: ctx.transitions[MOVES[0].name],
-      reasoning: "Random: no valid moves",
-    };
+/** LLM Random — random valid move from reconstructed board. */
+async function llmRandomStrategy(ctx: ProposerContext): Promise<ProposerStrategyResult> {
+  const disks = replayMoves(ctx.history);
+
+  if (isSolved(disks)) {
+    return { transitionName: "declare_solved", toState: ctx.transitions["declare_solved"], reasoning: "Solved" };
   }
-  const chosen = validMoves[Math.floor(Math.random() * validMoves.length)];
+
+  const valid = getValidMoves(disks);
+  if (valid.length === 0) {
+    return { transitionName: "A_to_B", toState: ctx.transitions["A_to_B"], reasoning: "Random: no valid moves" };
+  }
+  const chosen = valid[Math.floor(Math.random() * valid.length)];
   return {
     transitionName: chosen.name,
     toState: ctx.transitions[chosen.name],
     reasoning: `Random: ${PEG_NAMES[chosen.from]}→${PEG_NAMES[chosen.to]}`,
+  };
+}
+
+// ============================================================================
+// Machine Definition (2-state, per-state specialists)
+// ============================================================================
+
+function buildHanoiMachine(): MachineDefinition {
+  return {
+    machineName: MACHINE_NAME,
+    initialState: "unsolved",
+    goalState: "solved",
+    states: {
+      unsolved: {
+        prompt: "Tower of Hanoi: move all 3 disks from peg A to peg C",
+        transitions: {
+          A_to_B: "unsolved", A_to_C: "unsolved",
+          B_to_A: "unsolved", B_to_C: "unsolved",
+          C_to_A: "unsolved", C_to_B: "unsolved",
+          declare_solved: "solved",
+        },
+        specialists: [
+          { role: "proposer", specialistId: "human-optimal", isHuman: true, disabled: true },
+          { role: "proposer", specialistId: "llm-careful" },
+          { role: "proposer", specialistId: "llm-random" },
+          { role: "arbiter", specialistId: "hanoi-arbiter", strategyFnName: "aheadByK", threshold: 0.4 },
+        ],
+      },
+      solved: {},
+    },
   };
 }
 
@@ -286,34 +267,19 @@ interface SolveResult {
   aiDecisions: number;
 }
 
-/**
- * Solve the puzzle once using tick-based orchestration.
- *
- * Each call to tick() does one atomic thing:
- *   'solicited'  — one LLM proposer submitted a proposal
- *   'advanced'   — consensus reached, transition executed (AI decision)
- *   'needs_human' — all proposals in, no consensus (human must force)
- *
- * Training mode: after all LLMs are solicited, human forces before tick
- * evaluates consensus. This ensures exemplars and alignment are tracked.
- *
- * Non-training mode: tick handles the full cycle. Human intervenes only
- * when consensus isn't reached.
- */
 async function solvePuzzle(
   machine: MachineDefinition,
   training: boolean,
   verbose: boolean
 ): Promise<SolveResult> {
-  // Session object is a live reference — stays current after transitions
   const session = await createSession(machine);
-  const proposerCount = getEnabledProposers(MACHINE_NAME).length;
+  const proposerCount = getEnabledProposersForState(session).length;
   let humanDecisions = 0;
   let aiDecisions = 0;
   let moves = 0;
   let solicitedThisRound = 0;
 
-  while (session.currentState !== "222") {
+  while (session.currentState !== "solved") {
     if (moves > 50) {
       if (verbose) console.log("      !! safety valve (>50 moves)");
       break;
@@ -321,70 +287,85 @@ async function solvePuzzle(
 
     const results = await tick();
     const r = results.find((t) => t.sessionId === session.sessionId);
-    if (!r) break; // terminal
+    if (!r) break;
 
     if (r.status === "solicited") {
       solicitedThisRound++;
 
-      // Training: once all LLMs have submitted, human forces
       if (training && solicitedThisRound >= proposerCount) {
-        const state = session.currentState;
-        const transitions = machine.states[state]?.transitions ?? {};
-        const optimal = getOptimalMove(state, transitions);
-        const result = await submitArbitration({
-          sessionId: session.sessionId,
-          roundId: session.currentRoundId,
-          specialistId: "human-optimal",
-          transitionName: optimal.transitionName,
-          reasoning: optimal.reasoning,
-        });
+        const disks = replayMoves(session.history);
+        const transitions = machine.states["unsolved"]?.transitions ?? {};
+
+        if (isSolved(disks)) {
+          await submitArbitration({
+            sessionId: session.sessionId,
+            roundId: session.currentRoundId,
+            specialistId: "human-optimal",
+            transitionName: "declare_solved",
+            reasoning: "Human: puzzle solved",
+          });
+        } else {
+          const optimal = getOptimalMove(disks, transitions);
+          await submitArbitration({
+            sessionId: session.sessionId,
+            roundId: session.currentRoundId,
+            specialistId: "human-optimal",
+            transitionName: optimal.transitionName,
+            reasoning: optimal.reasoning,
+          });
+        }
         humanDecisions++;
         moves++;
         solicitedThisRound = 0;
         if (verbose) {
           console.log(
-            `      ${String(moves).padStart(2)}. ${formatState(state)} ` +
-              `─${optimal.transitionName}─▸ ${formatState(result.toState!)}  [TRAIN]`
+            `      ${String(moves).padStart(2)}. ${formatDisks(replayMoves(session.history.slice(0, -1)))} ─▸ ${formatDisks(replayMoves(session.history))}  [TRAIN]`
           );
         }
       }
       continue;
     }
 
-    // Past solicitation phase — reset counter
     solicitedThisRound = 0;
 
     if (r.status === "advanced") {
-      // AI consensus reached and transition executed
       moves++;
       aiDecisions++;
       if (verbose) {
         console.log(
-          `      ${String(moves).padStart(2)}. ${formatState(r.previousState!)} ` +
-            `─${r.transitionName!}─▸ ${formatState(r.currentState)}  [AI]`
+          `      ${String(moves).padStart(2)}. ${formatDisks(replayMoves(session.history.slice(0, -1)))} ─${r.transitionName!}─▸ ${formatDisks(replayMoves(session.history))}  [AI]`
         );
       }
       continue;
     }
 
     if (r.status === "needs_human") {
-      // No consensus — human forces optimal move
-      const state = session.currentState;
-      const transitions = machine.states[state]?.transitions ?? {};
-      const optimal = getOptimalMove(state, transitions);
-      const result = await submitArbitration({
-        sessionId: session.sessionId,
-        roundId: session.currentRoundId,
-        specialistId: "human-optimal",
-        transitionName: optimal.transitionName,
-        reasoning: optimal.reasoning,
-      });
+      const disks = replayMoves(session.history);
+      const transitions = machine.states["unsolved"]?.transitions ?? {};
+
+      if (isSolved(disks)) {
+        await submitArbitration({
+          sessionId: session.sessionId,
+          roundId: session.currentRoundId,
+          specialistId: "human-optimal",
+          transitionName: "declare_solved",
+          reasoning: "Human: puzzle solved",
+        });
+      } else {
+        const optimal = getOptimalMove(disks, transitions);
+        await submitArbitration({
+          sessionId: session.sessionId,
+          roundId: session.currentRoundId,
+          specialistId: "human-optimal",
+          transitionName: optimal.transitionName,
+          reasoning: optimal.reasoning,
+        });
+      }
       humanDecisions++;
       moves++;
       if (verbose) {
         console.log(
-          `      ${String(moves).padStart(2)}. ${formatState(state)} ` +
-            `─${optimal.transitionName}─▸ ${formatState(result.toState!)}  [HUMAN]`
+          `      ${String(moves).padStart(2)}. ${formatDisks(replayMoves(session.history.slice(0, -1)))} ─▸ ${formatDisks(replayMoves(session.history))}  [HUMAN]`
         );
       }
     }
@@ -399,27 +380,28 @@ async function solvePuzzle(
 
 async function main(): Promise<void> {
   console.log("=== Tower of Hanoi — DIAL Progressive Collapse Demo ===\n");
-  console.log("3 disks, 3 pegs. 6 moves per state (some invalid). Optimal: 7 moves.\n");
-  console.log("Specialists:");
-  console.log("  human-optimal   forces BFS-optimal moves (isHuman=true)");
+  console.log("2-state machine with per-state specialists. Board reconstructed from history.\n");
+  console.log("Specialists (on 'unsolved' state):");
+  console.log("  human-optimal   forces BFS-optimal moves (isHuman=true, disabled)");
   console.log("  llm-careful     learns from exemplars, greedy fallback");
-  console.log("  llm-impulsive   random valid move (never learns)\n");
+  console.log("  llm-random      random valid move (never learns)\n");
   console.log("Arbiter: aheadByK, threshold=0.4\n");
 
-  const machine = generateHanoiMachine();
+  const machine = buildHanoiMachine();
   const TRAINING_ROUNDS = 2;
   const TOTAL_ROUNDS = 10;
 
-  // Register specialists (persist across sessions via global store)
-  // Human is registered but disabled — tick() only solicits LLM proposers.
-  // Human forces via submitArbitration when needed.
+  // Register specialists with custom strategyFn (not auto-registered by createSession)
   await registerProposer({
     specialistId: "human-optimal",
     machineName: MACHINE_NAME,
     isHuman: true,
-    strategyFn: async (ctx) => getOptimalMove(ctx.currentState, ctx.transitions),
+    strategyFn: async (ctx) => {
+      const disks = replayMoves(ctx.history);
+      if (isSolved(disks)) return { transitionName: "declare_solved", toState: ctx.transitions["declare_solved"], reasoning: "Solved" };
+      return getOptimalMove(disks, ctx.transitions);
+    },
   });
-  disableSpecialist("human-optimal");
 
   await registerProposer({
     specialistId: "llm-careful",
@@ -427,16 +409,12 @@ async function main(): Promise<void> {
     strategyFn: llmCarefulStrategy,
   });
   await registerProposer({
-    specialistId: "llm-impulsive",
+    specialistId: "llm-random",
     machineName: MACHINE_NAME,
-    strategyFn: llmImpulsiveStrategy,
+    strategyFn: llmRandomStrategy,
   });
-  await registerArbiter({
-    specialistId: "hanoi-arbiter",
-    machineName: MACHINE_NAME,
-    strategyFnName: "aheadByK",
-    threshold: 0.4,
-  });
+
+  // Arbiter auto-registered by createSession (has strategyFnName: "aheadByK")
 
   // ── Phase 1: Training ────────────────────────────────────────────────
   console.log("─── Phase 1: Cold Start Training ──────────────────────────────────────");
@@ -449,7 +427,7 @@ async function main(): Promise<void> {
     humanDecisions: number;
     aiDecisions: number;
     carefulAlign: number;
-    impulsiveAlign: number;
+    randomAlign: number;
   }> = [];
 
   for (let i = 1; i <= TRAINING_ROUNDS; i++) {
@@ -457,15 +435,15 @@ async function main(): Promise<void> {
     if (verbose) console.log(`    Solve #${i} (step-by-step):`);
 
     const r = await solvePuzzle(machine, true, verbose);
-    const ca = getAlignmentScore("llm-careful", MACHINE_NAME);
-    const ia = getAlignmentScore("llm-impulsive", MACHINE_NAME);
+    const ca = getAlignmentScore("llm-careful", MACHINE_NAME, "unsolved");
+    const ra = getAlignmentScore("llm-random", MACHINE_NAME, "unsolved");
 
-    results.push({ iteration: i, phase: "train", ...r, carefulAlign: ca, impulsiveAlign: ia });
+    results.push({ iteration: i, phase: "train", ...r, carefulAlign: ca, randomAlign: ra });
 
     console.log(
       `    #${String(i).padStart(2)}: ` +
         `${r.moves} moves, all human-forced  ` +
-        `align: careful=${ca.toFixed(3)} impulsive=${ia.toFixed(3)}`
+        `align: careful=${ca.toFixed(3)} random=${ra.toFixed(3)}`
     );
   }
 
@@ -478,10 +456,10 @@ async function main(): Promise<void> {
     if (verbose) console.log(`    Solve #${i} (step-by-step):`);
 
     const r = await solvePuzzle(machine, false, verbose);
-    const ca = getAlignmentScore("llm-careful", MACHINE_NAME);
-    const ia = getAlignmentScore("llm-impulsive", MACHINE_NAME);
+    const ca = getAlignmentScore("llm-careful", MACHINE_NAME, "unsolved");
+    const ra = getAlignmentScore("llm-random", MACHINE_NAME, "unsolved");
 
-    results.push({ iteration: i, phase: "live", ...r, carefulAlign: ca, impulsiveAlign: ia });
+    results.push({ iteration: i, phase: "live", ...r, carefulAlign: ca, randomAlign: ra });
 
     const pct = r.moves > 0 ? ((r.aiDecisions / r.moves) * 100).toFixed(0) : "0";
     console.log(
@@ -489,7 +467,7 @@ async function main(): Promise<void> {
         `${String(r.moves).padStart(2)} moves ` +
         `(human ${String(r.humanDecisions).padStart(2)}, AI ${String(r.aiDecisions).padStart(2)}) ` +
         `collapse ${pct.padStart(3)}%  ` +
-        `align: careful=${ca.toFixed(3)} impulsive=${ia.toFixed(3)}`
+        `align: careful=${ca.toFixed(3)} random=${ra.toFixed(3)}`
     );
   }
 
@@ -519,8 +497,8 @@ async function main(): Promise<void> {
       `(${totalH} human, ${totalA} AI)`
   );
 
-  const records = getAllAlignmentRecords(MACHINE_NAME);
-  console.log("\n  Final alignment:");
+  const records = getAllAlignmentRecords(MACHINE_NAME, "unsolved");
+  console.log("\n  Final alignment (per-state: unsolved):");
   for (const r of records) {
     console.log(
       `    ${r.specialistId.padEnd(16)} ` +
@@ -530,17 +508,11 @@ async function main(): Promise<void> {
 
   console.log();
   if (last && last.humanDecisions === 0 && last.moves === 7) {
-    console.log(
-      "  ** FULL COLLAPSE: AI solves optimally (7 moves) with zero human intervention. **"
-    );
+    console.log("  ** FULL COLLAPSE: AI solves optimally (7 moves) with zero human intervention. **");
   } else if (last && last.humanDecisions === 0) {
-    console.log(
-      `  ** FULL COLLAPSE: AI solves autonomously (${last.moves} moves). **`
-    );
+    console.log(`  ** FULL COLLAPSE: AI solves autonomously (${last.moves} moves). **`);
   } else if (first && last && last.humanDecisions < first.humanDecisions) {
-    console.log(
-      `  ** PARTIAL COLLAPSE: human decisions ${first.humanDecisions} → ${last.humanDecisions}. **`
-    );
+    console.log(`  ** PARTIAL COLLAPSE: human decisions ${first.humanDecisions} → ${last.humanDecisions}. **`);
   } else {
     console.log("  ** Collapse not yet achieved. **");
   }
@@ -548,14 +520,12 @@ async function main(): Promise<void> {
   // ── Collapse Metrics ─────────────────────────────────────────────────
   console.log("\n─── Collapse Metrics ──────────────────────────────────────────────────\n");
 
-  const metrics = getCollapseMetrics(MACHINE_NAME);
+  const metrics = getCollapseMetrics(MACHINE_NAME, "unsolved");
   console.log(
     `  Collapse ratio: ${(metrics.collapseRatio * 100).toFixed(1)}% overall, ` +
       `${(metrics.recentCollapseRatio * 100).toFixed(1)}% recent`
   );
-  console.log(
-    `  Avg consensus margin: ${metrics.averageConsensusMargin.toFixed(3)}`
-  );
+  console.log(`  Avg consensus margin: ${metrics.averageConsensusMargin.toFixed(3)}`);
 
   if (metrics.signals.length > 0) {
     console.log("\n  Active signals:");

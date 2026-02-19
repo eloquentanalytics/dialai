@@ -33,8 +33,9 @@ src/dialai/
       query-helpers.test.ts        # DIAL_249–DIAL_259
       engine-helpers.test.ts       # DIAL_260–DIAL_267
       store.test.ts                # DIAL_268–DIAL_276
+      per-state-specialists.test.ts # DIAL_416–DIAL_431
     integration/
-      decision-cycle.test.ts       # DIAL_277–DIAL_284
+      decision-cycle.test.ts       # DIAL_277–DIAL_280
       cold-start.test.ts           # DIAL_285–DIAL_290
       alignment-growth.test.ts     # DIAL_291–DIAL_295
       execution-modes.test.ts      # DIAL_296–DIAL_304
@@ -373,10 +374,10 @@ export default defineConfig({
 
 | ID | Test Name | Description |
 |----|-----------|-------------|
-| DIAL_277 | single proposer unanimous consensus | One proposer with alignment 0.9, threshold 0.5, margin 1.0, consensus on proposal alone |
-| DIAL_278 | two proposers agree — combined proposal count consensus | Both propose same transition, proposal counts add, consensus reached |
-| DIAL_281 | proposals clustered by transition not by proposal ID | Two proposals for "approve" (different reasoning) cluster together |
-| DIAL_282 | consensus triggers transition execution via arbitration | `submitArbitration` after consensus leads to session advancing |
+| DIAL_277 | completes a full decision cycle with alignment-weighted consensus | Two proposers with different alignment scores submit proposals; higher-alignment proposer's transition wins arbitration |
+| DIAL_278 | handles multiple rounds until goal state | `runSession` drives a 3-state linear machine (a→b→c) through 2 rounds to goalState |
+| DIAL_279 | supports human override of arbitration | Human specialist forces transition via `submitArbitration` with `transitionName`, bypassing consensus |
+| DIAL_280 | tracks cost metadata through the cycle | `costUSD`, `latencyMsec`, `numInputTokens`, `numOutputTokens`, and `metaJson` roundtrip through proposal |
 
 ### 24. Cold Start — Human Decision Flow
 
@@ -562,3 +563,39 @@ export default defineConfig({
 | DIAL_410 | worked example: 3 proposers, 2 agree, 1 disagrees | Cluster of 2 vs solo — verify exact margin |
 | DIAL_414 | boundary: margin exactly equals threshold | Consensus reached (>= not >) |
 | DIAL_415 | boundary: margin one epsilon below threshold | Consensus not reached |
+
+### 42. Per-State Specialist Lookup
+
+| ID | Test Name | Description |
+|----|-----------|-------------|
+| DIAL_416 | getProposersForState returns state-level proposers when declared | State with `specialists` array returns only those proposers, not machine-level |
+| DIAL_417 | getProposersForState falls back to machine-level when state has no specialists | State without `specialists` array falls back to `getProposers(machineName)` |
+| DIAL_418 | getEnabledProposersForState filters out state-level disabled specialists | Proposer with `disabled: true` in state definition excluded from enabled list |
+| DIAL_419 | getArbiterForState returns state-level arbiter when declared | State with arbiter in `specialists` array returns that arbiter |
+| DIAL_420 | getArbiterForState falls back to machine-level when state has no specialists | State without `specialists` falls back to `getArbiter(machineName)` |
+| DIAL_421 | createSession auto-registers per-state specialists with strategyFnName | Specialists with `strategyFnName` in state definitions are auto-registered |
+| DIAL_422 | createSession does not duplicate auto-registration of existing specialists | Pre-registered specialist is not overwritten by createSession |
+
+### 43. Per-State Alignment Tracking
+
+| ID | Test Name | Description |
+|----|-----------|-------------|
+| DIAL_423 | alignment tracked per-state with 3-part key | `updateAlignment` with state param creates separate key per state |
+| DIAL_424 | alignment without state uses 2-part key (backward compat) | `updateAlignment` without state uses `specialistId:machineName` key |
+| DIAL_425 | per-state and non-state alignment are independent | Same specialist has different scores with and without state param |
+| DIAL_426 | getAllAlignmentRecords filters by state when provided | Returns only records matching the given state |
+| DIAL_427 | AlignmentRecord includes state field when created with state | Record created with state has `state` property set |
+| DIAL_428 | AlignmentRecord has undefined state when created without state | Record created without state has `state` undefined |
+
+### 44. Multi-State Specialist Declarations
+
+| ID | Test Name | Description |
+|----|-----------|-------------|
+| DIAL_429 | different states can declare different specialists | Review state gets legal-reviewer, build state gets engineer |
+
+### 45. Disabled Flag (Per-State)
+
+| ID | Test Name | Description |
+|----|-----------|-------------|
+| DIAL_430 | disabled specialist is in getProposersForState but not getEnabledProposersForState | `disabled: true` filters from enabled list but not full proposer list |
+| DIAL_431 | disabled is per-state, not global — same specialist can be enabled in other states | Per-state `disabled` flag does not affect the specialist's global `enabled` status |

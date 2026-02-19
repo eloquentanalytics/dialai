@@ -21,7 +21,7 @@ describe("Integration: Decision Cycle", () => {
     clear();
   });
 
-  it("completes a full decision cycle with alignment-weighted consensus", async () => {
+  it("DIAL_277: completes a full decision cycle with alignment-weighted consensus", async () => {
     const machine: MachineDefinition = {
       machineName: "consensus-test",
       initialState: "pending",
@@ -97,7 +97,7 @@ describe("Integration: Decision Cycle", () => {
     expect(updatedSession.history).toHaveLength(1);
   });
 
-  it("handles multiple rounds until goal state", async () => {
+  it("DIAL_278: handles multiple rounds until goal state", async () => {
     const machine: MachineDefinition = {
       machineName: "multi-round",
       initialState: "a",
@@ -121,7 +121,7 @@ describe("Integration: Decision Cycle", () => {
     expect(session.history).toHaveLength(2);
   });
 
-  it("supports human override of arbitration", async () => {
+  it("DIAL_279: supports human override of arbitration", async () => {
     const machine: MachineDefinition = {
       machineName: "human-override",
       initialState: "pending",
@@ -173,7 +173,7 @@ describe("Integration: Decision Cycle", () => {
     expect(updatedSession.currentState).toBe("approved");
   });
 
-  it("tracks cost metadata through the cycle", async () => {
+  it("DIAL_280: tracks cost metadata through the cycle", async () => {
     const machine: MachineDefinition = {
       machineName: "cost-tracking",
       initialState: "pending",
