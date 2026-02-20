@@ -233,7 +233,7 @@ describe("Integration: Cold Start — Human Decision Flow", () => {
     const ai1Record = records.find((r) => r.specialistId === "ai-1");
     expect(ai1Record).toBeDefined();
     expect(ai1Record!.matchingChoices).toBe(1);
-    expect(ai1Record!.alignmentScore).toBe(1.0);
+    expect(ai1Record!.alignmentScore).toBeCloseTo(0.2065, 3);
 
     // ai-2 used lastAvailable which picks "reject" — should not match
     const ai2Record = records.find((r) => r.specialistId === "ai-2");

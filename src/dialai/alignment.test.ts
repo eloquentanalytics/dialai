@@ -94,7 +94,7 @@ describe("Alignment System", () => {
 
       updateAlignment("ai-1", "align-test", true);
 
-      expect(getAlignmentScore("ai-1", "align-test")).toBe(1.0);
+      expect(getAlignmentScore("ai-1", "align-test")).toBeCloseTo(0.2065, 3);
     });
 
     it("calculates correct score over multiple updates", async () => {
@@ -108,7 +108,7 @@ describe("Alignment System", () => {
       updateAlignment("ai-1", "align-test", false);
       updateAlignment("ai-1", "align-test", true);
 
-      expect(getAlignmentScore("ai-1", "align-test")).toBeCloseTo(2 / 3);
+      expect(getAlignmentScore("ai-1", "align-test")).toBeCloseTo(0.2077, 3);
     });
 
     it("does not track alignment for human specialists", async () => {
@@ -166,7 +166,7 @@ describe("Alignment System", () => {
 
       updateAlignmentAfterHumanDecision("align-test", "to_b", proposals);
 
-      expect(getAlignmentScore("ai-1", "align-test")).toBe(1.0); // matched
+      expect(getAlignmentScore("ai-1", "align-test")).toBeCloseTo(0.2065, 3); // matched
       expect(getAlignmentScore("ai-2", "align-test")).toBe(0); // did not match
     });
   });
@@ -189,7 +189,7 @@ describe("Alignment System", () => {
 
       const records = getAllAlignmentRecords("align-test");
       expect(records).toHaveLength(2);
-      expect(records.find((r) => r.specialistId === "ai-1")?.alignmentScore).toBe(1.0);
+      expect(records.find((r) => r.specialistId === "ai-1")?.alignmentScore).toBeCloseTo(0.2065, 3);
       expect(records.find((r) => r.specialistId === "ai-2")?.alignmentScore).toBe(0);
     });
 

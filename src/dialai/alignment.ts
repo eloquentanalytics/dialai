@@ -9,6 +9,25 @@ import { specialists, alignmentRecords } from "./store.js";
 import type { AlignmentRecord, Proposal } from "./types.js";
 
 /**
+ * Wilson score lower bound for a binomial proportion.
+ * Returns the lower bound of a confidence interval, naturally penalizing
+ * small sample sizes. Used instead of naive `matches/total` so that
+ * 1/1 ≈ 0.21 (not 1.0) and confidence grows with evidence.
+ *
+ * @param matches - Number of successes
+ * @param total - Total number of trials
+ * @param z - Z-score for confidence level (default 1.96 = 95%)
+ */
+export function wilsonLowerBound(matches: number, total: number, z = 1.96): number {
+  if (total === 0) return 0;
+  const phat = matches / total;
+  const z2 = z * z;
+  const numerator = phat + z2 / (2 * total) - z * Math.sqrt((phat * (1 - phat) + z2 / (4 * total)) / total);
+  const denominator = 1 + z2 / total;
+  return Math.max(0, numerator / denominator);
+}
+
+/**
  * Checks whether a specialist is human by looking at the isHuman flag
  * on the registered specialist. No string matching on specialistId.
  */
@@ -61,7 +80,7 @@ export function updateAlignment(
     existing.matchingChoices += matched ? 1 : 0;
     existing.totalComparisons += 1;
     existing.alignmentScore =
-      existing.matchingChoices / existing.totalComparisons;
+      wilsonLowerBound(existing.matchingChoices, existing.totalComparisons);
     existing.lastUpdated = new Date();
   } else {
     alignmentRecords.set(key, {
@@ -70,7 +89,7 @@ export function updateAlignment(
       state,
       matchingChoices: matched ? 1 : 0,
       totalComparisons: 1,
-      alignmentScore: matched ? 1 : 0,
+      alignmentScore: wilsonLowerBound(matched ? 1 : 0, 1),
       lastUpdated: new Date(),
     });
   }

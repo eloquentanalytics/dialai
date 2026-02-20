@@ -10,6 +10,7 @@ import {
   updateAlignmentAfterHumanDecision,
   getAllAlignmentRecords,
   getProposalsForRound,
+  wilsonLowerBound,
 } from "../../src/dialai/index.js";
 import type { MachineDefinition } from "../../src/dialai/types.js";
 
@@ -141,7 +142,7 @@ describe("DIAL_198–DIAL_211: Alignment Score Tracking", () => {
     expect(getAllAlignmentRecords("align-test")).toHaveLength(0);
   });
 
-  test("DIAL_206: alignment score is matchingChoices/totalComparisons", async () => {
+  test("DIAL_206: alignment score uses Wilson lower bound", async () => {
     await registerProposer({
       specialistId: "p1",
       machineName: "align-test",
@@ -150,7 +151,7 @@ describe("DIAL_198–DIAL_211: Alignment Score Tracking", () => {
 
     seedAlignment("p1", "align-test", 18, 20);
 
-    expect(getAlignmentScore("p1", "align-test")).toBeCloseTo(0.9);
+    expect(getAlignmentScore("p1", "align-test")).toBeCloseTo(0.699, 2);
   });
 
   test("DIAL_207: updateAlignmentAfterHumanDecision checks proposers", async () => {
@@ -183,7 +184,7 @@ describe("DIAL_198–DIAL_211: Alignment Score Tracking", () => {
     // Human chose "approve"
     updateAlignmentAfterHumanDecision("align-test", "approve", proposals);
 
-    expect(getAlignmentScore("p-match", "align-test")).toBe(1.0);
+    expect(getAlignmentScore("p-match", "align-test")).toBeCloseTo(0.2065, 3);
     expect(getAlignmentScore("p-miss", "align-test")).toBe(0);
   });
 
@@ -205,5 +206,36 @@ describe("DIAL_198–DIAL_211: Alignment Score Tracking", () => {
     const records = getAllAlignmentRecords("align-test");
     expect(records).toHaveLength(1);
     expect(records[0].specialistId).toBe("p1");
+  });
+});
+
+describe("DIAL_432–DIAL_436: Wilson Score Lower Bound", () => {
+  test("DIAL_432: wilsonLowerBound returns 0 for 0 total", () => {
+    expect(wilsonLowerBound(0, 0)).toBe(0);
+  });
+
+  test("DIAL_433: wilsonLowerBound returns low score for small sample", () => {
+    // 1/1 should NOT be 1.0 — this is the key property
+    const score = wilsonLowerBound(1, 1);
+    expect(score).toBeCloseTo(0.2065, 3);
+    expect(score).toBeLessThan(0.5);
+  });
+
+  test("DIAL_434: wilsonLowerBound confidence grows with sample size", () => {
+    // Same 90% rate, but more samples → higher lower bound
+    const small = wilsonLowerBound(9, 10);
+    const large = wilsonLowerBound(90, 100);
+    expect(large).toBeGreaterThan(small);
+  });
+
+  test("DIAL_435: wilsonLowerBound returns 0 for 0 matches", () => {
+    expect(wilsonLowerBound(0, 5)).toBe(0);
+  });
+
+  test("DIAL_436: wilsonLowerBound approaches raw rate at large n", () => {
+    const score = wilsonLowerBound(900, 1000);
+    // Should be close to 0.9 with large sample
+    expect(score).toBeGreaterThan(0.87);
+    expect(score).toBeLessThan(0.92);
   });
 });

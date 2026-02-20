@@ -354,7 +354,7 @@ export interface AlignmentRecord {
   matchingChoices: number;
   /** Total number of comparisons */
   totalComparisons: number;
-  /** Calculated alignment score (matchingChoices / totalComparisons) */
+  /** Calculated alignment score (Wilson score lower bound of matchingChoices / totalComparisons) */
   alignmentScore: number;
   /** When this record was last updated */
   lastUpdated: Date;
@@ -398,7 +398,7 @@ export interface AlignmentEvaluationResult {
   totalExemplars: number;
   /** Number of matching decisions */
   matchingDecisions: number;
-  /** Alignment score (matchingDecisions / totalExemplars) */
+  /** Alignment score (Wilson score lower bound of matchingDecisions / totalExemplars) */
   alignmentScore: number;
 }
 

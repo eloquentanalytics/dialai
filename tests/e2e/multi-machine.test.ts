@@ -95,7 +95,7 @@ describe("E2E: Multi-Machine Isolation", () => {
     updateAlignment("shared-p-b", "machine-b", false);
 
     // Verify independent alignment records
-    expect(getAlignmentScore("shared-p-a", "machine-a")).toBe(1.0);
+    expect(getAlignmentScore("shared-p-a", "machine-a")).toBeCloseTo(0.3423, 3);
     expect(getAlignmentScore("shared-p-b", "machine-b")).toBe(0);
 
     // Cross-machine queries return 0 (no record)

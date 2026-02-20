@@ -212,7 +212,7 @@ describe("Per-state alignment tracking", () => {
     updateAlignment("p1", "test", true, "state-a");
     updateAlignment("p1", "test", false, "state-b");
 
-    expect(getAlignmentScore("p1", "test", "state-a")).toBe(1.0);
+    expect(getAlignmentScore("p1", "test", "state-a")).toBeCloseTo(0.2065, 3);
     expect(getAlignmentScore("p1", "test", "state-b")).toBe(0);
   });
 
@@ -224,7 +224,7 @@ describe("Per-state alignment tracking", () => {
     });
 
     updateAlignment("p1", "test", true);
-    expect(getAlignmentScore("p1", "test")).toBe(1.0);
+    expect(getAlignmentScore("p1", "test")).toBeCloseTo(0.2065, 3);
     // Per-state key should not exist
     expect(getAlignmentScore("p1", "test", "some-state")).toBe(0);
   });
@@ -239,7 +239,7 @@ describe("Per-state alignment tracking", () => {
     updateAlignment("p1", "test", true);
     updateAlignment("p1", "test", false, "state-a");
 
-    expect(getAlignmentScore("p1", "test")).toBe(1.0);
+    expect(getAlignmentScore("p1", "test")).toBeCloseTo(0.2065, 3);
     expect(getAlignmentScore("p1", "test", "state-a")).toBe(0);
   });
 

@@ -166,7 +166,7 @@ describe("DIAL_115–DIAL_127: Evaluate Consensus", () => {
 
     expect(capturedCtx).toBeDefined();
     expect(capturedCtx!.alignmentScores).toBeDefined();
-    expect(capturedCtx!.alignmentScores!["p1"]).toBe(1.0);
+    expect(capturedCtx!.alignmentScores!["p1"]).toBeCloseTo(0.2065, 3);
   });
 
   test("DIAL_127: arbiter threshold defaults to 1 when not set", async () => {

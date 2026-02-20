@@ -108,13 +108,14 @@ describe("DIAL_260–DIAL_267: Engine Helpers", () => {
       strategyFnName: "lastAvailable",
     });
 
-    // Give p1 alignment 0.7 and p2 alignment 0.9
+    // Give p1 alignment 7/10 → Wilson ~0.40, p2 alignment 9/10 → Wilson ~0.60
     for (let i = 0; i < 7; i++) updateAlignment("p1", "test", true);
     for (let i = 0; i < 3; i++) updateAlignment("p1", "test", false);
     for (let i = 0; i < 9; i++) updateAlignment("p2", "test", true);
     for (let i = 0; i < 1; i++) updateAlignment("p2", "test", false);
 
-    const champion = selectChampion("test", 0.8);
+    // Lower threshold so p2 (Wilson ~0.60) qualifies
+    const champion = selectChampion("test", 0.5);
     expect(champion).toBe("p2");
   });
 
@@ -140,9 +141,9 @@ describe("DIAL_260–DIAL_267: Engine Helpers", () => {
       strategyFnName: "firstAvailable",
     });
 
-    // Give p1 alignment 0.9
-    for (let i = 0; i < 9; i++) updateAlignment("p1", "test", true);
-    for (let i = 0; i < 1; i++) updateAlignment("p1", "test", false);
+    // Give p1 alignment 45/50 → Wilson ~0.82
+    for (let i = 0; i < 45; i++) updateAlignment("p1", "test", true);
+    for (let i = 0; i < 5; i++) updateAlignment("p1", "test", false);
 
     disableSpecialist("p1");
 
@@ -157,16 +158,16 @@ describe("DIAL_260–DIAL_267: Engine Helpers", () => {
       strategyFnName: "firstAvailable",
     });
 
-    // Alignment exactly 0.8
-    for (let i = 0; i < 8; i++) updateAlignment("p1", "test", true);
-    for (let i = 0; i < 2; i++) updateAlignment("p1", "test", false);
+    // 90/100 → Wilson ~0.83, should qualify at 0.8
+    for (let i = 0; i < 90; i++) updateAlignment("p1", "test", true);
+    for (let i = 0; i < 10; i++) updateAlignment("p1", "test", false);
 
     // Should qualify at threshold 0.8 (>= not >)
     const champion = selectChampion("test", 0.8);
     expect(champion).toBe("p1");
 
-    // At threshold 0.81, should not qualify
-    const noChampion = selectChampion("test", 0.81);
+    // At threshold 0.85, should not qualify
+    const noChampion = selectChampion("test", 0.85);
     expect(noChampion).toBeUndefined();
   });
 });

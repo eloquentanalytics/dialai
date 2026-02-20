@@ -123,8 +123,8 @@ describe("Integration: Human Primacy", () => {
     expect(ai2Record!.matchingChoices).toBe(10);
     expect(ai2Record!.totalComparisons).toBe(11);
 
-    // Alignment score decreased from 1.0 to ~0.909 due to the mismatch
-    expect(ai1Record!.alignmentScore).toBeCloseTo(10 / 11);
-    expect(ai2Record!.alignmentScore).toBeCloseTo(10 / 11);
+    // Alignment score uses Wilson lower bound: Wilson(10,11) ≈ 0.623
+    expect(ai1Record!.alignmentScore).toBeCloseTo(0.623, 2);
+    expect(ai2Record!.alignmentScore).toBeCloseTo(0.623, 2);
   });
 });

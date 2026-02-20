@@ -6,6 +6,7 @@
 
 import { specialists } from "./store.js";
 import { getExemplars } from "./exemplars.js";
+import { wilsonLowerBound } from "./alignment.js";
 import type {
   AlignmentEvaluationResult,
   AccuracyEvaluationResult,
@@ -43,7 +44,7 @@ export function computeAlignmentFromExemplars(
   return {
     matchingDecisions,
     totalExemplars,
-    alignmentScore: totalExemplars > 0 ? matchingDecisions / totalExemplars : 0,
+    alignmentScore: wilsonLowerBound(matchingDecisions, totalExemplars),
   };
 }
 

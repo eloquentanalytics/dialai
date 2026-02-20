@@ -64,25 +64,25 @@ describe("E2E: Champion Mode", () => {
       strategyFnName: "firstAvailable",
     });
 
-    // p-high: 9/10 = 0.9
-    for (let i = 0; i < 9; i++) updateAlignment("p-high", machineName, true);
-    updateAlignment("p-high", machineName, false);
+    // p-high: 90/100 → Wilson ≈ 0.83
+    for (let i = 0; i < 90; i++) updateAlignment("p-high", machineName, true);
+    for (let i = 0; i < 10; i++) updateAlignment("p-high", machineName, false);
 
-    // p-medium: 7/10 = 0.7 (below threshold)
-    for (let i = 0; i < 7; i++) updateAlignment("p-medium", machineName, true);
-    for (let i = 0; i < 3; i++) updateAlignment("p-medium", machineName, false);
+    // p-medium: 70/100 → Wilson ≈ 0.60 (below threshold)
+    for (let i = 0; i < 70; i++) updateAlignment("p-medium", machineName, true);
+    for (let i = 0; i < 30; i++) updateAlignment("p-medium", machineName, false);
 
-    // p-low: 3/10 = 0.3
-    for (let i = 0; i < 3; i++) updateAlignment("p-low", machineName, true);
-    for (let i = 0; i < 7; i++) updateAlignment("p-low", machineName, false);
+    // p-low: 30/100 → Wilson ≈ 0.21
+    for (let i = 0; i < 30; i++) updateAlignment("p-low", machineName, true);
+    for (let i = 0; i < 70; i++) updateAlignment("p-low", machineName, false);
 
     const champion = selectChampion(machineName, CHAMPION_THRESHOLD);
     expect(champion).toBe("p-high");
 
     // Verify scores
-    expect(getAlignmentScore("p-high", machineName)).toBeCloseTo(0.9);
-    expect(getAlignmentScore("p-medium", machineName)).toBeCloseTo(0.7);
-    expect(getAlignmentScore("p-low", machineName)).toBeCloseTo(0.3);
+    expect(getAlignmentScore("p-high", machineName)).toBeGreaterThan(0.8);
+    expect(getAlignmentScore("p-medium", machineName)).toBeGreaterThan(0.5);
+    expect(getAlignmentScore("p-low", machineName)).toBeLessThan(0.3);
   });
 
   it("DIAL_374: champion mode: only champion solicited for proposal", async () => {
@@ -109,8 +109,9 @@ describe("E2E: Champion Mode", () => {
       strategyFnName: "firstProposal",
     });
 
-    // Give champ high alignment
-    for (let i = 0; i < 10; i++) updateAlignment("champ", machineName, true);
+    // Give champ high alignment: 90/100 → Wilson ≈ 0.83
+    for (let i = 0; i < 90; i++) updateAlignment("champ", machineName, true);
+    for (let i = 0; i < 10; i++) updateAlignment("champ", machineName, false);
 
     expect(selectChampion(machineName, CHAMPION_THRESHOLD)).toBe("champ");
 
@@ -146,8 +147,9 @@ describe("E2E: Champion Mode", () => {
       strategyFnName: "firstProposal",
     });
 
-    // Champion alignment above 0.8
-    for (let i = 0; i < 10; i++) updateAlignment("champ", machineName, true);
+    // Champion alignment above 0.8: 90/100 → Wilson ≈ 0.83
+    for (let i = 0; i < 90; i++) updateAlignment("champ", machineName, true);
+    for (let i = 0; i < 10; i++) updateAlignment("champ", machineName, false);
 
     expect(selectChampion(machineName, CHAMPION_THRESHOLD)).toBe("champ");
 
@@ -198,10 +200,12 @@ describe("E2E: Champion Mode", () => {
       threshold: 2.0, // Threshold > 1 means even single proposal won't pass
     });
 
-    // Champion alignment
-    for (let i = 0; i < 10; i++) updateAlignment("champ", machineName, true);
-    // Backup alignment too
-    for (let i = 0; i < 10; i++) updateAlignment("backup", machineName, true);
+    // Champion alignment: 90/100 → Wilson ≈ 0.83
+    for (let i = 0; i < 90; i++) updateAlignment("champ", machineName, true);
+    for (let i = 0; i < 10; i++) updateAlignment("champ", machineName, false);
+    // Backup alignment: 90/100 → Wilson ≈ 0.83
+    for (let i = 0; i < 90; i++) updateAlignment("backup", machineName, true);
+    for (let i = 0; i < 10; i++) updateAlignment("backup", machineName, false);
 
     expect(selectChampion(machineName, CHAMPION_THRESHOLD)).toBe("champ");
 
@@ -253,9 +257,12 @@ describe("E2E: Champion Mode", () => {
       strategyFnName: "firstProposal",
     });
 
-    // Champion alignment
-    for (let i = 0; i < 10; i++) updateAlignment("champ", machineName, true);
-    for (let i = 0; i < 5; i++) updateAlignment("backup", machineName, true);
+    // Champion alignment: 90/100 → Wilson ≈ 0.83
+    for (let i = 0; i < 90; i++) updateAlignment("champ", machineName, true);
+    for (let i = 0; i < 10; i++) updateAlignment("champ", machineName, false);
+    // Backup lower
+    for (let i = 0; i < 50; i++) updateAlignment("backup", machineName, true);
+    for (let i = 0; i < 50; i++) updateAlignment("backup", machineName, false);
 
     expect(selectChampion(machineName, CHAMPION_THRESHOLD)).toBe("champ");
 

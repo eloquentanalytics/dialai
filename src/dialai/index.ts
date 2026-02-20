@@ -104,6 +104,7 @@ export {
 
 // Re-export alignment
 export {
+  wilsonLowerBound,
   isHumanSpecialist,
   getAlignmentScore,
   updateAlignment,

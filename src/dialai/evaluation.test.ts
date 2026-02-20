@@ -79,7 +79,7 @@ describe("Evaluation System", () => {
       expect(result.machineName).toBe("test-machine");
       expect(result.totalExemplars).toBe(3);
       expect(result.matchingDecisions).toBe(2);
-      expect(result.alignmentScore).toBeCloseTo(2 / 3);
+      expect(result.alignmentScore).toBeCloseTo(0.2077, 3);
     });
 
     it("respects maxRounds option", async () => {

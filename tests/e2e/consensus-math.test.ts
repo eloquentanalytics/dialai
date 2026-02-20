@@ -52,8 +52,9 @@ describe("E2E: Consensus Math Verification", () => {
   /**
    * Helper: seed alignment score for a specialist to a target value.
    * Uses multiple updateAlignment calls to achieve the desired score.
-   * Score = matchingChoices / totalComparisons
-   * To get score of X with precision, we use appropriate match/total counts.
+   * Score uses Wilson lower bound, so the actual alignment score will be lower
+   * than the raw rate, especially for small sample sizes. Use large
+   * totalComparisons (1000+) to get Wilson scores close to the raw rate.
    */
   function seedAlignment(
     specialistId: string,
@@ -71,8 +72,8 @@ describe("E2E: Consensus Math Verification", () => {
   }
 
   it("DIAL_408: 2 proposers, threshold 0.5, both agree — consensus reached", async () => {
-    // Both propose "approve" with alignment 0.9 and 0.6
-    // All on same transition: margin = (1.5 - 0) / 1.5 = 1.0 >= 0.5 -> consensus
+    // Both propose "approve" with alignment ~0.9 and ~0.6 (Wilson-adjusted)
+    // All on same transition: margin = (sum - 0) / sum = 1.0 >= 0.5 -> consensus
     const session = await createSession(machine);
 
     await registerProposer({
@@ -100,13 +101,13 @@ describe("E2E: Consensus Math Verification", () => {
       threshold: 0.5,
     });
 
-    // Seed alignment: p1 = 0.9, p2 = 0.6
-    seedAlignment("p1", "math-test", 0.9);
-    seedAlignment("p2", "math-test", 0.6);
+    // Seed alignment with large sample size so Wilson scores are close to raw rates
+    seedAlignment("p1", "math-test", 0.9, 1000);
+    seedAlignment("p2", "math-test", 0.6, 1000);
 
-    // Verify alignment scores
-    expect(getAlignmentScore("p1", "math-test")).toBe(0.9);
-    expect(getAlignmentScore("p2", "math-test")).toBe(0.6);
+    // Verify alignment scores are non-trivial (Wilson scores will be below raw rates)
+    expect(getAlignmentScore("p1", "math-test")).toBeGreaterThan(0.8);
+    expect(getAlignmentScore("p2", "math-test")).toBeGreaterThan(0.5);
 
     // Submit proposals
     await submitProposal({
@@ -122,17 +123,18 @@ describe("E2E: Consensus Math Verification", () => {
 
     const result = await evaluateConsensus(session.sessionId);
 
-    // Both propose "approve": leader = 0.9+0.6 = 1.5, runnerUp = 0
-    // margin = (1.5 - 0) / 1.5 = 1.0 >= 0.5
+    // Both propose "approve": all weight on one transition, runnerUp = 0
+    // margin = (sum - 0) / sum = 1.0 >= 0.5
     expect(result.consensusReached).toBe(true);
     expect(result.reasoning).toContain("1.00");
     expect(result.reasoning).toContain("approve");
   });
 
   it("DIAL_410: 3 proposers, 2 agree, 1 disagrees — consensus reached", async () => {
-    // Proposers A(0.9) and B(0.6) propose "approve" = 1.5
-    // Proposer C(0.3) proposes "reject" = 0.3
-    // margin = (1.5 - 0.3) / 1.8 = 0.667 >= 0.5 -> consensus
+    // Proposers A(~0.9) and B(~0.6) propose "approve"
+    // Proposer C(~0.3) proposes "reject"
+    // With 10000 samples, Wilson scores are very close to raw rates
+    // margin = (approve - reject) / total ≈ 0.67 >= 0.5 -> consensus
     const session = await createSession(machine);
 
     await registerProposer({
@@ -169,14 +171,14 @@ describe("E2E: Consensus Math Verification", () => {
       threshold: 0.5,
     });
 
-    // Seed alignment: A=0.9, B=0.6, C=0.3
-    seedAlignment("pA", "math-test", 0.9);
-    seedAlignment("pB", "math-test", 0.6);
-    seedAlignment("pC", "math-test", 0.3);
+    // Seed alignment with 10000 samples so Wilson ≈ raw rate
+    seedAlignment("pA", "math-test", 0.9, 10000);
+    seedAlignment("pB", "math-test", 0.6, 10000);
+    seedAlignment("pC", "math-test", 0.3, 10000);
 
-    expect(getAlignmentScore("pA", "math-test")).toBe(0.9);
-    expect(getAlignmentScore("pB", "math-test")).toBe(0.6);
-    expect(getAlignmentScore("pC", "math-test")).toBe(0.3);
+    expect(getAlignmentScore("pA", "math-test")).toBeGreaterThan(0.8);
+    expect(getAlignmentScore("pB", "math-test")).toBeGreaterThan(0.5);
+    expect(getAlignmentScore("pC", "math-test")).toBeGreaterThan(0.2);
 
     await submitProposal({
       sessionId: session.sessionId,
@@ -196,25 +198,22 @@ describe("E2E: Consensus Math Verification", () => {
 
     const result = await evaluateConsensus(session.sessionId);
 
-    // approve = 0.9+0.6 = 1.5, reject = 0.3, total = 1.8
-    // margin = (1.5 - 0.3) / 1.8 = 1.2/1.8 = 0.6667
+    // With Wilson-adjusted scores at 10000 samples:
+    // approve ≈ 0.894 + 0.590 = 1.484, reject ≈ 0.291, total ≈ 1.775
+    // margin ≈ 1.193 / 1.775 ≈ 0.67
     expect(result.consensusReached).toBe(true);
     expect(result.reasoning).toContain("0.67");
     expect(result.reasoning).toContain("approve");
   });
 
-  it("DIAL_414: boundary — margin exactly equals threshold", async () => {
-    // We need margin = threshold exactly.
+  it("DIAL_414: boundary — margin near threshold — consensus reached", async () => {
     // With 2 proposers: one proposes "approve", one proposes "reject"
     // margin = (leaderScore - runnerUpScore) / totalAlignment
     //
-    // Let's use: proposer X alignment=0.75, proposer Y alignment=0.25
-    // X proposes "approve" (score=0.75), Y proposes "reject" (score=0.25)
-    // total = 1.0, margin = (0.75 - 0.25) / 1.0 = 0.5
+    // Using alignment rates 0.75 and 0.25 with 1000 samples:
+    // Wilson(750,1000) ≈ 0.722, Wilson(250,1000) ≈ 0.224
+    // margin = (0.722 - 0.224) / (0.722 + 0.224) ≈ 0.53
     // threshold = 0.5 -> margin >= threshold -> consensus!
-    //
-    // To get exact 0.75: 3 matches out of 4 comparisons
-    // To get exact 0.25: 1 match out of 4 comparisons
     const session = await createSession(machine);
 
     await registerProposer({
@@ -242,15 +241,12 @@ describe("E2E: Consensus Math Verification", () => {
       threshold: 0.5,
     });
 
-    // Seed exact alignment: pX = 3/4 = 0.75, pY = 1/4 = 0.25
-    for (let i = 0; i < 3; i++) updateAlignment("pX", "math-test", true);
-    updateAlignment("pX", "math-test", false);
+    // Seed alignment with large sample size so Wilson scores are close to raw rates
+    seedAlignment("pX", "math-test", 0.75, 1000);
+    seedAlignment("pY", "math-test", 0.25, 1000);
 
-    updateAlignment("pY", "math-test", true);
-    for (let i = 0; i < 3; i++) updateAlignment("pY", "math-test", false);
-
-    expect(getAlignmentScore("pX", "math-test")).toBe(0.75);
-    expect(getAlignmentScore("pY", "math-test")).toBe(0.25);
+    expect(getAlignmentScore("pX", "math-test")).toBeGreaterThan(0.7);
+    expect(getAlignmentScore("pY", "math-test")).toBeGreaterThan(0.2);
 
     await submitProposal({
       sessionId: session.sessionId,
@@ -265,21 +261,18 @@ describe("E2E: Consensus Math Verification", () => {
 
     const result = await evaluateConsensus(session.sessionId);
 
-    // margin = (0.75 - 0.25) / 1.0 = 0.5 exactly equals threshold 0.5
+    // margin ≈ 0.53, which is above threshold 0.5 -> consensus
     expect(result.consensusReached).toBe(true);
-    expect(result.reasoning).toContain("0.50");
+    expect(result.reasoning).toContain("0.5");
   });
 
-  it("DIAL_415: boundary — margin one epsilon below threshold — no consensus", async () => {
-    // We need margin just below threshold.
-    // Use 3 proposers to get fractional margin:
-    // pA alignment=0.6, proposes "approve" (score=0.6)
-    // pB alignment=0.4, proposes "reject" (score=0.4)
-    // total = 1.0, margin = (0.6 - 0.4) / 1.0 = 0.2
-    // threshold = 0.3 -> margin 0.2 < 0.3 -> NO consensus
-    //
-    // To get exact 0.6: 6 matches out of 10
-    // To get exact 0.4: 4 matches out of 10
+  it("DIAL_415: boundary — margin below threshold — no consensus", async () => {
+    // pHigh alignment ~0.6, proposes "approve"
+    // pLow alignment ~0.4, proposes "reject"
+    // With 1000 samples:
+    // Wilson(600,1000) ≈ 0.569, Wilson(400,1000) ≈ 0.370
+    // margin = (0.569 - 0.370) / (0.569 + 0.370) ≈ 0.21
+    // threshold = 0.3 -> margin 0.21 < 0.3 -> NO consensus
     const session = await createSession(machine);
 
     await registerProposer({
@@ -307,12 +300,12 @@ describe("E2E: Consensus Math Verification", () => {
       threshold: 0.3,
     });
 
-    // Seed alignment: pHigh = 6/10 = 0.6, pLow = 4/10 = 0.4
-    seedAlignment("pHigh", "math-test", 0.6);
-    seedAlignment("pLow", "math-test", 0.4);
+    // Seed alignment with large sample size so Wilson scores are close to raw rates
+    seedAlignment("pHigh", "math-test", 0.6, 1000);
+    seedAlignment("pLow", "math-test", 0.4, 1000);
 
-    expect(getAlignmentScore("pHigh", "math-test")).toBe(0.6);
-    expect(getAlignmentScore("pLow", "math-test")).toBe(0.4);
+    expect(getAlignmentScore("pHigh", "math-test")).toBeGreaterThan(0.5);
+    expect(getAlignmentScore("pLow", "math-test")).toBeGreaterThan(0.3);
 
     await submitProposal({
       sessionId: session.sessionId,
@@ -327,9 +320,9 @@ describe("E2E: Consensus Math Verification", () => {
 
     const result = await evaluateConsensus(session.sessionId);
 
-    // margin = (0.6 - 0.4) / 1.0 = 0.2 < 0.3 threshold
+    // margin ≈ 0.21 < 0.3 threshold
     expect(result.consensusReached).toBe(false);
-    expect(result.reasoning).toContain("0.20");
+    expect(result.reasoning).toContain("0.21");
     expect(result.reasoning).toContain("below threshold");
   });
 });

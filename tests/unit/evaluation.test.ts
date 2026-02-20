@@ -72,7 +72,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
 
     expect(result.totalExemplars).toBe(2);
     expect(result.matchingDecisions).toBe(1);
-    expect(result.alignmentScore).toBeCloseTo(0.5);
+    expect(result.alignmentScore).toBeCloseTo(0.0945, 3);
   });
 
   test("DIAL_224: evaluateAlignment counts matching proposals by transitionName", async () => {
@@ -155,7 +155,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
 
     expect(result.totalExemplars).toBe(2);
     expect(result.matchingDecisions).toBe(1);
-    expect(result.alignmentScore).toBeCloseTo(0.5);
+    expect(result.alignmentScore).toBeCloseTo(0.0945, 3);
   });
 
   test("DIAL_228: evaluateAlignment returns 0 with no exemplars", async () => {
