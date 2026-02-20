@@ -3,13 +3,17 @@ import { TransitionPanel } from "../app/components/TransitionPanel.js";
 import { ProposalList } from "../app/components/ProposalList.js";
 import { HistoryTimeline } from "../app/components/HistoryTimeline.js";
 import { CollapseGauge } from "../app/components/CollapseGauge.js";
-import { replayMoves, ITEM_NAMES, isSolved } from "../machines/river-crossing-puzzle.js";
 import type { ScreenProps } from "../machines/types.js";
+
+interface RiverCrossingView {
+  items: number[];
+  solved: boolean;
+  itemNames: string[];
+}
 
 const ITEM_EMOJIS = ["\uD83D\uDC68\u200D\uD83C\uDF3E", "\uD83D\uDC3A", "\uD83D\uDC10", "\uD83E\uDD6C"];
 
-function RiverViz({ items }: { items: number[] }) {
-  const solved = isSolved(items);
+function RiverViz({ items, solved, itemNames }: { items: number[]; solved: boolean; itemNames: string[] }) {
   const leftBank = items.map((side, i) => (side === 0 ? i : -1)).filter((i) => i >= 0);
   const rightBank = items.map((side, i) => (side === 1 ? i : -1)).filter((i) => i >= 0);
 
@@ -29,7 +33,7 @@ function RiverViz({ items }: { items: number[] }) {
             {leftBank.map((idx) => (
               <div key={idx} style={{ textAlign: "center" }}>
                 <div style={{ fontSize: "2rem" }}>{ITEM_EMOJIS[idx]}</div>
-                <div style={{ fontSize: "0.7rem", color: "#aaa" }}>{ITEM_NAMES[idx]}</div>
+                <div style={{ fontSize: "0.7rem", color: "#aaa" }}>{itemNames[idx]}</div>
               </div>
             ))}
           </div>
@@ -58,7 +62,7 @@ function RiverViz({ items }: { items: number[] }) {
             {rightBank.map((idx) => (
               <div key={idx} style={{ textAlign: "center" }}>
                 <div style={{ fontSize: "2rem" }}>{ITEM_EMOJIS[idx]}</div>
-                <div style={{ fontSize: "0.7rem", color: "#aaa" }}>{ITEM_NAMES[idx]}</div>
+                <div style={{ fontSize: "0.7rem", color: "#aaa" }}>{itemNames[idx]}</div>
               </div>
             ))}
           </div>
@@ -75,14 +79,23 @@ function RiverViz({ items }: { items: number[] }) {
 }
 
 export function RiverCrossingScreen(props: ScreenProps) {
-  const { session, machine, proposals, collapseMetrics, onForceTransition } = props;
-  const items = replayMoves(session.history);
+  const { session, machine, proposals, collapseMetrics, onForceTransition, view } = props;
+
+  if (!view) {
+    return (
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "2rem" }}>
+        <p>Loading view...</p>
+      </div>
+    );
+  }
+
+  const { items, solved, itemNames } = view as unknown as RiverCrossingView;
 
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto", padding: "2rem" }}>
       <SessionHeader session={session} />
 
-      <RiverViz items={items} />
+      <RiverViz items={items} solved={solved} itemNames={itemNames} />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
         <div style={{ display: "grid", gap: "1.5rem", alignContent: "start" }}>

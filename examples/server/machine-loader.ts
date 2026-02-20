@@ -16,7 +16,6 @@ export async function loadMachines(): Promise<Map<string, MachineModule>> {
 
   for (const file of files) {
     if (file === "types.ts" || file === "types.js") continue;
-    if (file.includes("-puzzle")) continue;
     if (!file.endsWith(".ts") && !file.endsWith(".js")) continue;
 
     const modulePath = join(MACHINES_DIR, file);

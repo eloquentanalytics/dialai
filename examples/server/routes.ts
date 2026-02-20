@@ -176,7 +176,9 @@ route("GET", "/api/sessions", async (_req, res) => {
 route("GET", "/api/sessions/:id", async (_req, res, params) => {
   try {
     const session = await getSession(params.id);
-    json(res, session);
+    const mod = machineMap.get(session.machineName);
+    const view = mod?.computeView ? mod.computeView(session) : null;
+    json(res, { ...session, view });
   } catch {
     err(res, `Session not found: ${params.id}`, 404);
   }

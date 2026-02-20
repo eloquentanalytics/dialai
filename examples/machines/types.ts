@@ -18,6 +18,7 @@ export interface MachineModule {
     | ((ctx: ProposerContext) => Promise<ProposerStrategyResult>)
     | ((ctx: ArbiterContext) => Promise<ArbiterStrategyResult>)
   >;
+  computeView?: (session: Session) => Record<string, unknown>;
 }
 
 export interface ScreenProps {
@@ -27,6 +28,7 @@ export interface ScreenProps {
   lastTickResults: TickResult[];
   collapseMetrics: CollapseMetrics | null;
   decisions: DecisionRecord[];
+  view: Record<string, unknown> | null;
   onForceTransition: (transitionName: string, reasoning?: string) => Promise<void>;
   onSubmitProposal: (transitionName: string, reasoning?: string) => Promise<void>;
 }

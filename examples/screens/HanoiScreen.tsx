@@ -3,16 +3,19 @@ import { TransitionPanel } from "../app/components/TransitionPanel.js";
 import { ProposalList } from "../app/components/ProposalList.js";
 import { HistoryTimeline } from "../app/components/HistoryTimeline.js";
 import { CollapseGauge } from "../app/components/CollapseGauge.js";
-import { replayMoves, getPegStacks, PEG_NAMES, isSolved } from "../machines/hanoi-puzzle.js";
 import type { ScreenProps } from "../machines/types.js";
+
+interface HanoiView {
+  pegs: number[][];
+  solved: boolean;
+  pegNames: string[];
+  disks: number[];
+}
 
 const DISK_COLORS = ["#ff6b6b", "#ffd93d", "#6bcb77"];
 const DISK_WIDTHS = [60, 100, 140];
 
-function PegViz({ disks }: { disks: number[] }) {
-  const pegs = getPegStacks(disks);
-  const solved = isSolved(disks);
-
+function PegViz({ pegs, solved, pegNames }: { pegs: number[][]; solved: boolean; pegNames: string[] }) {
   return (
     <div style={{
       padding: "1.5rem",
@@ -25,7 +28,7 @@ function PegViz({ disks }: { disks: number[] }) {
         {pegs.map((peg, pegIdx) => (
           <div key={pegIdx} style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 160 }}>
             {/* Peg label */}
-            <div style={{ fontSize: "0.8rem", color: "#888", marginBottom: 4 }}>{PEG_NAMES[pegIdx]}</div>
+            <div style={{ fontSize: "0.8rem", color: "#888", marginBottom: 4 }}>{pegNames[pegIdx]}</div>
 
             {/* Peg rod */}
             <div style={{ position: "relative", width: 6, height: 100, background: "#444", borderRadius: 3 }}>
@@ -71,14 +74,23 @@ function PegViz({ disks }: { disks: number[] }) {
 }
 
 export function HanoiScreen(props: ScreenProps) {
-  const { session, machine, proposals, collapseMetrics, onForceTransition } = props;
-  const disks = replayMoves(session.history);
+  const { session, machine, proposals, collapseMetrics, onForceTransition, view } = props;
+
+  if (!view) {
+    return (
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "2rem" }}>
+        <p>Loading view...</p>
+      </div>
+    );
+  }
+
+  const { pegs, solved, pegNames } = view as unknown as HanoiView;
 
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto", padding: "2rem" }}>
       <SessionHeader session={session} />
 
-      <PegViz disks={disks} />
+      <PegViz pegs={pegs} solved={solved} pegNames={pegNames} />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
         <div style={{ display: "grid", gap: "1.5rem", alignContent: "start" }}>

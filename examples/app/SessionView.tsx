@@ -7,7 +7,7 @@ import { DefaultScreen } from "../screens/DefaultScreen.js";
 export function SessionView() {
   const { name, id, state } = useParams<{ name: string; id: string; state: string }>();
   const navigate = useNavigate();
-  const { session, proposals, lastTickResults, collapseMetrics, decisions, loading } = useSession(id);
+  const { session, proposals, lastTickResults, collapseMetrics, decisions, view, loading } = useSession(id);
 
   // Navigate to updated URL when state changes
   useEffect(() => {
@@ -50,6 +50,7 @@ export function SessionView() {
       lastTickResults={lastTickResults}
       collapseMetrics={collapseMetrics}
       decisions={decisions}
+      view={view}
       onForceTransition={onForceTransition}
       onSubmitProposal={onSubmitProposal}
     />

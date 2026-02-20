@@ -7,6 +7,7 @@ interface SessionData {
   lastTickResults: TickResult[];
   collapseMetrics: CollapseMetrics | null;
   decisions: DecisionRecord[];
+  view: Record<string, unknown> | null;
   loading: boolean;
 }
 
@@ -16,6 +17,7 @@ export function useSession(sessionId: string | undefined): SessionData {
   const [lastTickResults, setLastTickResults] = useState<TickResult[]>([]);
   const [collapseMetrics, setCollapseMetrics] = useState<CollapseMetrics | null>(null);
   const [decisions, setDecisions] = useState<DecisionRecord[]>([]);
+  const [view, setView] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const metricsIntervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
@@ -30,7 +32,11 @@ export function useSession(sessionId: string | undefined): SessionData {
           fetch(`/api/sessions/${sessionId}/proposals`),
           fetch("/api/tick"),
         ]);
-        if (sessionRes.ok) setSession(await sessionRes.json());
+        if (sessionRes.ok) {
+          const data = await sessionRes.json() as Session & { view?: Record<string, unknown> };
+          setSession(data);
+          setView(data.view ?? null);
+        }
         if (proposalRes.ok) setProposals(await proposalRes.json());
         if (tickRes.ok) setLastTickResults(await tickRes.json());
         setLoading(false);
@@ -64,5 +70,5 @@ export function useSession(sessionId: string | undefined): SessionData {
     };
   }, [sessionId]);
 
-  return { session, proposals, lastTickResults, collapseMetrics, decisions, loading };
+  return { session, proposals, lastTickResults, collapseMetrics, decisions, view, loading };
 }
