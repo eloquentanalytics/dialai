@@ -404,7 +404,7 @@ function buildProposerContext(session: Session): ProposerContext {
     currentState: session.currentState,
     prompt: currentStatedef?.prompt ?? "",
     transitions: currentStatedef?.transitions ?? {},
-    history: session.history,
+    history: [...session.history],
   };
 }
 

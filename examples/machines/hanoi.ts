@@ -191,28 +191,29 @@ async function llmGpt4oMiniStrategy(ctx: ProposerContext): Promise<ProposerStrat
     return { transitionName: "declare_solved", toState: ctx.transitions["declare_solved"], reasoning: "Solved" };
   }
 
-  // Check exemplars first, just like llm-careful
-  const stateExemplars = getExemplars(MACHINE_NAME, "unsolved");
-  for (const ex of stateExemplars.reverse()) {
-    const exDisks = replayMoves(ex.context.history);
-    if (exDisks.join("") === disks.join("")) {
-      return {
-        transitionName: ex.humanTransitionName,
-        toState: ctx.transitions[ex.humanTransitionName],
-        reasoning: `Learned (gpt4o-mini): replay ${ex.humanTransitionName}`,
-      };
-    }
-  }
-
-  // Fall back to GPT-4o-mini LLM call
   const pegs = getPegStacks(disks);
   const pegDescription = PEG_NAMES.map((name, i) =>
     `Peg ${name}: [${pegs[i].map(d => `disk${d}`).join(", ")}]`
   ).join("\n");
   const validMoves = getValidMoves(disks).map(m => m.name).join(", ");
 
+  // Build n-shot examples from exemplars
+  const stateExemplars = getExemplars(MACHINE_NAME, "unsolved");
+  let exemplarSection = "";
+  if (stateExemplars.length > 0) {
+    const shots = stateExemplars.map((ex) => {
+      const exDisks = replayMoves(ex.context.history);
+      const exPegs = getPegStacks(exDisks);
+      const exBoard = PEG_NAMES.map((name, i) =>
+        `Peg ${name}: [${exPegs[i].map(d => `disk${d}`).join(", ")}]`
+      ).join(", ");
+      return `Board: ${exBoard} → Correct move: ${ex.humanTransitionName}`;
+    });
+    exemplarSection = `\n\nHere are examples of correct moves from previous games:\n${shots.join("\n")}`;
+  }
+
   const systemMessage = "You are solving Tower of Hanoi. Move all disks from peg A to peg C. Smaller-numbered disks are smaller. A larger disk cannot be placed on a smaller one. Respond with ONLY a JSON object: {\"transitionName\": \"...\", \"toState\": \"...\", \"reasoning\": \"...\"}";
-  const userMessage = `Current board:\n${pegDescription}\n\nValid moves: ${validMoves}\n\nAvailable transitions:\n${Object.entries(ctx.transitions).map(([name, target]) => `  "${name}" → "${target}"`).join("\n")}\n\nChoose the best move to make progress toward getting all disks to peg C.`;
+  const userMessage = `Current board:\n${pegDescription}\n\nValid moves: ${validMoves}\n\nAvailable transitions:\n${Object.entries(ctx.transitions).map(([name, target]) => `  "${name}" → "${target}"`).join("\n")}${exemplarSection}\n\nChoose the best move to make progress toward getting all disks to peg C.`;
 
   try {
     const result = await callLlm("openai/gpt-4o-mini", systemMessage, userMessage);
@@ -221,12 +222,11 @@ async function llmGpt4oMiniStrategy(ctx: ProposerContext): Promise<ProposerStrat
       return {
         transitionName: parsed.transitionName,
         toState: ctx.transitions[parsed.transitionName],
-        reasoning: `GPT-4o-mini: ${parsed.reasoning ?? parsed.transitionName}`,
+        reasoning: `GPT-4o-mini (${stateExemplars.length} exemplars): ${parsed.reasoning ?? parsed.transitionName}`,
       };
     }
   } catch (err) {
     console.error("[llm-gpt4o-mini] LLM call failed:", err);
-    // Fall through to greedy fallback
   }
 
   // Greedy fallback if LLM fails
