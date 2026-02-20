@@ -4,7 +4,7 @@
  * Contains machine definition, strategy functions, and all puzzle logic.
  */
 
-import { getExemplars } from "dialai";
+import { getExemplars, callLlm } from "dialai";
 import type {
   MachineDefinition,
   ProposerContext,
@@ -184,6 +184,65 @@ async function llmCarefulStrategy(ctx: ProposerContext): Promise<ProposerStrateg
   };
 }
 
+async function llmGpt4oMiniStrategy(ctx: ProposerContext): Promise<ProposerStrategyResult> {
+  const disks = replayMoves(ctx.history);
+
+  if (isSolved(disks)) {
+    return { transitionName: "declare_solved", toState: ctx.transitions["declare_solved"], reasoning: "Solved" };
+  }
+
+  // Check exemplars first, just like llm-careful
+  const stateExemplars = getExemplars(MACHINE_NAME, "unsolved");
+  for (const ex of stateExemplars.reverse()) {
+    const exDisks = replayMoves(ex.context.history);
+    if (exDisks.join("") === disks.join("")) {
+      return {
+        transitionName: ex.humanTransitionName,
+        toState: ctx.transitions[ex.humanTransitionName],
+        reasoning: `Learned (gpt4o-mini): replay ${ex.humanTransitionName}`,
+      };
+    }
+  }
+
+  // Fall back to GPT-4o-mini LLM call
+  const pegs = getPegStacks(disks);
+  const pegDescription = PEG_NAMES.map((name, i) =>
+    `Peg ${name}: [${pegs[i].map(d => `disk${d}`).join(", ")}]`
+  ).join("\n");
+  const validMoves = getValidMoves(disks).map(m => m.name).join(", ");
+
+  const systemMessage = "You are solving Tower of Hanoi. Move all disks from peg A to peg C. Smaller-numbered disks are smaller. A larger disk cannot be placed on a smaller one. Respond with ONLY a JSON object: {\"transitionName\": \"...\", \"toState\": \"...\", \"reasoning\": \"...\"}";
+  const userMessage = `Current board:\n${pegDescription}\n\nValid moves: ${validMoves}\n\nAvailable transitions:\n${Object.entries(ctx.transitions).map(([name, target]) => `  "${name}" → "${target}"`).join("\n")}\n\nChoose the best move to make progress toward getting all disks to peg C.`;
+
+  try {
+    const result = await callLlm("openai/gpt-4o-mini", systemMessage, userMessage);
+    const parsed = JSON.parse(result.content) as ProposerStrategyResult;
+    if (parsed.transitionName && ctx.transitions[parsed.transitionName]) {
+      return {
+        transitionName: parsed.transitionName,
+        toState: ctx.transitions[parsed.transitionName],
+        reasoning: `GPT-4o-mini: ${parsed.reasoning ?? parsed.transitionName}`,
+      };
+    }
+  } catch (err) {
+    console.error("[llm-gpt4o-mini] LLM call failed:", err);
+    // Fall through to greedy fallback
+  }
+
+  // Greedy fallback if LLM fails
+  const valid = getValidMoves(disks);
+  const toGoal = valid.filter((m) => m.to === 2);
+  const chosen = toGoal.length > 0 ? toGoal[0] : valid[0];
+  if (!chosen) {
+    return { transitionName: "A_to_B", toState: ctx.transitions["A_to_B"], reasoning: "GPT-4o-mini fallback" };
+  }
+  return {
+    transitionName: chosen.name,
+    toState: ctx.transitions[chosen.name],
+    reasoning: `GPT-4o-mini greedy fallback: ${PEG_NAMES[chosen.from]}->${PEG_NAMES[chosen.to]}`,
+  };
+}
+
 async function llmRandomStrategy(ctx: ProposerContext): Promise<ProposerStrategyResult> {
   const disks = replayMoves(ctx.history);
 
@@ -223,6 +282,7 @@ const definition: MachineDefinition = {
       specialists: [
         { role: "proposer", specialistId: "human-optimal", isHuman: true, disabled: true },
         { role: "proposer", specialistId: "llm-careful" },
+        { role: "proposer", specialistId: "llm-gpt4o-mini" },
         { role: "proposer", specialistId: "llm-random" },
         { role: "arbiter", specialistId: "hanoi-arbiter", strategyFnName: "aheadByK", threshold: 0.4 },
       ],
@@ -240,6 +300,7 @@ const hanoi: MachineModule = {
   strategies: {
     "human-optimal": humanOptimalStrategy,
     "llm-careful": llmCarefulStrategy,
+    "llm-gpt4o-mini": llmGpt4oMiniStrategy,
     "llm-random": llmRandomStrategy,
   },
   computeView,
