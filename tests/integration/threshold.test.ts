@@ -150,7 +150,7 @@ describe("Integration: Consensus Threshold Behavior", () => {
     expect(result.reasoning).toContain("below threshold");
   });
 
-  it("DIAL_320: threshold 1.0: requires margin of 1.0", async () => {
+  it("DIAL_320: threshold 1.0: human-only mode blocks all auto-approval", async () => {
     const session = await createSession(machine);
 
     await registerProposer({
@@ -171,7 +171,7 @@ describe("Integration: Consensus Threshold Behavior", () => {
     });
 
     // Both proposers have alignment and propose the same transition ("approve")
-    // All proposals for same transition means runnerUp = 0, margin = total / total = 1.0
+    // All proposals for same transition means margin = 1.0, but threshold=1.0 blocks all
     for (let i = 0; i < 5; i++) updateAlignment("p1", "threshold-test", true);
     for (let i = 0; i < 5; i++) updateAlignment("p2", "threshold-test", true);
 
@@ -187,7 +187,7 @@ describe("Integration: Consensus Threshold Behavior", () => {
     });
 
     const result = await evaluateConsensus(session.sessionId);
-    expect(result.consensusReached).toBe(true);
+    expect(result.consensusReached).toBe(false);
   });
 
   it("DIAL_321: per-state threshold overrides machine default", async () => {

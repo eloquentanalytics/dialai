@@ -178,7 +178,31 @@ route("GET", "/api/sessions/:id", async (_req, res, params) => {
     const session = await getSession(params.id);
     const mod = machineMap.get(session.machineName);
     const view = mod?.computeView ? mod.computeView(session) : null;
-    json(res, { ...session, view });
+    const arbiter = [...specialists.values()].find(
+      (s) => s.role === "arbiter" && s.machineName === session.machineName
+    );
+    const arbiterThreshold = arbiter && "threshold" in arbiter ? arbiter.threshold : undefined;
+    json(res, { ...session, view, arbiterThreshold });
+  } catch {
+    err(res, `Session not found: ${params.id}`, 404);
+  }
+});
+
+// PATCH /api/sessions/:id/threshold
+route("PATCH", "/api/sessions/:id/threshold", async (req, res, params) => {
+  try {
+    const session = await getSession(params.id);
+    const body = await readBody(req);
+    const threshold = body.threshold as number;
+    if (typeof threshold !== "number" || threshold < 0 || threshold > 1) {
+      return err(res, "threshold must be a number between 0 and 1");
+    }
+    const arbiter = [...specialists.values()].find(
+      (s) => s.role === "arbiter" && s.machineName === session.machineName
+    );
+    if (!arbiter) return err(res, "No arbiter found for this machine", 404);
+    (arbiter as { threshold?: number }).threshold = threshold;
+    json(res, { threshold });
   } catch {
     err(res, `Session not found: ${params.id}`, 404);
   }
@@ -282,7 +306,7 @@ export function handleRequest(req: IncomingMessage, res: ServerResponse): void {
   if (req.method === "OPTIONS") {
     res.writeHead(204, {
       "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Methods": "GET, POST, PATCH, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type",
     });
     res.end();

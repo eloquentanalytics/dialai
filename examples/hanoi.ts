@@ -249,7 +249,7 @@ function buildHanoiMachine(): MachineDefinition {
           { role: "proposer", specialistId: "human-optimal", isHuman: true, disabled: true },
           { role: "proposer", specialistId: "llm-careful" },
           { role: "proposer", specialistId: "llm-random" },
-          { role: "arbiter", specialistId: "hanoi-arbiter", strategyFnName: "aheadByK", threshold: 0.4 },
+          { role: "arbiter", specialistId: "hanoi-arbiter", strategyFnName: "aheadByK", threshold: 1.0 },
         ],
       },
       solved: {},

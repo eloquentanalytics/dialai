@@ -284,7 +284,7 @@ const definition: MachineDefinition = {
         { role: "proposer", specialistId: "llm-careful" },
         { role: "proposer", specialistId: "llm-gpt4o-mini" },
         { role: "proposer", specialistId: "llm-random" },
-        { role: "arbiter", specialistId: "hanoi-arbiter", strategyFnName: "aheadByK", threshold: 0.4 },
+        { role: "arbiter", specialistId: "hanoi-arbiter", strategyFnName: "aheadByK", threshold: 1.0 },
       ],
     },
     solved: {},

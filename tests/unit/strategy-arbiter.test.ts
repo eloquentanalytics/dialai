@@ -74,7 +74,7 @@ describe("DIAL_171–DIAL_178: Arbiter Strategies", () => {
     expect(result.winningProposalId).toBeUndefined();
   });
 
-  test("DIAL_173: aheadByK with single proposal and threshold<=1 reaches consensus", async () => {
+  test("DIAL_173: aheadByK with single proposal and threshold<1 reaches consensus", async () => {
     const proposal = makeProposal({
       proposalId: "p-only",
       specialistId: "spec1",
@@ -90,7 +90,7 @@ describe("DIAL_171–DIAL_178: Arbiter Strategies", () => {
       proposals: [proposal],
       alignmentScores: { spec1: 0.9 },
       history: [],
-      threshold: 1,
+      threshold: 0.9,
     };
 
     const result = await aheadByK(ctx);
@@ -144,14 +144,14 @@ describe("DIAL_171–DIAL_178: Arbiter Strategies", () => {
     expect(["p-approve1", "p-approve2"]).toContain(result.winningProposalId);
   });
 
-  test("DIAL_178: aheadByK default threshold is 1 when ctx.threshold is undefined", async () => {
+  test("DIAL_178: aheadByK default threshold is 1 when ctx.threshold is undefined (human-only)", async () => {
     const proposal = makeProposal({
       proposalId: "p-only",
       specialistId: "spec1",
       transitionName: "approve",
     });
 
-    // Threshold omitted (undefined) should default to 1
+    // Threshold omitted (undefined) should default to 1 = human-only mode
     const ctx: ArbiterContext = {
       sessionId: "s1",
       roundId: "r1",
@@ -166,8 +166,7 @@ describe("DIAL_171–DIAL_178: Arbiter Strategies", () => {
 
     const result = await aheadByK(ctx);
 
-    // Single proposal with threshold <= 1 should still reach consensus
-    expect(result.consensusReached).toBe(true);
-    expect(result.winningProposalId).toBe("p-only");
+    // threshold=1 disables auto-approval (human-only mode)
+    expect(result.consensusReached).toBe(false);
   });
 });

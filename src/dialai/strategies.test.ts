@@ -127,7 +127,27 @@ describe("Arbiter Strategies", () => {
   });
 
   describe("aheadByK", () => {
-    it("returns consensus for single proposal with threshold <= 1", async () => {
+    it("returns consensus for single proposal with threshold < 1", async () => {
+      const propA = makeProposal({ proposalId: "prop-a" });
+
+      const ctx: ArbiterContext = {
+        sessionId: "session-1",
+        roundId: "round-1",
+        currentState: "pending",
+        prompt: "Evaluate",
+        machineName: "test",
+        proposals: [propA],
+        history: [],
+        threshold: 0.9,
+      };
+
+      const result = await aheadByK(ctx);
+
+      expect(result.consensusReached).toBe(true);
+      expect(result.winningProposalId).toBe("prop-a");
+    });
+
+    it("returns no consensus for single proposal with threshold = 1 (human-only mode)", async () => {
       const propA = makeProposal({ proposalId: "prop-a" });
 
       const ctx: ArbiterContext = {
@@ -143,8 +163,7 @@ describe("Arbiter Strategies", () => {
 
       const result = await aheadByK(ctx);
 
-      expect(result.consensusReached).toBe(true);
-      expect(result.winningProposalId).toBe("prop-a");
+      expect(result.consensusReached).toBe(false);
     });
 
     it("returns no consensus for single proposal with threshold > 1 and no alignment", async () => {

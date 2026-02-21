@@ -128,14 +128,16 @@ export async function firstProposal(
 /**
  * Ahead-by-K consensus strategy using alignment-weighted margin.
  *
- * Single proposal + threshold <= 1: consensus immediately.
+ * Single proposal + threshold < 1: consensus immediately.
  * Multiple proposals: alignment-weighted margin.
  *   1. Group proposals by transitionName
  *   2. Score each group by sum of proposer alignment scores
  *   3. margin = (leader - runnerUp) / totalAlignment
  *   4. Cold start (totalAlignment = 0): no consensus
- *   5. Consensus when margin >= threshold
+ *   5. Consensus when threshold < 1 and margin >= threshold
  *   6. Pick best proposal in winning transition (highest-alignment proposer)
+ *
+ * Setting threshold = 1 disables all auto-approval (human-only mode).
  */
 export async function aheadByK(
   ctx: ArbiterContext
@@ -149,8 +151,8 @@ export async function aheadByK(
     };
   }
 
-  // Single proposal: consensus if threshold allows
-  if (ctx.proposals.length === 1 && threshold <= 1) {
+  // Single proposal: auto-approve when threshold < 1 (no competing proposals needed)
+  if (ctx.proposals.length === 1 && threshold < 1) {
     return {
       consensusReached: true,
       winningProposalId: ctx.proposals[0].proposalId,
@@ -204,7 +206,7 @@ export async function aheadByK(
 
   const margin = (leaderScore - runnerUpScore) / totalAlignment;
 
-  if (margin >= threshold) {
+  if (threshold < 1 && margin >= threshold) {
     return {
       consensusReached: true,
       winningProposalId: sorted[0][1].bestProposalId,

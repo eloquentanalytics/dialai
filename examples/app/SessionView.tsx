@@ -16,6 +16,13 @@ export function SessionView() {
     }
   }, [session, name, id, state, navigate]);
 
+  // Redirect to machine list if session not found (loading finished but no session)
+  useEffect(() => {
+    if (!loading && !session) {
+      navigate("/", { replace: true });
+    }
+  }, [loading, session, navigate]);
+
   if (loading || !session) {
     return (
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "2rem" }}>
