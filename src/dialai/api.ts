@@ -52,7 +52,8 @@ import type {
  * @returns The created session
  */
 export async function createSession(
-  machine: MachineDefinition
+  machine: MachineDefinition,
+  metaJson?: Record<string, unknown>
 ): Promise<Session> {
   const normalized = normalizeMachine(machine);
 
@@ -64,6 +65,7 @@ export async function createSession(
     machine: normalized,
     history: [],
     createdAt: new Date(),
+    metaJson,
   };
 
   sessions.set(session.sessionId, session);
@@ -405,6 +407,7 @@ function buildProposerContext(session: Session): ProposerContext {
     prompt: currentStatedef?.prompt ?? "",
     transitions: currentStatedef?.transitions ?? {},
     history: [...session.history],
+    metaJson: session.metaJson,
   };
 }
 
@@ -426,6 +429,7 @@ function buildArbiterContext(
     proposals: roundProposals,
     history: session.history,
     threshold,
+    metaJson: session.metaJson,
   };
 }
 

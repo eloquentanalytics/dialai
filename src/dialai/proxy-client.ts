@@ -69,8 +69,11 @@ async function rpcCall<T>(
 // Proxy API Functions
 // ============================================================================
 
-export async function createSession(machine: MachineDefinition): Promise<Session> {
-  return rpcCall<Session>("create_session", { machine });
+export async function createSession(
+  machine: MachineDefinition,
+  metaJson?: Record<string, unknown>
+): Promise<Session> {
+  return rpcCall<Session>("create_session", { machine, metaJson });
 }
 
 export async function getSession(sessionId: string): Promise<Session> {

@@ -146,12 +146,15 @@ route("GET", "/api/machines/:name", async (_req, res, params) => {
 });
 
 // POST /api/machines/:name/sessions
-route("POST", "/api/machines/:name/sessions", async (_req, res, params) => {
+route("POST", "/api/machines/:name/sessions", async (req, res, params) => {
   const mod = machineMap.get(params.name);
   if (!mod) return err(res, `Machine not found: ${params.name}`, 404);
 
+  const body = await readBody(req);
+  const metaJson = body.metaJson as Record<string, unknown> | undefined;
+
   await registerMachineStrategies(mod);
-  const session = await createSession(mod.definition);
+  const session = await createSession(mod.definition, metaJson);
   json(res, {
     sessionId: session.sessionId,
     machineName: session.machineName,

@@ -17,7 +17,15 @@ import type { MachineModule } from "./types.js";
 // Puzzle Logic
 // ============================================================================
 
+const DEFAULT_NUM_DISKS = 3;
+const MAX_NUM_DISKS = 15;
 const PEG_NAMES = ["A", "B", "C"] as const;
+
+function getNumDisks(metaJson?: Record<string, unknown>): number {
+  const raw = metaJson?.numDisks;
+  if (typeof raw === "number" && raw >= 1 && raw <= MAX_NUM_DISKS) return Math.floor(raw);
+  return DEFAULT_NUM_DISKS;
+}
 
 const MOVES = [
   { name: "A_to_B", from: 0, to: 1 },
@@ -60,8 +68,8 @@ function isSolved(disks: number[]): boolean {
   return disks.every((d) => d === 2);
 }
 
-function replayMoves(history: Array<{ transitionName: string }>): number[] {
-  const disks = [0, 0, 0];
+function replayMoves(history: Array<{ transitionName: string }>, numDisks: number): number[] {
+  const disks: number[] = new Array(numDisks).fill(0) as number[];
   for (const { transitionName } of history) {
     const move = MOVE_MAP.get(transitionName);
     if (!move) continue;
@@ -70,55 +78,63 @@ function replayMoves(history: Array<{ transitionName: string }>): number[] {
   return disks;
 }
 
-function buildOptimalMoveTable(): Map<string, string> {
+function buildOptimalMoveTable(numDisks: number): Map<string, string> {
   const table = new Map<string, string>();
-  const goal = "222";
+  const goal = "2".repeat(numDisks);
+  const totalStates = 3 ** numDisks;
 
-  for (let d0 = 0; d0 < 3; d0++)
-    for (let d1 = 0; d1 < 3; d1++)
-      for (let d2 = 0; d2 < 3; d2++) {
-        const state = `${d0}${d1}${d2}`;
-        if (state === goal) continue;
-        const visited = new Set([state]);
-        const queue: Array<{ state: string; firstMove: string }> = [];
+  for (let s = 0; s < totalStates; s++) {
+    const state = s.toString(3).padStart(numDisks, "0");
+    if (state === goal) continue;
+    const visited = new Set([state]);
+    const queue: Array<{ state: string; firstMove: string }> = [];
 
-        for (const move of MOVES) {
-          const disks = state.split("").map(Number);
-          if (!isMoveValid(disks, move.from, move.to)) continue;
-          applyMoveToDisks(disks, move.from, move.to);
-          const next = disks.join("");
-          if (next === goal) { table.set(state, move.name); break; }
-          if (!visited.has(next)) {
-            visited.add(next);
-            queue.push({ state: next, firstMove: move.name });
-          }
-        }
-        if (table.has(state)) continue;
+    for (const move of MOVES) {
+      const disks = state.split("").map(Number);
+      if (!isMoveValid(disks, move.from, move.to)) continue;
+      applyMoveToDisks(disks, move.from, move.to);
+      const next = disks.join("");
+      if (next === goal) { table.set(state, move.name); break; }
+      if (!visited.has(next)) {
+        visited.add(next);
+        queue.push({ state: next, firstMove: move.name });
+      }
+    }
+    if (table.has(state)) continue;
 
-        while (queue.length > 0) {
-          const { state: curr, firstMove } = queue.shift()!;
-          for (const move of MOVES) {
-            const disks = curr.split("").map(Number);
-            if (!isMoveValid(disks, move.from, move.to)) continue;
-            applyMoveToDisks(disks, move.from, move.to);
-            const next = disks.join("");
-            if (next === goal) { table.set(state, firstMove); break; }
-            if (!visited.has(next)) {
-              visited.add(next);
-              queue.push({ state: next, firstMove });
-            }
-          }
-          if (table.has(state)) break;
+    while (queue.length > 0) {
+      const { state: curr, firstMove } = queue.shift()!;
+      for (const move of MOVES) {
+        const disks = curr.split("").map(Number);
+        if (!isMoveValid(disks, move.from, move.to)) continue;
+        applyMoveToDisks(disks, move.from, move.to);
+        const next = disks.join("");
+        if (next === goal) { table.set(state, firstMove); break; }
+        if (!visited.has(next)) {
+          visited.add(next);
+          queue.push({ state: next, firstMove });
         }
       }
+      if (table.has(state)) break;
+    }
+  }
   return table;
 }
 
-const OPTIMAL_TABLE = buildOptimalMoveTable();
+const optimalTableCache = new Map<number, Map<string, string>>();
 
-function getOptimalMove(disks: number[], transitions: Record<string, string>): { transitionName: string; toState: string; reasoning: string } {
+function getOptimalTable(numDisks: number): Map<string, string> {
+  let table = optimalTableCache.get(numDisks);
+  if (!table) {
+    table = buildOptimalMoveTable(numDisks);
+    optimalTableCache.set(numDisks, table);
+  }
+  return table;
+}
+
+function getOptimalMove(disks: number[], transitions: Record<string, string>, numDisks: number): { transitionName: string; toState: string; reasoning: string } {
   const stateKey = disks.join("");
-  const moveName = OPTIMAL_TABLE.get(stateKey);
+  const moveName = getOptimalTable(numDisks).get(stateKey);
   if (!moveName) throw new Error(`No optimal move from "${stateKey}"`);
   return {
     transitionName: moveName,
@@ -132,10 +148,11 @@ function getOptimalMove(disks: number[], transitions: Record<string, string>): {
 // ============================================================================
 
 function computeView(session: Session): Record<string, unknown> {
-  const disks = replayMoves(session.history);
+  const numDisks = getNumDisks(session.metaJson);
+  const disks = replayMoves(session.history, numDisks);
   const pegs = getPegStacks(disks);
   const solved = isSolved(disks);
-  return { pegs, solved, pegNames: [...PEG_NAMES], disks };
+  return { pegs, solved, pegNames: [...PEG_NAMES], disks, numDisks };
 }
 
 // ============================================================================
@@ -145,15 +162,17 @@ function computeView(session: Session): Record<string, unknown> {
 const MACHINE_NAME = "hanoi";
 
 async function humanOptimalStrategy(ctx: ProposerContext): Promise<ProposerStrategyResult> {
-  const disks = replayMoves(ctx.history);
+  const numDisks = getNumDisks(ctx.metaJson);
+  const disks = replayMoves(ctx.history, numDisks);
   if (isSolved(disks)) {
     return { transitionName: "declare_solved", toState: ctx.transitions["declare_solved"], reasoning: "Solved" };
   }
-  return getOptimalMove(disks, ctx.transitions);
+  return getOptimalMove(disks, ctx.transitions, numDisks);
 }
 
 async function llmCarefulStrategy(ctx: ProposerContext): Promise<ProposerStrategyResult> {
-  const disks = replayMoves(ctx.history);
+  const numDisks = getNumDisks(ctx.metaJson);
+  const disks = replayMoves(ctx.history, numDisks);
 
   if (isSolved(disks)) {
     return { transitionName: "declare_solved", toState: ctx.transitions["declare_solved"], reasoning: "Solved" };
@@ -161,7 +180,7 @@ async function llmCarefulStrategy(ctx: ProposerContext): Promise<ProposerStrateg
 
   const stateExemplars = getExemplars(MACHINE_NAME, "unsolved");
   for (const ex of stateExemplars.reverse()) {
-    const exDisks = replayMoves(ex.context.history);
+    const exDisks = replayMoves(ex.context.history, numDisks);
     if (exDisks.join("") === disks.join("")) {
       return {
         transitionName: ex.humanTransitionName,
@@ -185,7 +204,8 @@ async function llmCarefulStrategy(ctx: ProposerContext): Promise<ProposerStrateg
 }
 
 async function llmGpt4oMiniStrategy(ctx: ProposerContext): Promise<ProposerStrategyResult> {
-  const disks = replayMoves(ctx.history);
+  const numDisks = getNumDisks(ctx.metaJson);
+  const disks = replayMoves(ctx.history, numDisks);
 
   if (isSolved(disks)) {
     return { transitionName: "declare_solved", toState: ctx.transitions["declare_solved"], reasoning: "Solved" };
@@ -202,7 +222,7 @@ async function llmGpt4oMiniStrategy(ctx: ProposerContext): Promise<ProposerStrat
   let exemplarSection = "";
   if (stateExemplars.length > 0) {
     const shots = stateExemplars.map((ex) => {
-      const exDisks = replayMoves(ex.context.history);
+      const exDisks = replayMoves(ex.context.history, numDisks);
       const exPegs = getPegStacks(exDisks);
       const exBoard = PEG_NAMES.map((name, i) =>
         `Peg ${name}: [${exPegs[i].map(d => `disk${d}`).join(", ")}]`
@@ -215,36 +235,22 @@ async function llmGpt4oMiniStrategy(ctx: ProposerContext): Promise<ProposerStrat
   const systemMessage = "You are solving Tower of Hanoi. Move all disks from peg A to peg C. Smaller-numbered disks are smaller. A larger disk cannot be placed on a smaller one. Respond with ONLY a JSON object: {\"transitionName\": \"...\", \"toState\": \"...\", \"reasoning\": \"...\"}";
   const userMessage = `Current board:\n${pegDescription}\n\nValid moves: ${validMoves}\n\nAvailable transitions:\n${Object.entries(ctx.transitions).map(([name, target]) => `  "${name}" → "${target}"`).join("\n")}${exemplarSection}\n\nChoose the best move to make progress toward getting all disks to peg C.`;
 
-  try {
-    const result = await callLlm("openai/gpt-4o-mini", systemMessage, userMessage);
-    const parsed = JSON.parse(result.content) as ProposerStrategyResult;
-    if (parsed.transitionName && ctx.transitions[parsed.transitionName]) {
-      return {
-        transitionName: parsed.transitionName,
-        toState: ctx.transitions[parsed.transitionName],
-        reasoning: `GPT-4o-mini (${stateExemplars.length} exemplars): ${parsed.reasoning ?? parsed.transitionName}`,
-      };
-    }
-  } catch (err) {
-    console.error("[llm-gpt4o-mini] LLM call failed:", err);
-  }
-
-  // Greedy fallback if LLM fails
-  const valid = getValidMoves(disks);
-  const toGoal = valid.filter((m) => m.to === 2);
-  const chosen = toGoal.length > 0 ? toGoal[0] : valid[0];
-  if (!chosen) {
-    return { transitionName: "A_to_B", toState: ctx.transitions["A_to_B"], reasoning: "GPT-4o-mini fallback" };
+  const result = await callLlm("openai/gpt-4o-mini", systemMessage, userMessage);
+  const cleaned = result.content.replace(/^```(?:json)?\s*|\s*```$/g, "").trim();
+  const parsed = JSON.parse(cleaned) as ProposerStrategyResult;
+  if (!parsed.transitionName || !ctx.transitions[parsed.transitionName]) {
+    throw new Error(`GPT-4o-mini returned invalid transition: ${parsed.transitionName}`);
   }
   return {
-    transitionName: chosen.name,
-    toState: ctx.transitions[chosen.name],
-    reasoning: `GPT-4o-mini greedy fallback: ${PEG_NAMES[chosen.from]}->${PEG_NAMES[chosen.to]}`,
+    transitionName: parsed.transitionName,
+    toState: ctx.transitions[parsed.transitionName],
+    reasoning: `GPT-4o-mini (${stateExemplars.length} exemplars): ${parsed.reasoning ?? parsed.transitionName}`,
   };
 }
 
 async function llmRandomStrategy(ctx: ProposerContext): Promise<ProposerStrategyResult> {
-  const disks = replayMoves(ctx.history);
+  const numDisks = getNumDisks(ctx.metaJson);
+  const disks = replayMoves(ctx.history, numDisks);
 
   if (isSolved(disks)) {
     return { transitionName: "declare_solved", toState: ctx.transitions["declare_solved"], reasoning: "Solved" };
@@ -272,7 +278,7 @@ const definition: MachineDefinition = {
   goalState: "solved",
   states: {
     unsolved: {
-      prompt: "Tower of Hanoi: move all 3 disks from peg A to peg C",
+      prompt: "Tower of Hanoi: move all disks from peg A to peg C",
       transitions: {
         A_to_B: "unsolved", A_to_C: "unsolved",
         B_to_A: "unsolved", B_to_C: "unsolved",

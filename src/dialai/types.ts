@@ -58,6 +58,8 @@ export interface Session {
   history: TransitionRecord[];
   /** When the session was created */
   createdAt: Date;
+  /** Arbitrary session-level metadata (e.g. puzzle configuration) */
+  metaJson?: Record<string, unknown>;
 }
 
 /**
@@ -189,6 +191,8 @@ export interface ProposerContext {
   transitions: Record<string, string>;
   /** All previous transitions */
   history: TransitionRecord[];
+  /** Session-level metadata */
+  metaJson?: Record<string, unknown>;
 }
 
 /**
@@ -227,6 +231,8 @@ export interface ArbiterContext {
   history: TransitionRecord[];
   /** Configured threshold for this arbiter */
   threshold: number;
+  /** Session-level metadata */
+  metaJson?: Record<string, unknown>;
 }
 
 // ============================================================================

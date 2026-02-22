@@ -10,10 +10,21 @@ interface HanoiView {
   solved: boolean;
   pegNames: string[];
   disks: number[];
+  numDisks?: number;
 }
 
-const DISK_COLORS = ["#ff6b6b", "#ffd93d", "#6bcb77"];
-const DISK_WIDTHS = [60, 100, 140];
+function generateDiskColors(n: number): string[] {
+  return Array.from({ length: n }, (_, i) =>
+    `hsl(${Math.round((i * 360) / n)}, 70%, 55%)`
+  );
+}
+
+function generateDiskWidths(n: number): number[] {
+  return Array.from({ length: n }, (_, i) =>
+    n === 1 ? 90 : 40 + (i / (n - 1)) * 100
+  );
+}
+
 const PEG_NAMES = ["A", "B", "C"];
 
 /** BFS solver: returns the optimal next transition name (e.g. "A_to_C") or null if solved. */
@@ -75,7 +86,16 @@ const SPECIALIST_COLORS = [
   "#26c6da",  // teal
 ];
 
+const FIXED_ROD_HEIGHT = 80;
+
 function PegViz({ pegs, solved, pegNames }: { pegs: number[][]; solved: boolean; pegNames: string[] }) {
+  const numDisks = pegs.reduce((sum, p) => sum + p.length, 0);
+  const colors = generateDiskColors(numDisks);
+  const widths = generateDiskWidths(numDisks);
+  const rodHeight = FIXED_ROD_HEIGHT;
+  const diskSpacing = numDisks > 1 ? Math.min(28, (rodHeight - 6) / numDisks) : rodHeight - 6;
+  const diskHeight = Math.max(6, diskSpacing - 4);
+
   return (
     <div style={{
       padding: "0.75rem 1.5rem",
@@ -84,26 +104,26 @@ function PegViz({ pegs, solved, pegNames }: { pegs: number[][]; solved: boolean;
       borderRadius: 8,
       marginBottom: "0.75rem",
     }}>
-      <div style={{ display: "flex", justifyContent: "space-around", alignItems: "flex-end", height: 120 }}>
+      <div style={{ display: "flex", justifyContent: "space-around", alignItems: "flex-end", height: rodHeight + 30 }}>
         {pegs.map((peg, pegIdx) => (
           <div key={pegIdx} style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 160 }}>
             {/* Peg label */}
             <div style={{ fontSize: "0.8rem", color: "#888", marginBottom: 4 }}>{pegNames[pegIdx]}</div>
 
             {/* Peg rod */}
-            <div style={{ position: "relative", width: 6, height: 100, background: "#444", borderRadius: 3 }}>
+            <div style={{ position: "relative", width: 6, height: rodHeight, background: "#444", borderRadius: 3 }}>
               {/* Disks stacked from bottom */}
               {[...peg].reverse().map((diskId, stackIdx) => (
                 <div
                   key={diskId}
                   style={{
                     position: "absolute",
-                    bottom: stackIdx * 28,
+                    bottom: stackIdx * diskSpacing,
                     left: "50%",
                     transform: "translateX(-50%)",
-                    width: DISK_WIDTHS[diskId],
-                    height: 24,
-                    background: DISK_COLORS[diskId],
+                    width: widths[diskId],
+                    height: diskHeight,
+                    background: colors[diskId],
                     borderRadius: 4,
                     display: "flex",
                     alignItems: "center",
@@ -113,7 +133,7 @@ function PegViz({ pegs, solved, pegNames }: { pegs: number[][]; solved: boolean;
                     color: "#000",
                   }}
                 >
-                  {["S", "M", "L"][diskId]}
+                  {String(diskId)}
                 </div>
               ))}
             </div>

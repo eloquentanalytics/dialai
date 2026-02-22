@@ -200,7 +200,8 @@ async function callTool(
     case "create_session": {
       const machine = args.machine;
       validateMachine(machine);
-      result = await createSession(machine);
+      const metaJson = args.metaJson as Record<string, unknown> | undefined;
+      result = await createSession(machine, metaJson);
       break;
     }
     case "get_session":

@@ -254,7 +254,8 @@ export function createMcpServer(): Server {
         case "create_session": {
           const machine = args?.machine as MachineDefinition;
           validateMachine(machine);
-          const session = await createSession(machine);
+          const metaJson = args?.metaJson as Record<string, unknown> | undefined;
+          const session = await createSession(machine, metaJson);
           return {
             content: [
               {

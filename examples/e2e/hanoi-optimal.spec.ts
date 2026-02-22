@@ -5,6 +5,9 @@ import { test, expect } from "@playwright/test";
  * by clicking whichever transition row is marked data-optimal="true", then
  * captures alignment data from the API after each step.
  *
+ * NOTE: This test assumes the default 3-disk configuration (HANOI_DISKS unset).
+ * The optimal sequence and move count (7) are specific to 3 disks.
+ *
  * Expects the dev server to be running on localhost:3000.
  */
 test("solve hanoi in 7 optimal moves and capture alignment", async ({ page, request, }, testInfo) => {

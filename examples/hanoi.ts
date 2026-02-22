@@ -19,6 +19,7 @@
  *
  * Usage:
  *   npx tsx examples/hanoi.ts
+ *   npx tsx examples/hanoi.ts --disks 4
  */
 
 import {
@@ -31,6 +32,7 @@ import {
   getAllAlignmentRecords,
   getExemplars,
   getCollapseMetrics,
+  callLlm,
 } from "../src/dialai/index.js";
 import type {
   MachineDefinition,
@@ -38,6 +40,18 @@ import type {
   ProposerContext,
   ProposerStrategyResult,
 } from "../src/dialai/index.js";
+
+// ============================================================================
+// Configuration
+// ============================================================================
+
+const disksArg = process.argv.findIndex((a) => a === "--disks");
+const NUM_DISKS = Math.max(1, Math.min(15, disksArg >= 0 ? parseInt(process.argv[disksArg + 1] ?? "3", 10) || 3 : 3));
+const OPTIMAL_MOVES = 2 ** NUM_DISKS - 1;
+
+const delayArg = process.argv.findIndex((a) => a === "--delay");
+const DELAY_MS = delayArg >= 0 ? (parseFloat(process.argv[delayArg + 1] ?? "0") * 1000) : 0;
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // ============================================================================
 // Puzzle Logic (history-based)
@@ -60,7 +74,7 @@ const MOVE_MAP = new Map(MOVES.map((m) => [m.name, m]));
 
 /** Replay transition history to reconstruct current disk positions. */
 function replayMoves(history: TransitionRecord[]): number[] {
-  const disks = [0, 0, 0]; // all on peg A (3 disks)
+  const disks: number[] = new Array(NUM_DISKS).fill(0) as number[]; // all on peg A
   for (const { transitionName } of history) {
     const move = MOVE_MAP.get(transitionName);
     if (!move) continue; // skip declare_solved
@@ -99,9 +113,8 @@ function isSolved(disks: number[]): boolean {
 
 function formatDisks(disks: number[]): string {
   const pegs = getPegStacks(disks);
-  const labels = ["s", "M", "L"];
   return PEG_NAMES.map(
-    (name, i) => `${name}:[${pegs[i].map((d) => labels[d]).join("")}]`
+    (name, i) => `${name}:[${pegs[i].map((d) => String(d)).join("")}]`
   ).join(" ");
 }
 
@@ -111,45 +124,44 @@ function formatDisks(disks: number[]): string {
 
 function buildOptimalMoveTable(): Map<string, string> {
   const table = new Map<string, string>();
-  const goal = "222";
+  const goal = "2".repeat(NUM_DISKS);
+  const totalStates = 3 ** NUM_DISKS;
 
-  for (let d0 = 0; d0 < 3; d0++)
-    for (let d1 = 0; d1 < 3; d1++)
-      for (let d2 = 0; d2 < 3; d2++) {
-        const state = `${d0}${d1}${d2}`;
-        if (state === goal) continue;
-        const visited = new Set([state]);
-        const queue: Array<{ state: string; firstMove: string }> = [];
+  for (let s = 0; s < totalStates; s++) {
+    const state = s.toString(3).padStart(NUM_DISKS, "0");
+    if (state === goal) continue;
+    const visited = new Set([state]);
+    const queue: Array<{ state: string; firstMove: string }> = [];
 
-        for (const move of MOVES) {
-          const disks = state.split("").map(Number);
-          if (!isMoveValid(disks, move.from, move.to)) continue;
-          applyMoveToDisks(disks, move.from, move.to);
-          const next = disks.join("");
-          if (next === goal) { table.set(state, move.name); break; }
-          if (!visited.has(next)) {
-            visited.add(next);
-            queue.push({ state: next, firstMove: move.name });
-          }
-        }
-        if (table.has(state)) continue;
+    for (const move of MOVES) {
+      const disks = state.split("").map(Number);
+      if (!isMoveValid(disks, move.from, move.to)) continue;
+      applyMoveToDisks(disks, move.from, move.to);
+      const next = disks.join("");
+      if (next === goal) { table.set(state, move.name); break; }
+      if (!visited.has(next)) {
+        visited.add(next);
+        queue.push({ state: next, firstMove: move.name });
+      }
+    }
+    if (table.has(state)) continue;
 
-        while (queue.length > 0) {
-          const { state: curr, firstMove } = queue.shift()!;
-          for (const move of MOVES) {
-            const disks = curr.split("").map(Number);
-            if (!isMoveValid(disks, move.from, move.to)) continue;
-            applyMoveToDisks(disks, move.from, move.to);
-            const next = disks.join("");
-            if (next === goal) { table.set(state, firstMove); break; }
-            if (!visited.has(next)) {
-              visited.add(next);
-              queue.push({ state: next, firstMove });
-            }
-          }
-          if (table.has(state)) break;
+    while (queue.length > 0) {
+      const { state: curr, firstMove } = queue.shift()!;
+      for (const move of MOVES) {
+        const disks = curr.split("").map(Number);
+        if (!isMoveValid(disks, move.from, move.to)) continue;
+        applyMoveToDisks(disks, move.from, move.to);
+        const next = disks.join("");
+        if (next === goal) { table.set(state, firstMove); break; }
+        if (!visited.has(next)) {
+          visited.add(next);
+          queue.push({ state: next, firstMove });
         }
       }
+      if (table.has(state)) break;
+    }
+  }
   return table;
 }
 
@@ -227,6 +239,51 @@ async function llmRandomStrategy(ctx: ProposerContext): Promise<ProposerStrategy
   };
 }
 
+/** LLM GPT-4o-mini — calls OpenAI with n-shot exemplars, greedy fallback. */
+async function llmGpt4oMiniStrategy(ctx: ProposerContext): Promise<ProposerStrategyResult> {
+  const disks = replayMoves(ctx.history);
+
+  if (isSolved(disks)) {
+    return { transitionName: "declare_solved", toState: ctx.transitions["declare_solved"], reasoning: "Solved" };
+  }
+
+  const pegs = getPegStacks(disks);
+  const pegDescription = PEG_NAMES.map((name, i) =>
+    `Peg ${name}: [${pegs[i].map(d => `disk${d}`).join(", ")}]`
+  ).join("\n");
+  const validMoveNames = getValidMoves(disks).map(m => m.name).join(", ");
+
+  // Build n-shot examples from exemplars
+  const stateExemplars = getExemplars(MACHINE_NAME, "unsolved");
+  let exemplarSection = "";
+  if (stateExemplars.length > 0) {
+    const shots = stateExemplars.map((ex) => {
+      const exDisks = replayMoves(ex.context.history);
+      const exPegs = getPegStacks(exDisks);
+      const exBoard = PEG_NAMES.map((name, i) =>
+        `Peg ${name}: [${exPegs[i].map(d => `disk${d}`).join(", ")}]`
+      ).join(", ");
+      return `Board: ${exBoard} → Correct move: ${ex.humanTransitionName}`;
+    });
+    exemplarSection = `\n\nHere are examples of correct moves from previous games:\n${shots.join("\n")}`;
+  }
+
+  const systemMessage = "You are solving Tower of Hanoi. Move all disks from peg A to peg C. Smaller-numbered disks are smaller. A larger disk cannot be placed on a smaller one. Respond with ONLY a JSON object: {\"transitionName\": \"...\", \"toState\": \"...\", \"reasoning\": \"...\"}";
+  const userMessage = `Current board:\n${pegDescription}\n\nValid moves: ${validMoveNames}\n\nAvailable transitions:\n${Object.entries(ctx.transitions).map(([name, target]) => `  "${name}" → "${target}"`).join("\n")}${exemplarSection}\n\nChoose the best move to make progress toward getting all disks to peg C.`;
+
+  const result = await callLlm("openai/gpt-4o-mini", systemMessage, userMessage);
+  const cleaned = result.content.replace(/^```(?:json)?\s*|\s*```$/g, "").trim();
+  const parsed = JSON.parse(cleaned) as ProposerStrategyResult;
+  if (!parsed.transitionName || !ctx.transitions[parsed.transitionName]) {
+    throw new Error(`GPT-4o-mini returned invalid transition: ${parsed.transitionName}`);
+  }
+  return {
+    transitionName: parsed.transitionName,
+    toState: ctx.transitions[parsed.transitionName],
+    reasoning: `GPT-4o-mini (${stateExemplars.length} exemplars): ${parsed.reasoning ?? parsed.transitionName}`,
+  };
+}
+
 // ============================================================================
 // Machine Definition (2-state, per-state specialists)
 // ============================================================================
@@ -238,7 +295,7 @@ function buildHanoiMachine(): MachineDefinition {
     goalState: "solved",
     states: {
       unsolved: {
-        prompt: "Tower of Hanoi: move all 3 disks from peg A to peg C",
+        prompt: `Tower of Hanoi: move all ${NUM_DISKS} disks from peg A to peg C`,
         transitions: {
           A_to_B: "unsolved", A_to_C: "unsolved",
           B_to_A: "unsolved", B_to_C: "unsolved",
@@ -248,6 +305,7 @@ function buildHanoiMachine(): MachineDefinition {
         specialists: [
           { role: "proposer", specialistId: "human-optimal", isHuman: true, disabled: true },
           { role: "proposer", specialistId: "llm-careful" },
+          { role: "proposer", specialistId: "llm-gpt4o-mini" },
           { role: "proposer", specialistId: "llm-random" },
           { role: "arbiter", specialistId: "hanoi-arbiter", strategyFnName: "aheadByK", threshold: 1.0 },
         ],
@@ -272,7 +330,7 @@ async function solvePuzzle(
   training: boolean,
   verbose: boolean
 ): Promise<SolveResult> {
-  const session = await createSession(machine);
+  const session = await createSession(machine, { numDisks: NUM_DISKS });
   const proposerCount = getEnabledProposersForState(session).length;
   let humanDecisions = 0;
   let aiDecisions = 0;
@@ -280,8 +338,8 @@ async function solvePuzzle(
   let solicitedThisRound = 0;
 
   while (session.currentState !== "solved") {
-    if (moves > 50) {
-      if (verbose) console.log("      !! safety valve (>50 moves)");
+    if (moves > 4 * OPTIMAL_MOVES) {
+      if (verbose) console.log(`      !! safety valve (>${4 * OPTIMAL_MOVES} moves)`);
       break;
     }
 
@@ -379,13 +437,14 @@ async function solvePuzzle(
 // ============================================================================
 
 async function main(): Promise<void> {
-  console.log("=== Tower of Hanoi — DIAL Progressive Collapse Demo ===\n");
-  console.log("2-state machine with per-state specialists. Board reconstructed from history.\n");
+  console.log(`=== Tower of Hanoi (${NUM_DISKS} disks) — DIAL Progressive Collapse Demo ===\n`);
+  console.log(`2-state machine with per-state specialists. Board reconstructed from history. Optimal: ${OPTIMAL_MOVES} moves.\n`);
   console.log("Specialists (on 'unsolved' state):");
   console.log("  human-optimal   forces BFS-optimal moves (isHuman=true, disabled)");
   console.log("  llm-careful     learns from exemplars, greedy fallback");
+  console.log("  llm-gpt4o-mini  GPT-4o-mini with n-shot exemplars");
   console.log("  llm-random      random valid move (never learns)\n");
-  console.log("Arbiter: aheadByK, threshold=0.4\n");
+  console.log("Arbiter: aheadByK, threshold=1.0\n");
 
   const machine = buildHanoiMachine();
   const TRAINING_ROUNDS = 2;
@@ -409,6 +468,11 @@ async function main(): Promise<void> {
     strategyFn: llmCarefulStrategy,
   });
   await registerProposer({
+    specialistId: "llm-gpt4o-mini",
+    machineName: MACHINE_NAME,
+    strategyFn: llmGpt4oMiniStrategy,
+  });
+  await registerProposer({
     specialistId: "llm-random",
     machineName: MACHINE_NAME,
     strategyFn: llmRandomStrategy,
@@ -427,6 +491,7 @@ async function main(): Promise<void> {
     humanDecisions: number;
     aiDecisions: number;
     carefulAlign: number;
+    gpt4oMiniAlign: number;
     randomAlign: number;
   }> = [];
 
@@ -436,15 +501,17 @@ async function main(): Promise<void> {
 
     const r = await solvePuzzle(machine, true, verbose);
     const ca = getAlignmentScore("llm-careful", MACHINE_NAME, "unsolved");
+    const ga = getAlignmentScore("llm-gpt4o-mini", MACHINE_NAME, "unsolved");
     const ra = getAlignmentScore("llm-random", MACHINE_NAME, "unsolved");
 
-    results.push({ iteration: i, phase: "train", ...r, carefulAlign: ca, randomAlign: ra });
+    results.push({ iteration: i, phase: "train", ...r, carefulAlign: ca, gpt4oMiniAlign: ga, randomAlign: ra });
 
     console.log(
       `    #${String(i).padStart(2)}: ` +
         `${r.moves} moves, all human-forced  ` +
-        `align: careful=${ca.toFixed(3)} random=${ra.toFixed(3)}`
+        `align: careful=${ca.toFixed(3)} gpt4o-mini=${ga.toFixed(3)} random=${ra.toFixed(3)}`
     );
+    if (DELAY_MS > 0 && i < TRAINING_ROUNDS) await sleep(DELAY_MS);
   }
 
   // ── Phase 2: Guided Handoff ──────────────────────────────────────────
@@ -457,9 +524,10 @@ async function main(): Promise<void> {
 
     const r = await solvePuzzle(machine, false, verbose);
     const ca = getAlignmentScore("llm-careful", MACHINE_NAME, "unsolved");
+    const ga = getAlignmentScore("llm-gpt4o-mini", MACHINE_NAME, "unsolved");
     const ra = getAlignmentScore("llm-random", MACHINE_NAME, "unsolved");
 
-    results.push({ iteration: i, phase: "live", ...r, carefulAlign: ca, randomAlign: ra });
+    results.push({ iteration: i, phase: "live", ...r, carefulAlign: ca, gpt4oMiniAlign: ga, randomAlign: ra });
 
     const pct = r.moves > 0 ? ((r.aiDecisions / r.moves) * 100).toFixed(0) : "0";
     console.log(
@@ -467,8 +535,9 @@ async function main(): Promise<void> {
         `${String(r.moves).padStart(2)} moves ` +
         `(human ${String(r.humanDecisions).padStart(2)}, AI ${String(r.aiDecisions).padStart(2)}) ` +
         `collapse ${pct.padStart(3)}%  ` +
-        `align: careful=${ca.toFixed(3)} random=${ra.toFixed(3)}`
+        `align: careful=${ca.toFixed(3)} gpt4o-mini=${ga.toFixed(3)} random=${ra.toFixed(3)}`
     );
+    if (DELAY_MS > 0 && i < TOTAL_ROUNDS) await sleep(DELAY_MS);
   }
 
   // ── Summary ──────────────────────────────────────────────────────────
@@ -507,8 +576,8 @@ async function main(): Promise<void> {
   }
 
   console.log();
-  if (last && last.humanDecisions === 0 && last.moves === 7) {
-    console.log("  ** FULL COLLAPSE: AI solves optimally (7 moves) with zero human intervention. **");
+  if (last && last.humanDecisions === 0 && last.moves === OPTIMAL_MOVES) {
+    console.log(`  ** FULL COLLAPSE: AI solves optimally (${OPTIMAL_MOVES} moves) with zero human intervention. **`);
   } else if (last && last.humanDecisions === 0) {
     console.log(`  ** FULL COLLAPSE: AI solves autonomously (${last.moves} moves). **`);
   } else if (first && last && last.humanDecisions < first.humanDecisions) {
