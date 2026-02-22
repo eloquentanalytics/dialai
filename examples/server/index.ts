@@ -7,7 +7,7 @@ import { createServer } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import { join, extname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createSession } from "dialai";
+import { createSession, getSessions } from "dialai";
 import { loadMachines } from "./machine-loader.js";
 import { startTickLoop, setOnTickComplete } from "./tick-loop.js";
 import { setMachines, handleRequest, registerMachineStrategies } from "./routes.js";
@@ -63,14 +63,21 @@ async function main(): Promise<void> {
   setWsMachines(machines);
   console.log(`  ${machines.size} machine(s) loaded\n`);
 
-  // Register strategies and auto-create sessions
-  console.log("Auto-creating sessions...");
+  // Register strategies and create sessions for machines that don't have one yet
+  const existingSessions = await getSessions();
+  const machinesWithSessions = new Set(existingSessions.map((s) => s.machineName));
+
+  console.log("Ensuring sessions exist...");
   for (const [name, mod] of machines) {
     await registerMachineStrategies(mod);
+    if (machinesWithSessions.has(name)) {
+      console.log(`  ${name} → already has session(s), skipping`);
+      continue;
+    }
     const metaJson = SESSION_CONFIGS[name];
     const session = await createSession(mod.definition, metaJson);
     const label = metaJson ? ` (${JSON.stringify(metaJson)})` : "";
-    console.log(`  ${name}${label} → session ${session.sessionId}`);
+    console.log(`  ${name}${label} → created session ${session.sessionId}`);
   }
   console.log();
 
