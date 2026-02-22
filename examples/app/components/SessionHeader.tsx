@@ -12,7 +12,7 @@ export function SessionHeader({ session }: Props) {
     <div style={{ marginBottom: "1.5rem" }}>
       <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "0.5rem" }}>
         <Link to="/" style={{ color: "#5555ff", textDecoration: "none", fontSize: "0.85rem" }}>
-          &larr; Machines
+          &larr; Lobby
         </Link>
         <h1 style={{ fontSize: "1.3rem", fontWeight: 600 }}>{session.machineName}</h1>
         <span

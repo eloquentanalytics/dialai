@@ -98,15 +98,20 @@ export async function registerMachineStrategies(mod: MachineModule): Promise<voi
     if (stateDef.specialists) allSpecs.push(...stateDef.specialists);
   }
 
+  const store = getStore();
   for (const spec of allSpecs) {
-    // Skip if already registered or has a built-in strategy
-    if (await getStore().hasSpecialist(spec.specialistId)) continue;
+    // Skip specialists that use a built-in named strategy (resolves from registry)
     if (spec.strategyFnName) continue;
 
     const strategyFn = mod.strategies[spec.specialistId];
     if (!strategyFn) continue;
 
-    if (spec.role === "proposer") {
+    const existing = await store.getSpecialist(spec.specialistId);
+    if (existing) {
+      // Re-attach the in-memory strategyFn (lost across restarts)
+      (existing as { strategyFn?: unknown }).strategyFn = strategyFn;
+      await store.setSpecialist(existing);
+    } else if (spec.role === "proposer") {
       await registerProposer({
         specialistId: spec.specialistId,
         machineName: spec.machineName ?? name,
@@ -148,15 +153,21 @@ route("GET", "/api/machines/:name", async (_req, res, params) => {
 // GET /api/sessions — enhanced with isTerminal, goalState
 route("GET", "/api/sessions", async (_req, res) => {
   const allSessions = await getSessions();
-  json(res, allSessions.map((s) => ({
-    sessionId: s.sessionId,
-    machineName: s.machineName,
-    currentState: s.currentState,
-    historyLength: s.history.length,
-    createdAt: s.createdAt,
-    isTerminal: s.currentState === s.machine.goalState,
-    goalState: s.machine.goalState,
-  })));
+  json(res, allSessions.map((s) => {
+    const lastTransition = s.history.length > 0 ? s.history[s.history.length - 1] : null;
+    const lastActivityAt = lastTransition ? new Date(lastTransition.executionTimestamp).toISOString() : s.createdAt;
+    return {
+      sessionId: s.sessionId,
+      machineName: s.machineName,
+      currentState: s.currentState,
+      historyLength: s.history.length,
+      createdAt: s.createdAt,
+      isTerminal: s.currentState === s.machine.goalState,
+      goalState: s.machine.goalState,
+      lastActivityAt,
+      metaJson: s.metaJson ?? null,
+    };
+  }));
 });
 
 // GET /api/sessions/:id

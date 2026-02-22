@@ -185,6 +185,9 @@ export function createPostgresStore(databaseUrl: string): Store {
   // that are computed from history but not stored as-is in the DB
   const sessionRuntimeState = new Map<string, { currentState: string; currentRoundId: string }>();
 
+  // In-memory cache for strategyFn callbacks (not serializable to DB)
+  const strategyFnCache = new Map<string, (...args: unknown[]) => unknown>();
+
   // In-memory caches for alignment records and exemplars
   const alignmentCache = new Map<string, AlignmentRecord>();
   const exemplarCache = new Map<string, Exemplar>();
@@ -290,6 +293,24 @@ export function createPostgresStore(databaseUrl: string): Store {
         if (runtime) {
           session.currentState = runtime.currentState;
           session.currentRoundId = runtime.currentRoundId;
+        } else {
+          // Reconstruct state from history (same as getSession)
+          if (session.history.length > 0) {
+            let state = session.machine.initialState;
+            for (const h of session.history) {
+              const stateDef = session.machine.states[state];
+              if (stateDef?.transitions?.[h.transitionName]) {
+                state = stateDef.transitions[h.transitionName];
+              }
+            }
+            session.currentState = state;
+          }
+          const { generateUUID } = await import("./utils.js");
+          session.currentRoundId = generateUUID();
+          sessionRuntimeState.set(session.sessionId, {
+            currentState: session.currentState,
+            currentRoundId: session.currentRoundId,
+          });
         }
         sessions.push(session);
       }
@@ -304,7 +325,10 @@ export function createPostgresStore(databaseUrl: string): Store {
         .where("specialistId", "=", id)
         .executeTakeFirst();
       if (!row) return undefined;
-      return specialistFromRow(row);
+      const spec = specialistFromRow(row);
+      const cachedFn = strategyFnCache.get(id);
+      if (cachedFn) (spec as { strategyFn?: unknown }).strategyFn = cachedFn;
+      return spec;
     },
 
     async hasSpecialist(id: string): Promise<boolean> {
@@ -317,6 +341,10 @@ export function createPostgresStore(databaseUrl: string): Store {
     },
 
     async setSpecialist(specialist: Specialist | Arbiter): Promise<void> {
+      // Cache strategyFn in memory (not serializable to DB)
+      const fn = (specialist as { strategyFn?: (...args: unknown[]) => unknown }).strategyFn;
+      if (fn) strategyFnCache.set(specialist.specialistId, fn);
+
       const config: Record<string, unknown> = {};
       if ("strategyFnName" in specialist) config.strategyFnName = specialist.strategyFnName;
       if ("strategyWebhookUrl" in specialist) config.strategyWebhookUrl = specialist.strategyWebhookUrl;
@@ -359,7 +387,12 @@ export function createPostgresStore(databaseUrl: string): Store {
         query = query.where("role", "=", role);
       }
       const rows = await query.execute();
-      return rows.map(specialistFromRow);
+      return rows.map((row) => {
+        const spec = specialistFromRow(row);
+        const cachedFn = strategyFnCache.get(spec.specialistId);
+        if (cachedFn) (spec as { strategyFn?: unknown }).strategyFn = cachedFn;
+        return spec;
+      });
     },
 
     // Proposals
