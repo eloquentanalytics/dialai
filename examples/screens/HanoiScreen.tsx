@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 import { SessionHeader } from "../app/components/SessionHeader.js";
 import { HistoryTimeline } from "../app/components/HistoryTimeline.js";
 import { CollapseGauge } from "../app/components/CollapseGauge.js";
+import { TickCountdown } from "../app/components/TickCountdown.js";
+import { SpecialistRoster } from "../app/components/SpecialistRoster.js";
+import { VisitorRegistration } from "../app/components/VisitorRegistration.js";
 import type { ScreenProps } from "../machines/types.js";
 import type { Proposal } from "dialai";
 
@@ -31,6 +34,9 @@ const PEG_NAMES = ["A", "B", "C"];
 function computeOptimalMove(pegs: number[][]): string | null {
   const numDisks = pegs.reduce((sum, p) => sum + p.length, 0);
   if (numDisks === 0) return null;
+
+  // Only compute for small disk counts (BFS is exponential)
+  if (numDisks > 10) return null;
 
   // Convert pegs to per-disk positions: diskPos[d] = peg index
   const diskPos = new Array(numDisks).fill(0);
@@ -159,19 +165,21 @@ function TransitionRow({
   proposals,
   colorMap,
   isOptimal,
-  onForce,
+  onClick,
+  isVisitor,
 }: {
   name: string;
   target: string;
   proposals: Proposal[];
   colorMap: Record<string, string>;
   isOptimal?: boolean;
-  onForce: () => void;
+  onClick: () => void;
+  isVisitor: boolean;
 }) {
   const defaultBorder = isOptimal ? "#2a5a3a" : (proposals.length > 0 ? "#3a3a6a" : "#2a2a3a");
   return (
     <div
-      onClick={onForce}
+      onClick={isVisitor ? onClick : undefined}
       data-optimal={isOptimal ? "true" : undefined}
       data-transition={name}
       style={{
@@ -179,13 +187,14 @@ function TransitionRow({
         background: isOptimal ? "#1a2a1a" : "#141420",
         border: `1px solid ${defaultBorder}`,
         borderRadius: 6,
-        cursor: "pointer",
+        cursor: isVisitor ? "pointer" : "default",
         transition: "border-color 0.15s",
         minHeight: 36,
+        opacity: isVisitor ? 1 : 0.7,
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.borderColor = isOptimal ? "#4a8a5a" : "#5555ff"; }}
+      onMouseEnter={(e) => { if (isVisitor) e.currentTarget.style.borderColor = isOptimal ? "#4a8a5a" : "#5555ff"; }}
       onMouseLeave={(e) => { e.currentTarget.style.borderColor = defaultBorder; }}
-      title={`Force: ${name} → ${target}`}
+      title={isVisitor ? `Propose: ${name} → ${target}` : "Register to propose moves"}
     >
       {/* Left label — fixed width */}
       <div style={{
@@ -359,7 +368,7 @@ function ThresholdSlider({
 }
 
 export function HanoiScreen(props: ScreenProps) {
-  const { session, machine, proposals, collapseMetrics, onForceTransition, view } = props;
+  const { session, machine, proposals, collapseMetrics, onSubmitProposal, view, isVisitor, visitors, tickMeta, visitorIdentity, onRegister, onLeave } = props;
   const serverThreshold = (session as unknown as Record<string, unknown>).arbiterThreshold as number | undefined;
   const [threshold, setThreshold] = useState(serverThreshold ?? 1.0);
 
@@ -407,18 +416,32 @@ export function HanoiScreen(props: ScreenProps) {
 
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto", padding: "2rem" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "0.5rem" }}>
         <SessionHeader session={session} />
-        <ThresholdSlider
-          sessionId={session.sessionId}
-          threshold={threshold}
-          setThreshold={setThreshold}
-          specialists={Object.keys(colorMap).map((id) => {
-            const found = collapseMetrics?.specialists?.find((s) => s.specialistId === id);
-            return { specialistId: id, alignment: found?.alignment ?? 0 };
-          })}
-          colorMap={colorMap}
-        />
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+          <TickCountdown tickMeta={tickMeta ?? null} />
+          <VisitorRegistration
+            identity={visitorIdentity ?? null}
+            onRegister={onRegister ?? (async () => {})}
+            onLeave={onLeave ?? (() => {})}
+          />
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: "0.75rem", marginBottom: "0.75rem" }}>
+        <div style={{ flex: 1 }}>
+          <ThresholdSlider
+            sessionId={session.sessionId}
+            threshold={threshold}
+            setThreshold={setThreshold}
+            specialists={Object.keys(colorMap).map((id) => {
+              const found = collapseMetrics?.specialists?.find((s) => s.specialistId === id);
+              return { specialistId: id, alignment: found?.alignment ?? 0 };
+            })}
+            colorMap={colorMap}
+          />
+        </div>
+        <SpecialistRoster collapseMetrics={collapseMetrics} visitors={visitors ?? []} />
       </div>
 
       <PegViz pegs={pegs} solved={solved} pegNames={pegNames} />
@@ -430,6 +453,11 @@ export function HanoiScreen(props: ScreenProps) {
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", marginBottom: "1.5rem" }}>
+          {!isVisitor && (
+            <div style={{ fontSize: "0.75rem", color: "#666", marginBottom: "0.25rem" }}>
+              Register above to propose moves
+            </div>
+          )}
           {Object.entries(transitions).map(([name, target]) => (
             <TransitionRow
               key={name}
@@ -438,7 +466,8 @@ export function HanoiScreen(props: ScreenProps) {
               proposals={proposalsByTransition[name] ?? []}
               colorMap={colorMap}
               isOptimal={name === optimalMove}
-              onForce={() => onForceTransition(name, `Human override: ${name}`)}
+              onClick={() => onSubmitProposal(name, `Proposed by visitor: ${name}`)}
+              isVisitor={!!isVisitor}
             />
           ))}
         </div>

@@ -1,13 +1,15 @@
 import { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSession } from "./hooks/useSession.js";
+import { useVisitor } from "./hooks/useVisitor.js";
 import { screenRegistry } from "../screens/index.js";
 import { DefaultScreen } from "../screens/DefaultScreen.js";
 
 export function SessionView() {
   const { name, id, state } = useParams<{ name: string; id: string; state: string }>();
   const navigate = useNavigate();
-  const { session, proposals, lastTickResults, collapseMetrics, decisions, view, loading } = useSession(id);
+  const { session, proposals, lastTickResults, collapseMetrics, decisions, view, visitors, tickMeta, loading } = useSession(id);
+  const { identity, register, clear } = useVisitor(name);
 
   // Navigate to updated URL when state changes
   useEffect(() => {
@@ -33,19 +35,20 @@ export function SessionView() {
 
   const ScreenComponent = (name && screenRegistry[name]) || DefaultScreen;
 
-  async function onForceTransition(transitionName: string, reasoning?: string) {
-    await fetch(`/api/sessions/${id}/arbitrate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ transitionName, reasoning }),
-    });
+  async function onForceTransition(_transitionName: string, _reasoning?: string) {
+    // Force-transition disabled in public UI — visitors propose instead
   }
 
   async function onSubmitProposal(transitionName: string, reasoning?: string) {
-    await fetch(`/api/sessions/${id}/propose`, {
+    if (!identity) return;
+    await fetch(`/api/sessions/${id}/visitor-propose`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ transitionName, reasoning }),
+      body: JSON.stringify({
+        visitorId: identity.visitorId,
+        transitionName,
+        reasoning: reasoning ?? `Proposal by ${identity.handle}`,
+      }),
     });
   }
 
@@ -60,6 +63,12 @@ export function SessionView() {
       view={view}
       onForceTransition={onForceTransition}
       onSubmitProposal={onSubmitProposal}
+      isVisitor={!!identity}
+      visitors={visitors}
+      tickMeta={tickMeta}
+      visitorIdentity={identity}
+      onRegister={register}
+      onLeave={clear}
     />
   );
 }

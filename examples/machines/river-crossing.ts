@@ -158,7 +158,7 @@ async function llmCautiousStrategy(ctx: ProposerContext): Promise<ProposerStrate
     return { transitionName: "declare_solved", toState: ctx.transitions["declare_solved"], reasoning: "Solved" };
   }
 
-  const stateExemplars = getExemplars(MACHINE_NAME, "unsolved");
+  const stateExemplars = await getExemplars(MACHINE_NAME, "unsolved");
   for (const ex of [...stateExemplars].reverse()) {
     const exItems = replayMoves(ex.context.history);
     if (exItems.join("") === items.join("")) {

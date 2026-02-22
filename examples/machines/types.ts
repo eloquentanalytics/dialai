@@ -21,6 +21,27 @@ export interface MachineModule {
   computeView?: (session: Session) => Record<string, unknown>;
 }
 
+export interface Visitor {
+  visitorId: string;
+  handle: string;
+  specialistId: string;
+  machineName: string;
+  registeredAt: number;
+  lastSeenAt: number;
+}
+
+export interface TickMeta {
+  lastTickAt: number;
+  intervalMs: number;
+  nextTickAt: number;
+}
+
+export interface VisitorIdentity {
+  visitorId: string;
+  handle: string;
+  specialistId: string;
+}
+
 export interface ScreenProps {
   session: Session;
   machine: MachineDefinition;
@@ -31,4 +52,10 @@ export interface ScreenProps {
   view: Record<string, unknown> | null;
   onForceTransition: (transitionName: string, reasoning?: string) => Promise<void>;
   onSubmitProposal: (transitionName: string, reasoning?: string) => Promise<void>;
+  isVisitor?: boolean;
+  visitors?: Visitor[];
+  tickMeta?: TickMeta | null;
+  visitorIdentity?: VisitorIdentity | null;
+  onRegister?: (handle: string) => Promise<unknown>;
+  onLeave?: () => void;
 }

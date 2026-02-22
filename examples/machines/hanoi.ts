@@ -178,7 +178,7 @@ async function llmCarefulStrategy(ctx: ProposerContext): Promise<ProposerStrateg
     return { transitionName: "declare_solved", toState: ctx.transitions["declare_solved"], reasoning: "Solved" };
   }
 
-  const stateExemplars = getExemplars(MACHINE_NAME, "unsolved");
+  const stateExemplars = await getExemplars(MACHINE_NAME, "unsolved");
   for (const ex of stateExemplars.reverse()) {
     const exDisks = replayMoves(ex.context.history, numDisks);
     if (exDisks.join("") === disks.join("")) {
@@ -218,7 +218,7 @@ async function llmGpt4oMiniStrategy(ctx: ProposerContext): Promise<ProposerStrat
   const validMoves = getValidMoves(disks).map(m => m.name).join(", ");
 
   // Build n-shot examples from exemplars
-  const stateExemplars = getExemplars(MACHINE_NAME, "unsolved");
+  const stateExemplars = await getExemplars(MACHINE_NAME, "unsolved");
   let exemplarSection = "";
   if (stateExemplars.length > 0) {
     const shots = stateExemplars.map((ex) => {
