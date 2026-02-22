@@ -7,16 +7,18 @@ import { describe, it, expect, beforeEach } from "vitest";
 import {
   clear,
   runSession,
-  specialists,
+  getSpecialist,
   registerProposer,
   registerArbiter,
   getAlignmentScore,
+  getProposers,
+  getArbiter,
 } from "../../src/dialai/index.js";
 import type { MachineDefinition } from "../../src/dialai/types.js";
 
 describe("E2E: Full Session Lifecycle via runSession", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   it("DIAL_345: runSession drives 2-state machine to goalState", async () => {
@@ -139,12 +141,10 @@ describe("E2E: Full Session Lifecycle via runSession", () => {
     const session = await runSession(machine);
 
     // Check that a default proposer was registered with the __default_proposer_ prefix
-    const defaultProposerKey = [...specialists.keys()].find((k) =>
-      k.startsWith("__default_proposer_")
+    const proposers = await getProposers("default-proposer");
+    const defaultProposer = proposers.find((p) =>
+      p.specialistId.startsWith("__default_proposer_")
     );
-    expect(defaultProposerKey).toBeDefined();
-
-    const defaultProposer = specialists.get(defaultProposerKey!);
     expect(defaultProposer).toBeDefined();
     expect(defaultProposer!.role).toBe("proposer");
     expect(session.currentState).toBe("b");
@@ -167,14 +167,10 @@ describe("E2E: Full Session Lifecycle via runSession", () => {
     const session = await runSession(machine);
 
     // Check that a default arbiter was registered with the __default_arbiter_ prefix
-    const defaultArbiterKey = [...specialists.keys()].find((k) =>
-      k.startsWith("__default_arbiter_")
-    );
-    expect(defaultArbiterKey).toBeDefined();
-
-    const defaultArbiter = specialists.get(defaultArbiterKey!);
-    expect(defaultArbiter).toBeDefined();
-    expect(defaultArbiter!.role).toBe("arbiter");
+    const arbiter = await getArbiter("default-arbiter");
+    expect(arbiter).toBeDefined();
+    expect(arbiter!.specialistId.startsWith("__default_arbiter_")).toBe(true);
+    expect(arbiter!.role).toBe("arbiter");
     expect(session.currentState).toBe("b");
   });
 
@@ -207,19 +203,24 @@ describe("E2E: Full Session Lifecycle via runSession", () => {
     const session = await runSession(machine);
 
     // Check that p1 was registered from the machine definition
-    const p1 = specialists.get("p1");
+    const p1 = await getSpecialist("p1");
     expect(p1).toBeDefined();
     expect(p1!.role).toBe("proposer");
 
-    const a1 = specialists.get("a1");
+    const a1 = await getSpecialist("a1");
     expect(a1).toBeDefined();
     expect(a1!.role).toBe("arbiter");
 
     // No default specialists should have been created
-    const defaultKeys = [...specialists.keys()].filter(
-      (k) => k.startsWith("__default_proposer_") || k.startsWith("__default_arbiter_")
+    const proposers = await getProposers("embedded-specialists");
+    const defaultProposers = proposers.filter((p) =>
+      p.specialistId.startsWith("__default_proposer_")
     );
-    expect(defaultKeys).toHaveLength(0);
+    expect(defaultProposers).toHaveLength(0);
+
+    const arbiter = await getArbiter("embedded-specialists");
+    const isDefault = arbiter?.specialistId.startsWith("__default_arbiter_") ?? false;
+    expect(isDefault).toBe(false);
 
     expect(session.currentState).toBe("b");
   });
@@ -263,8 +264,8 @@ describe("E2E: Full Session Lifecycle via runSession", () => {
     });
 
     // Both proposers have 0 alignment at cold start
-    expect(getAlignmentScore("p-first", "exhausted")).toBe(0);
-    expect(getAlignmentScore("p-last", "exhausted")).toBe(0);
+    expect(await getAlignmentScore("p-first", "exhausted")).toBe(0);
+    expect(await getAlignmentScore("p-last", "exhausted")).toBe(0);
 
     const session = await runSession(machine);
 

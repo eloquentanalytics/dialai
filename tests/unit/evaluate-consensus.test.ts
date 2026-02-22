@@ -32,8 +32,8 @@ function twoOptionMachine(): MachineDefinition {
 }
 
 describe("DIAL_115–DIAL_127: Evaluate Consensus", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   test("DIAL_115: requires arbiter registered", async () => {
@@ -146,7 +146,7 @@ describe("DIAL_115–DIAL_127: Evaluate Consensus", () => {
     });
 
     // Update alignment for p1 so it has a score
-    updateAlignment("p1", "consensus-test", true);
+    await updateAlignment("p1", "consensus-test", true);
 
     // Use a custom arbiter strategy to capture the context
     let capturedCtx: ArbiterContext | undefined;

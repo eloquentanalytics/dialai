@@ -18,8 +18,8 @@ import type {
 } from "../../src/dialai/types.js";
 
 describe("Integration: Specialist Execution Modes", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   const machine: MachineDefinition = {

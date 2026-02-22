@@ -19,8 +19,8 @@ import type {
 } from "../../src/dialai/types.js";
 
 describe("E2E: Semantic Isolation Verification", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   const machine: MachineDefinition = {

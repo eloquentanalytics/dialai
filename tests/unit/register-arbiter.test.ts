@@ -3,8 +3,8 @@ import { clear, registerArbiter } from "../../src/dialai/index.js";
 import type { ArbiterContext, ArbiterStrategyResult } from "../../src/dialai/types.js";
 
 describe("DIAL_049–DIAL_051: Specialist Registration — Arbiters", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   test("DIAL_049: registers arbiter with strategyFn", async () => {

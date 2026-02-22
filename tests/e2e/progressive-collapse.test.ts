@@ -22,8 +22,8 @@ import {
 import type { MachineDefinition } from "../../src/dialai/types.js";
 
 describe("E2E: Progressive Collapse — Cold Start through Autonomous", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   const machine: MachineDefinition = {
@@ -64,8 +64,8 @@ describe("E2E: Progressive Collapse — Cold Start through Autonomous", () => {
     });
 
     // Both AI proposers have 0 alignment
-    expect(getAlignmentScore("ai-1", "progressive")).toBe(0);
-    expect(getAlignmentScore("ai-2", "progressive")).toBe(0);
+    expect(await getAlignmentScore("ai-1", "progressive")).toBe(0);
+    expect(await getAlignmentScore("ai-2", "progressive")).toBe(0);
 
     await submitProposal({
       sessionId: session.sessionId,
@@ -134,12 +134,12 @@ describe("E2E: Progressive Collapse — Cold Start through Autonomous", () => {
     expect(result.isHuman).toBe(true);
 
     // Exemplar created
-    const exemplarList = getExemplars("progressive");
+    const exemplarList = await getExemplars("progressive");
     expect(exemplarList).toHaveLength(1);
     expect(exemplarList[0].humanTransitionName).toBe("approve");
 
     // Alignment records exist
-    const records = getAllAlignmentRecords("progressive");
+    const records = await getAllAlignmentRecords("progressive");
     expect(records.length).toBeGreaterThanOrEqual(1);
   });
 
@@ -183,11 +183,11 @@ describe("E2E: Progressive Collapse — Cold Start through Autonomous", () => {
 
     // ai-1 used firstAvailable which picks "approve" — matches every time
     // Wilson(5,5) ≈ 0.57 — confidence grows with more evidence
-    const score = getAlignmentScore("ai-1", "progressive");
+    const score = await getAlignmentScore("ai-1", "progressive");
     expect(score).toBeGreaterThan(0.5);
     expect(score).toBeLessThan(1.0);
 
-    const records = getAllAlignmentRecords("progressive");
+    const records = await getAllAlignmentRecords("progressive");
     const ai1Record = records.find((r) => r.specialistId === "ai-1");
     expect(ai1Record).toBeDefined();
     expect(ai1Record!.totalComparisons).toBe(5);
@@ -209,11 +209,11 @@ describe("E2E: Progressive Collapse — Cold Start through Autonomous", () => {
 
     // Seed alignment: ai-1 has high alignment
     for (let i = 0; i < 5; i++) {
-      updateAlignment("ai-1", "progressive", true);
+      await updateAlignment("ai-1", "progressive", true);
     }
 
     // Wilson(5,5) ≈ 0.57 — not 1.0 but still has positive alignment
-    expect(getAlignmentScore("ai-1", "progressive")).toBeGreaterThan(0.5);
+    expect(await getAlignmentScore("ai-1", "progressive")).toBeGreaterThan(0.5);
 
     // New session: ai-1 submits a proposal autonomously
     const session = await createSession(machine);
@@ -255,8 +255,8 @@ describe("E2E: Progressive Collapse — Cold Start through Autonomous", () => {
     });
 
     // Phase 1: Cold start — no alignment
-    expect(getAlignmentScore("ai-1", machineName)).toBe(0);
-    expect(getAlignmentScore("ai-2", machineName)).toBe(0);
+    expect(await getAlignmentScore("ai-1", machineName)).toBe(0);
+    expect(await getAlignmentScore("ai-2", machineName)).toBe(0);
 
     // Phase 2: Human calibration — 10 rounds where human picks "approve"
     // ai-1 (firstAvailable) picks "approve" -> matches
@@ -285,8 +285,8 @@ describe("E2E: Progressive Collapse — Cold Start through Autonomous", () => {
     }
 
     // Phase 3: Alignment growth — Wilson(10,10) ≈ 0.72, Wilson(0,10) = 0
-    expect(getAlignmentScore("ai-1", machineName)).toBeGreaterThan(0.7);
-    expect(getAlignmentScore("ai-2", machineName)).toBe(0);
+    expect(await getAlignmentScore("ai-1", machineName)).toBeGreaterThan(0.7);
+    expect(await getAlignmentScore("ai-2", machineName)).toBe(0);
 
     // Phase 4: Autonomous consensus — ai-1 alone can reach consensus
     const session = await createSession(machine);
@@ -301,9 +301,9 @@ describe("E2E: Progressive Collapse — Cold Start through Autonomous", () => {
     // Phase 5: Champion mode — Wilson(10,10) ≈ 0.72, use lower threshold
     // Note: human specialist always returns 1.0 alignment, so selectChampion
     // may pick human. The key assertion: ai-1 qualifies above threshold.
-    const ai1Score = getAlignmentScore("ai-1", machineName);
+    const ai1Score = await getAlignmentScore("ai-1", machineName);
     expect(ai1Score).toBeGreaterThanOrEqual(0.7);
-    const champion = selectChampion(machineName, 0.7);
+    const champion = await selectChampion(machineName, 0.7);
     expect(champion).toBeDefined();
   });
 
@@ -343,7 +343,7 @@ describe("E2E: Progressive Collapse — Cold Start through Autonomous", () => {
       reasoning: "First exemplar",
     });
 
-    const eval1 = evaluateAlignment("ai-1", machineName);
+    const eval1 = await evaluateAlignment("ai-1", machineName);
     expect(eval1.totalExemplars).toBe(1);
     expect(eval1.alignmentScore).toBeCloseTo(0.2065, 3); // Wilson(1,1)
 
@@ -364,13 +364,13 @@ describe("E2E: Progressive Collapse — Cold Start through Autonomous", () => {
       });
     }
 
-    const eval5 = evaluateAlignment("ai-1", machineName);
+    const eval5 = await evaluateAlignment("ai-1", machineName);
     expect(eval5.totalExemplars).toBe(5);
     // Wilson(5,5) ≈ 0.57 — confidence grows with more exemplars
     expect(eval5.alignmentScore).toBeGreaterThan(eval1.alignmentScore);
 
     // More exemplars exist
-    const allExemplars = getExemplars(machineName);
+    const allExemplars = await getExemplars(machineName);
     expect(allExemplars).toHaveLength(5);
   });
 });

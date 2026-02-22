@@ -20,8 +20,8 @@ import {
 import type { MachineDefinition } from "../../src/dialai/types.js";
 
 describe("Integration: Cold Start — Human Decision Flow", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   const machine: MachineDefinition = {
@@ -62,8 +62,8 @@ describe("Integration: Cold Start — Human Decision Flow", () => {
     });
 
     // No alignment data seeded — both AI proposers have 0 alignment
-    expect(getAlignmentScore("ai-1", "cold-start")).toBe(0);
-    expect(getAlignmentScore("ai-2", "cold-start")).toBe(0);
+    expect(await getAlignmentScore("ai-1", "cold-start")).toBe(0);
+    expect(await getAlignmentScore("ai-2", "cold-start")).toBe(0);
 
     await submitProposal({
       sessionId: session.sessionId,
@@ -172,7 +172,7 @@ describe("Integration: Cold Start — Human Decision Flow", () => {
       reasoning: "Human approves",
     });
 
-    const exemplarList = getExemplars("cold-start");
+    const exemplarList = await getExemplars("cold-start");
     expect(exemplarList).toHaveLength(1);
     expect(exemplarList[0].humanTransitionName).toBe("approve");
     expect(exemplarList[0].humanToState).toBe("approved");
@@ -226,7 +226,7 @@ describe("Integration: Cold Start — Human Decision Flow", () => {
       reasoning: "Human approves",
     });
 
-    const records = getAllAlignmentRecords("cold-start");
+    const records = await getAllAlignmentRecords("cold-start");
     expect(records.length).toBeGreaterThanOrEqual(2);
 
     // ai-1 used firstAvailable which picks "approve" — should match
@@ -281,7 +281,7 @@ describe("Integration: Cold Start — Human Decision Flow", () => {
     });
 
     // Verify ai-1 now has non-zero alignment
-    expect(getAlignmentScore("ai-1", "cold-start")).toBeGreaterThan(0);
+    expect(await getAlignmentScore("ai-1", "cold-start")).toBeGreaterThan(0);
 
     // Round 2: new session, ai-1 now has alignment and can contribute to consensus
     const session2 = await createSession(machine);

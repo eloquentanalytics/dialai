@@ -22,8 +22,8 @@ import {
 import type { MachineDefinition } from "../../src/dialai/types.js";
 
 describe("E2E: Champion Mode", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   const CHAMPION_THRESHOLD = 0.8;
@@ -65,24 +65,24 @@ describe("E2E: Champion Mode", () => {
     });
 
     // p-high: 90/100 → Wilson ≈ 0.83
-    for (let i = 0; i < 90; i++) updateAlignment("p-high", machineName, true);
-    for (let i = 0; i < 10; i++) updateAlignment("p-high", machineName, false);
+    for (let i = 0; i < 90; i++) await updateAlignment("p-high", machineName, true);
+    for (let i = 0; i < 10; i++) await updateAlignment("p-high", machineName, false);
 
     // p-medium: 70/100 → Wilson ≈ 0.60 (below threshold)
-    for (let i = 0; i < 70; i++) updateAlignment("p-medium", machineName, true);
-    for (let i = 0; i < 30; i++) updateAlignment("p-medium", machineName, false);
+    for (let i = 0; i < 70; i++) await updateAlignment("p-medium", machineName, true);
+    for (let i = 0; i < 30; i++) await updateAlignment("p-medium", machineName, false);
 
     // p-low: 30/100 → Wilson ≈ 0.21
-    for (let i = 0; i < 30; i++) updateAlignment("p-low", machineName, true);
-    for (let i = 0; i < 70; i++) updateAlignment("p-low", machineName, false);
+    for (let i = 0; i < 30; i++) await updateAlignment("p-low", machineName, true);
+    for (let i = 0; i < 70; i++) await updateAlignment("p-low", machineName, false);
 
-    const champion = selectChampion(machineName, CHAMPION_THRESHOLD);
+    const champion = await selectChampion(machineName, CHAMPION_THRESHOLD);
     expect(champion).toBe("p-high");
 
     // Verify scores
-    expect(getAlignmentScore("p-high", machineName)).toBeGreaterThan(0.8);
-    expect(getAlignmentScore("p-medium", machineName)).toBeGreaterThan(0.5);
-    expect(getAlignmentScore("p-low", machineName)).toBeLessThan(0.3);
+    expect(await getAlignmentScore("p-high", machineName)).toBeGreaterThan(0.8);
+    expect(await getAlignmentScore("p-medium", machineName)).toBeGreaterThan(0.5);
+    expect(await getAlignmentScore("p-low", machineName)).toBeLessThan(0.3);
   });
 
   it("DIAL_374: champion mode: only champion solicited for proposal", async () => {
@@ -110,10 +110,10 @@ describe("E2E: Champion Mode", () => {
     });
 
     // Give champ high alignment: 90/100 → Wilson ≈ 0.83
-    for (let i = 0; i < 90; i++) updateAlignment("champ", machineName, true);
-    for (let i = 0; i < 10; i++) updateAlignment("champ", machineName, false);
+    for (let i = 0; i < 90; i++) await updateAlignment("champ", machineName, true);
+    for (let i = 0; i < 10; i++) await updateAlignment("champ", machineName, false);
 
-    expect(selectChampion(machineName, CHAMPION_THRESHOLD)).toBe("champ");
+    expect(await selectChampion(machineName, CHAMPION_THRESHOLD)).toBe("champ");
 
     // Manually create session and submit only champion's proposal (simulating champion mode)
     const session = await createSession(machine);
@@ -123,7 +123,7 @@ describe("E2E: Champion Mode", () => {
       roundId: session.currentRoundId,
     });
 
-    const proposals = getProposalsForRound(session.sessionId, session.currentRoundId);
+    const proposals = await getProposalsForRound(session.sessionId, session.currentRoundId);
     expect(proposals).toHaveLength(1);
     expect(proposals[0].specialistId).toBe("champ");
   });
@@ -148,10 +148,10 @@ describe("E2E: Champion Mode", () => {
     });
 
     // Champion alignment above 0.8: 90/100 → Wilson ≈ 0.83
-    for (let i = 0; i < 90; i++) updateAlignment("champ", machineName, true);
-    for (let i = 0; i < 10; i++) updateAlignment("champ", machineName, false);
+    for (let i = 0; i < 90; i++) await updateAlignment("champ", machineName, true);
+    for (let i = 0; i < 10; i++) await updateAlignment("champ", machineName, false);
 
-    expect(selectChampion(machineName, CHAMPION_THRESHOLD)).toBe("champ");
+    expect(await selectChampion(machineName, CHAMPION_THRESHOLD)).toBe("champ");
 
     // Create session and submit only champion's proposal
     const session = await createSession(machine);
@@ -201,13 +201,13 @@ describe("E2E: Champion Mode", () => {
     });
 
     // Champion alignment: 90/100 → Wilson ≈ 0.83
-    for (let i = 0; i < 90; i++) updateAlignment("champ", machineName, true);
-    for (let i = 0; i < 10; i++) updateAlignment("champ", machineName, false);
+    for (let i = 0; i < 90; i++) await updateAlignment("champ", machineName, true);
+    for (let i = 0; i < 10; i++) await updateAlignment("champ", machineName, false);
     // Backup alignment: 90/100 → Wilson ≈ 0.83
-    for (let i = 0; i < 90; i++) updateAlignment("backup", machineName, true);
-    for (let i = 0; i < 10; i++) updateAlignment("backup", machineName, false);
+    for (let i = 0; i < 90; i++) await updateAlignment("backup", machineName, true);
+    for (let i = 0; i < 10; i++) await updateAlignment("backup", machineName, false);
 
-    expect(selectChampion(machineName, CHAMPION_THRESHOLD)).toBe("champ");
+    expect(await selectChampion(machineName, CHAMPION_THRESHOLD)).toBe("champ");
 
     // runSession will:
     // 1. Try champion mode (single proposal from champ)
@@ -258,13 +258,13 @@ describe("E2E: Champion Mode", () => {
     });
 
     // Champion alignment: 90/100 → Wilson ≈ 0.83
-    for (let i = 0; i < 90; i++) updateAlignment("champ", machineName, true);
-    for (let i = 0; i < 10; i++) updateAlignment("champ", machineName, false);
+    for (let i = 0; i < 90; i++) await updateAlignment("champ", machineName, true);
+    for (let i = 0; i < 10; i++) await updateAlignment("champ", machineName, false);
     // Backup lower
-    for (let i = 0; i < 50; i++) updateAlignment("backup", machineName, true);
-    for (let i = 0; i < 50; i++) updateAlignment("backup", machineName, false);
+    for (let i = 0; i < 50; i++) await updateAlignment("backup", machineName, true);
+    for (let i = 0; i < 50; i++) await updateAlignment("backup", machineName, false);
 
-    expect(selectChampion(machineName, CHAMPION_THRESHOLD)).toBe("champ");
+    expect(await selectChampion(machineName, CHAMPION_THRESHOLD)).toBe("champ");
 
     // runSession uses tick-based orchestration: all proposers are solicited
     // one at a time (champion first due to ordering), then consensus is evaluated.

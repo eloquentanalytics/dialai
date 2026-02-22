@@ -36,8 +36,8 @@ function noTransitionMachine(): MachineDefinition {
 }
 
 describe("DIAL_104–DIAL_114: Transition Execution", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   test("DIAL_104: executes valid transition", async () => {
@@ -84,12 +84,12 @@ describe("DIAL_104–DIAL_114: Transition Execution", () => {
       specialistId: "p1",
       roundId: session.currentRoundId,
     });
-    expect(getProposalsForRound(session.sessionId, session.currentRoundId)).toHaveLength(1);
+    expect(await getProposalsForRound(session.sessionId, session.currentRoundId)).toHaveLength(1);
 
     await executeTransition(session.sessionId, "to_b", "b");
 
     // Old round's proposals gone
-    expect(getProposalsForRound(session.sessionId, session.currentRoundId)).toHaveLength(0);
+    expect(await getProposalsForRound(session.sessionId, session.currentRoundId)).toHaveLength(0);
   });
 
   test("DIAL_110: rejects transition not in current state", async () => {

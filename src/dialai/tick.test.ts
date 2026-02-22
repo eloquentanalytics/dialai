@@ -40,8 +40,8 @@ const multiStepMachine: MachineDefinition = {
 };
 
 describe("tick", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   it("solicits one proposer at a time", async () => {
@@ -70,7 +70,7 @@ describe("tick", () => {
     expect(r1[0].sessionId).toBe(session.sessionId);
 
     // Verify only one proposal exists
-    const proposals = getProposalsForRound(
+    const proposals = await getProposalsForRound(
       session.sessionId,
       session.currentRoundId
     );

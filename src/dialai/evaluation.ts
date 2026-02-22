@@ -4,7 +4,7 @@
  * Evaluates specialist alignment and accuracy against human decisions.
  */
 
-import { specialists } from "./store.js";
+import { getStore } from "./store.js";
 import { getExemplars } from "./exemplars.js";
 import { wilsonLowerBound } from "./alignment.js";
 import type {
@@ -112,17 +112,17 @@ export function computeAccuracyFromExemplars(
  * against stored exemplars.
  * Thin wrapper: validates specialist, fetches exemplars, calls pure function.
  */
-export function evaluateAlignment(
+export async function evaluateAlignment(
   specialistId: string,
   machineName: string,
   options?: { maxRounds?: number }
-): AlignmentEvaluationResult {
-  const specialist = specialists.get(specialistId);
+): Promise<AlignmentEvaluationResult> {
+  const specialist = await getStore().getSpecialist(specialistId);
   if (!specialist) {
     throw new Error(`Specialist not found: ${specialistId}`);
   }
 
-  const exemplars = getExemplars(machineName);
+  const exemplars = await getExemplars(machineName);
   const result = computeAlignmentFromExemplars(
     specialistId,
     exemplars,
@@ -140,17 +140,17 @@ export function evaluateAlignment(
  * Evaluates a specialist's accuracy by analyzing their proposal history.
  * Thin wrapper: validates specialist, fetches exemplars, calls pure function.
  */
-export function evaluateAccuracy(
+export async function evaluateAccuracy(
   specialistId: string,
   machineName: string,
   options?: { lookback?: number }
-): AccuracyEvaluationResult {
-  const specialist = specialists.get(specialistId);
+): Promise<AccuracyEvaluationResult> {
+  const specialist = await getStore().getSpecialist(specialistId);
   if (!specialist) {
     throw new Error(`Specialist not found: ${specialistId}`);
   }
 
-  const exemplars = getExemplars(machineName);
+  const exemplars = await getExemplars(machineName);
   const result = computeAccuracyFromExemplars(
     specialistId,
     exemplars,

@@ -12,8 +12,8 @@ import {
 import type { MachineDefinition } from "../../src/dialai/types.js";
 
 describe("DIAL_260–DIAL_267: Engine Helpers", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   test("DIAL_260: getEffectiveThreshold uses state-level threshold first", async () => {
@@ -35,7 +35,7 @@ describe("DIAL_260–DIAL_267: Engine Helpers", () => {
     });
 
     const session = await createSession(machine);
-    expect(getEffectiveThreshold(session)).toBe(0.3);
+    expect(await getEffectiveThreshold(session)).toBe(0.3);
   });
 
   test("DIAL_261: getEffectiveThreshold falls back to machine-level", async () => {
@@ -57,7 +57,7 @@ describe("DIAL_260–DIAL_267: Engine Helpers", () => {
     });
 
     const session = await createSession(machine);
-    expect(getEffectiveThreshold(session)).toBe(0.6);
+    expect(await getEffectiveThreshold(session)).toBe(0.6);
   });
 
   test("DIAL_262: getEffectiveThreshold falls back to arbiter threshold", async () => {
@@ -78,7 +78,7 @@ describe("DIAL_260–DIAL_267: Engine Helpers", () => {
     });
 
     const session = await createSession(machine);
-    expect(getEffectiveThreshold(session)).toBe(0.7);
+    expect(await getEffectiveThreshold(session)).toBe(0.7);
   });
 
   test("DIAL_263: getEffectiveThreshold defaults to 0.5", async () => {
@@ -93,7 +93,7 @@ describe("DIAL_260–DIAL_267: Engine Helpers", () => {
     };
 
     const session = await createSession(machine);
-    expect(getEffectiveThreshold(session)).toBe(0.5);
+    expect(await getEffectiveThreshold(session)).toBe(0.5);
   });
 
   test("DIAL_264: selectChampion returns highest-alignment proposer above threshold", async () => {
@@ -109,13 +109,13 @@ describe("DIAL_260–DIAL_267: Engine Helpers", () => {
     });
 
     // Give p1 alignment 7/10 → Wilson ~0.40, p2 alignment 9/10 → Wilson ~0.60
-    for (let i = 0; i < 7; i++) updateAlignment("p1", "test", true);
-    for (let i = 0; i < 3; i++) updateAlignment("p1", "test", false);
-    for (let i = 0; i < 9; i++) updateAlignment("p2", "test", true);
-    for (let i = 0; i < 1; i++) updateAlignment("p2", "test", false);
+    for (let i = 0; i < 7; i++) await updateAlignment("p1", "test", true);
+    for (let i = 0; i < 3; i++) await updateAlignment("p1", "test", false);
+    for (let i = 0; i < 9; i++) await updateAlignment("p2", "test", true);
+    for (let i = 0; i < 1; i++) await updateAlignment("p2", "test", false);
 
     // Lower threshold so p2 (Wilson ~0.60) qualifies
-    const champion = selectChampion("test", 0.5);
+    const champion = await selectChampion("test", 0.5);
     expect(champion).toBe("p2");
   });
 
@@ -127,10 +127,10 @@ describe("DIAL_260–DIAL_267: Engine Helpers", () => {
     });
 
     // Alignment 0.5 — below any reasonable threshold
-    for (let i = 0; i < 5; i++) updateAlignment("p1", "test", true);
-    for (let i = 0; i < 5; i++) updateAlignment("p1", "test", false);
+    for (let i = 0; i < 5; i++) await updateAlignment("p1", "test", true);
+    for (let i = 0; i < 5; i++) await updateAlignment("p1", "test", false);
 
-    const champion = selectChampion("test", 0.8);
+    const champion = await selectChampion("test", 0.8);
     expect(champion).toBeUndefined();
   });
 
@@ -142,12 +142,12 @@ describe("DIAL_260–DIAL_267: Engine Helpers", () => {
     });
 
     // Give p1 alignment 45/50 → Wilson ~0.82
-    for (let i = 0; i < 45; i++) updateAlignment("p1", "test", true);
-    for (let i = 0; i < 5; i++) updateAlignment("p1", "test", false);
+    for (let i = 0; i < 45; i++) await updateAlignment("p1", "test", true);
+    for (let i = 0; i < 5; i++) await updateAlignment("p1", "test", false);
 
-    disableSpecialist("p1");
+    await disableSpecialist("p1");
 
-    const champion = selectChampion("test", 0.8);
+    const champion = await selectChampion("test", 0.8);
     expect(champion).toBeUndefined();
   });
 
@@ -159,15 +159,15 @@ describe("DIAL_260–DIAL_267: Engine Helpers", () => {
     });
 
     // 90/100 → Wilson ~0.83, should qualify at 0.8
-    for (let i = 0; i < 90; i++) updateAlignment("p1", "test", true);
-    for (let i = 0; i < 10; i++) updateAlignment("p1", "test", false);
+    for (let i = 0; i < 90; i++) await updateAlignment("p1", "test", true);
+    for (let i = 0; i < 10; i++) await updateAlignment("p1", "test", false);
 
     // Should qualify at threshold 0.8 (>= not >)
-    const champion = selectChampion("test", 0.8);
+    const champion = await selectChampion("test", 0.8);
     expect(champion).toBe("p1");
 
     // At threshold 0.85, should not qualify
-    const noChampion = selectChampion("test", 0.85);
+    const noChampion = await selectChampion("test", 0.85);
     expect(noChampion).toBeUndefined();
   });
 });

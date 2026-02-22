@@ -23,10 +23,11 @@
     "dev": "tsc --watch -p tsconfig.build.json",
     "test": "vitest",
     "test:coverage": "vitest --coverage",
-    "lint": "eslint . --ext .ts",
-    "lint:fix": "eslint . --ext .ts --fix",
+    "lint": "eslint src tests --ext .ts",
+    "lint:fix": "eslint src tests --ext .ts --fix",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,md,json}\"",
+    "migrate": "tsx src/dialai/migrations/migrate.ts",
     "typecheck": "tsc --noEmit",
     "ci": "npm run typecheck && npm run lint && CI=true npm test && npm run build",
     "pre-push": "npm run ci",
@@ -48,10 +49,13 @@
     "url": "https://github.com/eloquentanalytics/dialai.git"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0"
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "kysely": "^0.28.11",
+    "pg": "^8.18.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
+    "@types/pg": "^8.16.0",
     "@typescript-eslint/eslint-plugin": "^6.13.0",
     "@typescript-eslint/parser": "^6.13.0",
     "@vitest/coverage-v8": "^1.0.0",

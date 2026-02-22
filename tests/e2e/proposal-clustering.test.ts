@@ -16,8 +16,8 @@ import {
 import type { MachineDefinition } from "../../src/dialai/types.js";
 
 describe("E2E: Proposal Clustering", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   const machine: MachineDefinition = {
@@ -59,10 +59,10 @@ describe("E2E: Proposal Clustering", () => {
     });
 
     // Seed alignment: p1=0.8, p2=0.6
-    for (let i = 0; i < 8; i++) updateAlignment("p1", "clustering", true);
-    for (let i = 0; i < 2; i++) updateAlignment("p1", "clustering", false);
-    for (let i = 0; i < 6; i++) updateAlignment("p2", "clustering", true);
-    for (let i = 0; i < 4; i++) updateAlignment("p2", "clustering", false);
+    for (let i = 0; i < 8; i++) await updateAlignment("p1", "clustering", true);
+    for (let i = 0; i < 2; i++) await updateAlignment("p1", "clustering", false);
+    for (let i = 0; i < 6; i++) await updateAlignment("p2", "clustering", true);
+    for (let i = 0; i < 4; i++) await updateAlignment("p2", "clustering", false);
 
     // Both propose "approve"
     await submitProposal({
@@ -110,12 +110,12 @@ describe("E2E: Proposal Clustering", () => {
     });
 
     // Seed alignment: p1=0.5, p2=0.5, p3=0.3
-    for (let i = 0; i < 5; i++) updateAlignment("p1", "clustering", true);
-    for (let i = 0; i < 5; i++) updateAlignment("p1", "clustering", false);
-    for (let i = 0; i < 5; i++) updateAlignment("p2", "clustering", true);
-    for (let i = 0; i < 5; i++) updateAlignment("p2", "clustering", false);
-    for (let i = 0; i < 3; i++) updateAlignment("p3", "clustering", true);
-    for (let i = 0; i < 7; i++) updateAlignment("p3", "clustering", false);
+    for (let i = 0; i < 5; i++) await updateAlignment("p1", "clustering", true);
+    for (let i = 0; i < 5; i++) await updateAlignment("p1", "clustering", false);
+    for (let i = 0; i < 5; i++) await updateAlignment("p2", "clustering", true);
+    for (let i = 0; i < 5; i++) await updateAlignment("p2", "clustering", false);
+    for (let i = 0; i < 3; i++) await updateAlignment("p3", "clustering", true);
+    for (let i = 0; i < 7; i++) await updateAlignment("p3", "clustering", false);
 
     // p1 proposes "approve", p2 proposes "approve", p3 proposes "reject"
     await submitProposal({
@@ -172,10 +172,10 @@ describe("E2E: Proposal Clustering", () => {
     });
 
     // Seed alignment
-    for (let i = 0; i < 7; i++) updateAlignment("p1", "clustering", true);
-    for (let i = 0; i < 3; i++) updateAlignment("p1", "clustering", false);
-    for (let i = 0; i < 6; i++) updateAlignment("p2", "clustering", true);
-    for (let i = 0; i < 4; i++) updateAlignment("p2", "clustering", false);
+    for (let i = 0; i < 7; i++) await updateAlignment("p1", "clustering", true);
+    for (let i = 0; i < 3; i++) await updateAlignment("p1", "clustering", false);
+    for (let i = 0; i < 6; i++) await updateAlignment("p2", "clustering", true);
+    for (let i = 0; i < 4; i++) await updateAlignment("p2", "clustering", false);
 
     await submitProposal({
       sessionId: session.sessionId,
@@ -217,10 +217,10 @@ describe("E2E: Proposal Clustering", () => {
     });
 
     // Seed: p1 alignment = 0.7, p2 alignment = 0.3
-    for (let i = 0; i < 7; i++) updateAlignment("p1", "clustering", true);
-    for (let i = 0; i < 3; i++) updateAlignment("p1", "clustering", false);
-    for (let i = 0; i < 3; i++) updateAlignment("p2", "clustering", true);
-    for (let i = 0; i < 7; i++) updateAlignment("p2", "clustering", false);
+    for (let i = 0; i < 7; i++) await updateAlignment("p1", "clustering", true);
+    for (let i = 0; i < 3; i++) await updateAlignment("p1", "clustering", false);
+    for (let i = 0; i < 3; i++) await updateAlignment("p2", "clustering", true);
+    for (let i = 0; i < 7; i++) await updateAlignment("p2", "clustering", false);
 
     await submitProposal({
       sessionId: session.sessionId,
@@ -242,17 +242,17 @@ describe("E2E: Proposal Clustering", () => {
 
     // Now increase p1 alignment so margin >= 0.6
     // Add more matches: p1 = (7+3)/(10+4) => need to recalculate
-    for (let i = 0; i < 3; i++) updateAlignment("p1", "clustering", true);
+    for (let i = 0; i < 3; i++) await updateAlignment("p1", "clustering", true);
     // p1 alignment = 10/13 ≈ 0.769, p2 alignment = 3/10 = 0.3
     // total = 1.069, margin = (0.769 - 0.3) / 1.069 ≈ 0.439 — still below 0.6
 
     // Lets approach differently: add many more to p1
-    for (let i = 0; i < 10; i++) updateAlignment("p1", "clustering", true);
+    for (let i = 0; i < 10; i++) await updateAlignment("p1", "clustering", true);
     // p1 = 20/23 ≈ 0.870, p2 = 0.3, total ≈ 1.170
     // margin = (0.870 - 0.3) / 1.170 ≈ 0.487 — still below 0.6
 
     // Lower threshold and retry with fresh session
-    clear();
+    await clear();
 
     const session2 = await createSession(machine);
     await registerProposer({
@@ -273,10 +273,10 @@ describe("E2E: Proposal Clustering", () => {
     });
 
     // p1 alignment = 0.7, p2 alignment = 0.3
-    for (let i = 0; i < 7; i++) updateAlignment("p1", "clustering", true);
-    for (let i = 0; i < 3; i++) updateAlignment("p1", "clustering", false);
-    for (let i = 0; i < 3; i++) updateAlignment("p2", "clustering", true);
-    for (let i = 0; i < 7; i++) updateAlignment("p2", "clustering", false);
+    for (let i = 0; i < 7; i++) await updateAlignment("p1", "clustering", true);
+    for (let i = 0; i < 3; i++) await updateAlignment("p1", "clustering", false);
+    for (let i = 0; i < 3; i++) await updateAlignment("p2", "clustering", true);
+    for (let i = 0; i < 7; i++) await updateAlignment("p2", "clustering", false);
 
     await submitProposal({
       sessionId: session2.sessionId,

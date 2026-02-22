@@ -57,7 +57,7 @@ async function main(): Promise<void> {
     const machine = await loadMachineFromFile(filePath);
 
     // Clear any existing state
-    clear();
+    await clear();
 
     // Run the session
     const session = await runSession(machine);

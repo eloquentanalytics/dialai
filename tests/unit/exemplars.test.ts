@@ -3,7 +3,7 @@ import {
   clear,
   createExemplar,
   getExemplars,
-  exemplars,
+  getStore,
 } from "../../src/dialai/index.js";
 import type { ProposerContext, Proposal } from "../../src/dialai/types.js";
 
@@ -32,44 +32,44 @@ function makeProposal(overrides?: Partial<Proposal>): Proposal {
 }
 
 describe("DIAL_212–DIAL_222: Exemplar System", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
-  test("DIAL_212: createExemplar stores exemplar in store", () => {
+  test("DIAL_212: createExemplar stores exemplar in store", async () => {
     const ctx = makeContext();
     const proposals = [makeProposal()];
 
-    expect(exemplars.size).toBe(0);
+    expect((await getStore().getExemplarsByMachine("test-machine")).length).toBe(0);
 
-    createExemplar("test-machine", "pending", ctx, "approve", "approved", proposals);
+    await createExemplar("test-machine", "pending", ctx, "approve", "approved", proposals);
 
-    expect(exemplars.size).toBe(1);
+    expect((await getStore().getExemplarsByMachine("test-machine")).length).toBe(1);
   });
 
-  test("DIAL_213: exemplar has unique exemplarId", () => {
+  test("DIAL_213: exemplar has unique exemplarId", async () => {
     const ctx = makeContext();
     const proposals = [makeProposal()];
 
-    const ex1 = createExemplar("test-machine", "pending", ctx, "approve", "approved", proposals);
-    const ex2 = createExemplar("test-machine", "pending", ctx, "approve", "approved", proposals);
+    const ex1 = await createExemplar("test-machine", "pending", ctx, "approve", "approved", proposals);
+    const ex2 = await createExemplar("test-machine", "pending", ctx, "approve", "approved", proposals);
 
     expect(ex1.exemplarId).toBeDefined();
     expect(ex2.exemplarId).toBeDefined();
     expect(ex1.exemplarId).not.toBe(ex2.exemplarId);
   });
 
-  test("DIAL_214: exemplar stores machineName and state", () => {
+  test("DIAL_214: exemplar stores machineName and state", async () => {
     const ctx = makeContext();
     const proposals = [makeProposal()];
 
-    const ex = createExemplar("my-machine", "review", ctx, "approve", "approved", proposals);
+    const ex = await createExemplar("my-machine", "review", ctx, "approve", "approved", proposals);
 
     expect(ex.machineName).toBe("my-machine");
     expect(ex.state).toBe("review");
   });
 
-  test("DIAL_215: exemplar stores context (ProposerContext)", () => {
+  test("DIAL_215: exemplar stores context (ProposerContext)", async () => {
     const ctx = makeContext({
       sessionId: "sess-42",
       currentState: "review",
@@ -78,7 +78,7 @@ describe("DIAL_212–DIAL_222: Exemplar System", () => {
     });
     const proposals = [makeProposal()];
 
-    const ex = createExemplar("test-machine", "review", ctx, "approve", "done", proposals);
+    const ex = await createExemplar("test-machine", "review", ctx, "approve", "done", proposals);
 
     expect(ex.context.sessionId).toBe("sess-42");
     expect(ex.context.currentState).toBe("review");
@@ -87,21 +87,21 @@ describe("DIAL_212–DIAL_222: Exemplar System", () => {
     expect(ex.context.history).toEqual([]);
   });
 
-  test("DIAL_216: exemplar stores humanTransitionName and humanToState", () => {
+  test("DIAL_216: exemplar stores humanTransitionName and humanToState", async () => {
     const ctx = makeContext();
     const proposals = [makeProposal()];
 
-    const ex = createExemplar("test-machine", "pending", ctx, "reject", "rejected", proposals);
+    const ex = await createExemplar("test-machine", "pending", ctx, "reject", "rejected", proposals);
 
     expect(ex.humanTransitionName).toBe("reject");
     expect(ex.humanToState).toBe("rejected");
   });
 
-  test("DIAL_217: exemplar stores copies of proposals - mutating original does not affect stored", () => {
+  test("DIAL_217: exemplar stores copies of proposals - mutating original does not affect stored", async () => {
     const ctx = makeContext();
     const originalProposals = [makeProposal({ proposalId: "p-original" })];
 
-    const ex = createExemplar("test-machine", "pending", ctx, "approve", "approved", originalProposals);
+    const ex = await createExemplar("test-machine", "pending", ctx, "approve", "approved", originalProposals);
 
     // Mutate the original array
     originalProposals.push(makeProposal({ proposalId: "p-added" }));
@@ -111,38 +111,38 @@ describe("DIAL_212–DIAL_222: Exemplar System", () => {
     expect(ex.proposals[0].proposalId).toBe("p-original");
   });
 
-  test("DIAL_220: exemplar stores createdAt timestamp", () => {
+  test("DIAL_220: exemplar stores createdAt timestamp", async () => {
     const ctx = makeContext();
     const proposals = [makeProposal()];
 
-    const ex = createExemplar("test-machine", "pending", ctx, "approve", "approved", proposals);
+    const ex = await createExemplar("test-machine", "pending", ctx, "approve", "approved", proposals);
 
     expect(ex.createdAt).toBeInstanceOf(Date);
   });
 
-  test("DIAL_221: getExemplars returns all exemplars for a machine", () => {
+  test("DIAL_221: getExemplars returns all exemplars for a machine", async () => {
     const ctx = makeContext();
     const proposals = [makeProposal()];
 
-    createExemplar("machineA", "pending", ctx, "approve", "approved", proposals);
-    createExemplar("machineA", "review", ctx, "reject", "rejected", proposals);
-    createExemplar("machineB", "pending", ctx, "approve", "approved", proposals);
+    await createExemplar("machineA", "pending", ctx, "approve", "approved", proposals);
+    await createExemplar("machineA", "review", ctx, "reject", "rejected", proposals);
+    await createExemplar("machineB", "pending", ctx, "approve", "approved", proposals);
 
-    const result = getExemplars("machineA");
+    const result = await getExemplars("machineA");
 
     expect(result).toHaveLength(2);
     expect(result.every((e) => e.machineName === "machineA")).toBe(true);
   });
 
-  test("DIAL_222: getExemplars filters by state when provided", () => {
+  test("DIAL_222: getExemplars filters by state when provided", async () => {
     const ctx = makeContext();
     const proposals = [makeProposal()];
 
-    createExemplar("machineA", "pending", ctx, "approve", "approved", proposals);
-    createExemplar("machineA", "review", ctx, "reject", "rejected", proposals);
-    createExemplar("machineA", "pending", ctx, "reject", "rejected", proposals);
+    await createExemplar("machineA", "pending", ctx, "approve", "approved", proposals);
+    await createExemplar("machineA", "review", ctx, "reject", "rejected", proposals);
+    await createExemplar("machineA", "pending", ctx, "reject", "rejected", proposals);
 
-    const result = getExemplars("machineA", "pending");
+    const result = await getExemplars("machineA", "pending");
 
     expect(result).toHaveLength(2);
     expect(result.every((e) => e.state === "pending")).toBe(true);

@@ -42,13 +42,10 @@ export type {
 } from "./types.js";
 
 // Re-export store
+export type { Store } from "./store.js";
 export {
-  sessions,
-  specialists,
-  proposals,
-  alignmentRecords,
-  exemplars,
-  decisionLog,
+  getStore,
+  setStore,
   clear,
 } from "./store.js";
 
@@ -161,24 +158,16 @@ export {
 // Convenience Functions
 // ============================================================================
 
-import { decisionLog, alignmentRecords } from "./store.js";
+import { getStore } from "./store.js";
 import { computeCollapseMetrics } from "./monitoring.js";
 import type { CollapseMetrics } from "./types.js";
 
 /**
  * Convenience wrapper: computes collapse metrics for a machine
- * by reading from the in-memory stores.
+ * by reading from the store.
  */
-export function getCollapseMetrics(machineName: string, state?: string): CollapseMetrics {
-  const decisions = [...decisionLog.values()].filter(
-    (d) => d.machineName === machineName
-  );
-  const alignment = [...alignmentRecords.values()].filter(
-    (r) => {
-      if (r.machineName !== machineName) return false;
-      if (state !== undefined) return r.state === state;
-      return true;
-    }
-  );
+export async function getCollapseMetrics(machineName: string, state?: string): Promise<CollapseMetrics> {
+  const decisions = await getStore().getDecisionRecordsByMachine(machineName);
+  const alignment = await getStore().getAlignmentRecordsByMachine(machineName, state);
   return computeCollapseMetrics(decisions, alignment);
 }

@@ -37,8 +37,8 @@ function makeProposal(overrides?: Partial<Proposal>): Proposal {
 const MACHINE_NAME = "eval-test";
 
 describe("DIAL_223–DIAL_235: Evaluation System", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   test("DIAL_223: evaluateAlignment returns correct score from exemplars", async () => {
@@ -49,7 +49,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
     });
 
     // Exemplar 1: specialist matches human choice (approve)
-    createExemplar(
+    await createExemplar(
       MACHINE_NAME,
       "pending",
       makeContext(),
@@ -59,7 +59,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
     );
 
     // Exemplar 2: specialist does NOT match human choice (human chose reject, specialist chose approve)
-    createExemplar(
+    await createExemplar(
       MACHINE_NAME,
       "pending",
       makeContext(),
@@ -68,7 +68,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
       [makeProposal({ specialistId: "spec1", transitionName: "approve", toState: "approved" })]
     );
 
-    const result = evaluateAlignment("spec1", MACHINE_NAME);
+    const result = await evaluateAlignment("spec1", MACHINE_NAME);
 
     expect(result.totalExemplars).toBe(2);
     expect(result.matchingDecisions).toBe(1);
@@ -85,7 +85,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
     // All 3 exemplars: specialist proposes "approve"
     // Exemplar 1 and 2: human chose "approve" (matches)
     // Exemplar 3: human chose "reject" (no match)
-    createExemplar(
+    await createExemplar(
       MACHINE_NAME,
       "pending",
       makeContext(),
@@ -93,7 +93,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
       "approved",
       [makeProposal({ specialistId: "spec1", transitionName: "approve" })]
     );
-    createExemplar(
+    await createExemplar(
       MACHINE_NAME,
       "pending",
       makeContext(),
@@ -101,7 +101,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
       "approved",
       [makeProposal({ specialistId: "spec1", transitionName: "approve" })]
     );
-    createExemplar(
+    await createExemplar(
       MACHINE_NAME,
       "pending",
       makeContext(),
@@ -110,7 +110,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
       [makeProposal({ specialistId: "spec1", transitionName: "approve" })]
     );
 
-    const result = evaluateAlignment("spec1", MACHINE_NAME);
+    const result = await evaluateAlignment("spec1", MACHINE_NAME);
 
     expect(result.matchingDecisions).toBe(2);
     expect(result.totalExemplars).toBe(3);
@@ -124,7 +124,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
     });
 
     // Exemplar 1: match
-    createExemplar(
+    await createExemplar(
       MACHINE_NAME,
       "pending",
       makeContext(),
@@ -133,7 +133,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
       [makeProposal({ specialistId: "spec1", transitionName: "approve" })]
     );
     // Exemplar 2: no match
-    createExemplar(
+    await createExemplar(
       MACHINE_NAME,
       "pending",
       makeContext(),
@@ -142,7 +142,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
       [makeProposal({ specialistId: "spec1", transitionName: "approve" })]
     );
     // Exemplar 3: match (should be excluded by maxRounds=2)
-    createExemplar(
+    await createExemplar(
       MACHINE_NAME,
       "pending",
       makeContext(),
@@ -151,7 +151,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
       [makeProposal({ specialistId: "spec1", transitionName: "approve" })]
     );
 
-    const result = evaluateAlignment("spec1", MACHINE_NAME, { maxRounds: 2 });
+    const result = await evaluateAlignment("spec1", MACHINE_NAME, { maxRounds: 2 });
 
     expect(result.totalExemplars).toBe(2);
     expect(result.matchingDecisions).toBe(1);
@@ -165,7 +165,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
       strategyFnName: "firstAvailable",
     });
 
-    const result = evaluateAlignment("spec1", MACHINE_NAME);
+    const result = await evaluateAlignment("spec1", MACHINE_NAME);
 
     expect(result.totalExemplars).toBe(0);
     expect(result.matchingDecisions).toBe(0);
@@ -180,7 +180,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
     });
 
     // Exemplar 1: transition matches
-    createExemplar(
+    await createExemplar(
       MACHINE_NAME,
       "pending",
       makeContext(),
@@ -189,7 +189,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
       [makeProposal({ specialistId: "spec1", transitionName: "approve", toState: "approved" })]
     );
     // Exemplar 2: transition does NOT match
-    createExemplar(
+    await createExemplar(
       MACHINE_NAME,
       "pending",
       makeContext(),
@@ -198,7 +198,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
       [makeProposal({ specialistId: "spec1", transitionName: "approve", toState: "approved" })]
     );
 
-    const result = evaluateAccuracy("spec1", MACHINE_NAME);
+    const result = await evaluateAccuracy("spec1", MACHINE_NAME);
 
     expect(result.totalDecisions).toBe(2);
     expect(result.transitionMatchRate).toBeCloseTo(0.5);
@@ -212,7 +212,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
     });
 
     // Exemplar 1: toState matches humanToState
-    createExemplar(
+    await createExemplar(
       MACHINE_NAME,
       "pending",
       makeContext(),
@@ -221,7 +221,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
       [makeProposal({ specialistId: "spec1", transitionName: "approve", toState: "approved" })]
     );
     // Exemplar 2: toState does NOT match humanToState
-    createExemplar(
+    await createExemplar(
       MACHINE_NAME,
       "pending",
       makeContext(),
@@ -230,7 +230,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
       [makeProposal({ specialistId: "spec1", transitionName: "approve", toState: "approved" })]
     );
 
-    const result = evaluateAccuracy("spec1", MACHINE_NAME);
+    const result = await evaluateAccuracy("spec1", MACHINE_NAME);
 
     expect(result.totalDecisions).toBe(2);
     expect(result.stateMatchRate).toBeCloseTo(0.5);
@@ -243,7 +243,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
       strategyFnName: "firstAvailable",
     });
 
-    createExemplar(
+    await createExemplar(
       MACHINE_NAME,
       "pending",
       makeContext(),
@@ -251,7 +251,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
       "approved",
       [makeProposal({ specialistId: "spec1", transitionName: "approve", costUSD: 0.05 })]
     );
-    createExemplar(
+    await createExemplar(
       MACHINE_NAME,
       "pending",
       makeContext(),
@@ -260,7 +260,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
       [makeProposal({ specialistId: "spec1", transitionName: "approve", costUSD: 0.10 })]
     );
 
-    const result = evaluateAccuracy("spec1", MACHINE_NAME);
+    const result = await evaluateAccuracy("spec1", MACHINE_NAME);
 
     expect(result.totalCostUSD).toBeCloseTo(0.15);
   });
@@ -272,7 +272,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
       strategyFnName: "firstAvailable",
     });
 
-    createExemplar(
+    await createExemplar(
       MACHINE_NAME,
       "pending",
       makeContext(),
@@ -280,7 +280,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
       "approved",
       [makeProposal({ specialistId: "spec1", transitionName: "approve", latencyMsec: 100 })]
     );
-    createExemplar(
+    await createExemplar(
       MACHINE_NAME,
       "pending",
       makeContext(),
@@ -289,7 +289,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
       [makeProposal({ specialistId: "spec1", transitionName: "approve", latencyMsec: 200 })]
     );
 
-    const result = evaluateAccuracy("spec1", MACHINE_NAME);
+    const result = await evaluateAccuracy("spec1", MACHINE_NAME);
 
     expect(result.avgLatencyMsec).toBeCloseTo(150);
   });
@@ -302,7 +302,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
     });
 
     // Exemplar 1: match (should be excluded by lookback=2, only last 2 used)
-    createExemplar(
+    await createExemplar(
       MACHINE_NAME,
       "pending",
       makeContext(),
@@ -311,7 +311,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
       [makeProposal({ specialistId: "spec1", transitionName: "approve", toState: "approved" })]
     );
     // Exemplar 2: no match
-    createExemplar(
+    await createExemplar(
       MACHINE_NAME,
       "pending",
       makeContext(),
@@ -320,7 +320,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
       [makeProposal({ specialistId: "spec1", transitionName: "approve", toState: "approved" })]
     );
     // Exemplar 3: no match
-    createExemplar(
+    await createExemplar(
       MACHINE_NAME,
       "pending",
       makeContext(),
@@ -329,7 +329,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
       [makeProposal({ specialistId: "spec1", transitionName: "approve", toState: "approved" })]
     );
 
-    const result = evaluateAccuracy("spec1", MACHINE_NAME, { lookback: 2 });
+    const result = await evaluateAccuracy("spec1", MACHINE_NAME, { lookback: 2 });
 
     // Only last 2 exemplars checked: both are mismatches
     expect(result.totalDecisions).toBe(2);
@@ -344,7 +344,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
     });
 
     // Exemplars exist but spec1 has no proposals in them
-    createExemplar(
+    await createExemplar(
       MACHINE_NAME,
       "pending",
       makeContext(),
@@ -352,7 +352,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
       "approved",
       [makeProposal({ specialistId: "other-spec", transitionName: "approve" })]
     );
-    createExemplar(
+    await createExemplar(
       MACHINE_NAME,
       "pending",
       makeContext(),
@@ -361,7 +361,7 @@ describe("DIAL_223–DIAL_235: Evaluation System", () => {
       [makeProposal({ specialistId: "other-spec", transitionName: "reject" })]
     );
 
-    const result = evaluateAccuracy("spec1", MACHINE_NAME);
+    const result = await evaluateAccuracy("spec1", MACHINE_NAME);
 
     expect(result.totalDecisions).toBe(0);
     expect(result.transitionMatchRate).toBe(0);

@@ -5,7 +5,7 @@
  * Alignment scores are used for weighted consensus and progressive collapse.
  */
 
-import { specialists, alignmentRecords } from "./store.js";
+import { getStore } from "./store.js";
 import type { AlignmentRecord, Proposal } from "./types.js";
 
 /**
@@ -31,8 +31,8 @@ export function wilsonLowerBound(matches: number, total: number, z = 1.96): numb
  * Checks whether a specialist is human by looking at the isHuman flag
  * on the registered specialist. No string matching on specialistId.
  */
-export function isHumanSpecialist(specialistId: string): boolean {
-  const specialist = specialists.get(specialistId);
+export async function isHumanSpecialist(specialistId: string): Promise<boolean> {
+  const specialist = await getStore().getSpecialist(specialistId);
   if (!specialist) return false;
   return "isHuman" in specialist && specialist.isHuman === true;
 }
@@ -42,19 +42,19 @@ export function isHumanSpecialist(specialistId: string): boolean {
  * Returns 1.0 for human specialists (always perfectly aligned).
  * Returns 0 for unknown specialists.
  */
-export function getAlignmentScore(
+export async function getAlignmentScore(
   specialistId: string,
   machineName: string,
   state?: string
-): number {
-  if (isHumanSpecialist(specialistId)) {
+): Promise<number> {
+  if (await isHumanSpecialist(specialistId)) {
     return 1.0;
   }
 
   const key = state
     ? `${specialistId}:${machineName}:${state}`
     : `${specialistId}:${machineName}`;
-  const record = alignmentRecords.get(key);
+  const record = await getStore().getAlignmentRecord(key);
   if (!record) return 0;
   return record.alignmentScore;
 }
@@ -62,19 +62,19 @@ export function getAlignmentScore(
 /**
  * Updates the alignment record for a specialist after a single comparison.
  */
-export function updateAlignment(
+export async function updateAlignment(
   specialistId: string,
   machineName: string,
   matched: boolean,
   state?: string
-): void {
+): Promise<void> {
   // Don't track alignment for human specialists
-  if (isHumanSpecialist(specialistId)) return;
+  if (await isHumanSpecialist(specialistId)) return;
 
   const key = state
     ? `${specialistId}:${machineName}:${state}`
     : `${specialistId}:${machineName}`;
-  const existing = alignmentRecords.get(key);
+  const existing = await getStore().getAlignmentRecord(key);
 
   if (existing) {
     existing.matchingChoices += matched ? 1 : 0;
@@ -82,8 +82,9 @@ export function updateAlignment(
     existing.alignmentScore =
       wilsonLowerBound(existing.matchingChoices, existing.totalComparisons);
     existing.lastUpdated = new Date();
+    await getStore().setAlignmentRecord(key, existing);
   } else {
-    alignmentRecords.set(key, {
+    await getStore().setAlignmentRecord(key, {
       specialistId,
       machineName,
       state,
@@ -120,19 +121,19 @@ export function computeAlignmentUpdates(
  * Updates alignment for all specialists after a human forces a decision.
  * Thin wrapper: builds the human IDs set, calls the pure function, applies results.
  */
-export function updateAlignmentAfterHumanDecision(
+export async function updateAlignmentAfterHumanDecision(
   machineName: string,
   humanTransitionName: string,
   proposals: Proposal[],
   state?: string
-): void {
+): Promise<void> {
   // Build set of human specialist IDs
   const allSpecialistIds = new Set<string>();
   for (const p of proposals) allSpecialistIds.add(p.specialistId);
 
   const humanSpecialistIds = new Set<string>();
   for (const id of allSpecialistIds) {
-    if (isHumanSpecialist(id)) humanSpecialistIds.add(id);
+    if (await isHumanSpecialist(id)) humanSpecialistIds.add(id);
   }
 
   const updates = computeAlignmentUpdates(
@@ -142,22 +143,16 @@ export function updateAlignmentAfterHumanDecision(
   );
 
   for (const { specialistId, matched } of updates) {
-    updateAlignment(specialistId, machineName, matched, state);
+    await updateAlignment(specialistId, machineName, matched, state);
   }
 }
 
 /**
  * Returns all alignment records for a machine.
  */
-export function getAllAlignmentRecords(
+export async function getAllAlignmentRecords(
   machineName: string,
   state?: string
-): AlignmentRecord[] {
-  return [...alignmentRecords.values()].filter(
-    (r) => {
-      if (r.machineName !== machineName) return false;
-      if (state !== undefined) return r.state === state;
-      return true;
-    }
-  );
+): Promise<AlignmentRecord[]> {
+  return getStore().getAlignmentRecordsByMachine(machineName, state);
 }

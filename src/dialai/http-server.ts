@@ -278,13 +278,10 @@ async function callTool(
       break;
     }
     case "get_decision_log": {
-      const { decisionLog } = await import("./store.js");
+      const { getStore } = await import("./store.js");
       const machineName = args.machineName as string;
       const limit = (args.limit as number) ?? 100;
-      const all = [...decisionLog.values()]
-        .filter((d) => d.machineName === machineName)
-        .slice(-limit);
-      result = all;
+      result = await getStore().getDecisionRecordsByMachine(machineName, limit);
       break;
     }
     default:

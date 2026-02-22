@@ -25,7 +25,7 @@ import {
 } from "./api.js";
 import { runSession } from "./engine.js";
 import { validateMachine } from "./utils.js";
-import { decisionLog } from "./store.js";
+import { getStore } from "./store.js";
 import { getCollapseMetrics } from "./index.js";
 import type { MachineDefinition } from "./types.js";
 
@@ -416,7 +416,7 @@ export function createMcpServer(): Server {
         }
 
         case "get_collapse_metrics": {
-          const metrics = getCollapseMetrics(args?.machineName as string);
+          const metrics = await getCollapseMetrics(args?.machineName as string);
           return {
             content: [
               {
@@ -430,9 +430,7 @@ export function createMcpServer(): Server {
         case "get_decision_log": {
           const machineName = args?.machineName as string;
           const limit = (args?.limit as number) ?? 100;
-          const records = [...decisionLog.values()]
-            .filter((d) => d.machineName === machineName)
-            .slice(-limit);
+          const records = await getStore().getDecisionRecordsByMachine(machineName, limit);
           return {
             content: [
               {

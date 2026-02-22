@@ -1,39 +1,86 @@
 /**
- * DIAL AI In-Memory Store
+ * DIAL AI Store
  *
- * Simple in-memory Maps with no business logic.
- * All API functions read from and write to these maps.
+ * Pluggable persistence layer. Exports the Store interface and a singleton
+ * accessor. Default store is in-memory (createMemoryStore). Set a different
+ * store via setStore() for Postgres or other backends.
  */
 
-import type { Session, Specialist, Arbiter, Proposal, AlignmentRecord, Exemplar, DecisionRecord } from "./types.js";
+import type {
+  Session,
+  Specialist,
+  Arbiter,
+  Proposal,
+  AlignmentRecord,
+  Exemplar,
+  DecisionRecord,
+} from "./types.js";
+import { createMemoryStore } from "./store-memory.js";
 
-/** All sessions by ID */
-export const sessions: Map<string, Session> = new Map();
+// ============================================================================
+// Store Interface
+// ============================================================================
 
-/** All registered specialists by ID */
-export const specialists: Map<string, Specialist | Arbiter> = new Map();
+export interface Store {
+  // Sessions
+  getSession(id: string): Promise<Session | undefined>;
+  setSession(session: Session): Promise<void>;
+  getAllSessions(): Promise<Session[]>;
 
-/** All proposals by ID */
-export const proposals: Map<string, Proposal> = new Map();
+  // Specialists
+  getSpecialist(id: string): Promise<(Specialist | Arbiter) | undefined>;
+  hasSpecialist(id: string): Promise<boolean>;
+  setSpecialist(specialist: Specialist | Arbiter): Promise<void>;
+  getSpecialistsByMachineAndRole(machineName: string, role?: string): Promise<(Specialist | Arbiter)[]>;
 
-/** Alignment records keyed by "specialistId:machineName" */
-export const alignmentRecords: Map<string, AlignmentRecord> = new Map();
+  // Proposals
+  getProposal(id: string): Promise<Proposal | undefined>;
+  setProposal(proposal: Proposal): Promise<void>;
+  getProposalsByRound(sessionId: string, roundId: string): Promise<Proposal[]>;
+  deleteProposalsBySession(sessionId: string): Promise<void>;
 
-/** All exemplars by ID */
-export const exemplars: Map<string, Exemplar> = new Map();
+  // Alignment Records
+  getAlignmentRecord(key: string): Promise<AlignmentRecord | undefined>;
+  setAlignmentRecord(key: string, record: AlignmentRecord): Promise<void>;
+  getAlignmentRecordsByMachine(machineName: string, state?: string): Promise<AlignmentRecord[]>;
 
-/** Decision records for monitoring progressive collapse */
-export const decisionLog: Map<string, DecisionRecord> = new Map();
+  // Exemplars
+  setExemplar(exemplar: Exemplar): Promise<void>;
+  getExemplarsByMachine(machineName: string, state?: string): Promise<Exemplar[]>;
+
+  // Decision Log
+  setDecisionRecord(record: DecisionRecord): Promise<void>;
+  getDecisionRecordsByMachine(machineName: string, limit?: number): Promise<DecisionRecord[]>;
+
+  // Lifecycle
+  clear(): Promise<void>;
+  close(): Promise<void>;
+}
+
+// ============================================================================
+// Singleton
+// ============================================================================
+
+let _store: Store = createMemoryStore();
 
 /**
- * Clears all in-memory state.
- * Useful for testing and resetting between runs.
+ * Returns the current store singleton.
  */
-export function clear(): void {
-  sessions.clear();
-  specialists.clear();
-  proposals.clear();
-  alignmentRecords.clear();
-  exemplars.clear();
-  decisionLog.clear();
+export function getStore(): Store {
+  return _store;
+}
+
+/**
+ * Replaces the current store singleton.
+ * Use this to switch to a Postgres or other backend.
+ */
+export function setStore(store: Store): void {
+  _store = store;
+}
+
+/**
+ * Clears all state in the current store.
+ */
+export async function clear(): Promise<void> {
+  return _store.clear();
 }

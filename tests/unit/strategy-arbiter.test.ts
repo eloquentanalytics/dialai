@@ -21,8 +21,8 @@ function makeProposal(overrides: Partial<Proposal>): Proposal {
 }
 
 describe("DIAL_171–DIAL_178: Arbiter Strategies", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   test("DIAL_171: firstProposal returns first proposal by timestamp", async () => {

@@ -23,8 +23,8 @@ function twoStateMachine(): MachineDefinition {
 }
 
 describe("DIAL_001–DIAL_010: Session Management", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   test("DIAL_001: creates session with valid machine definition", async () => {

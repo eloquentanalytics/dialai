@@ -25,8 +25,8 @@ function simpleMachine(): MachineDefinition {
 }
 
 describe("DIAL_249–DIAL_259: Query Helpers", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   test("DIAL_249: getSpecialist returns specialist by ID", async () => {
@@ -36,13 +36,13 @@ describe("DIAL_249–DIAL_259: Query Helpers", () => {
       strategyFnName: "firstAvailable",
     });
 
-    const specialist = getSpecialist("p1");
+    const specialist = await getSpecialist("p1");
     expect(specialist).toBeDefined();
     expect(specialist!.specialistId).toBe("p1");
   });
 
-  test("DIAL_250: getSpecialist returns undefined for unknown ID", () => {
-    const specialist = getSpecialist("unknown");
+  test("DIAL_250: getSpecialist returns undefined for unknown ID", async () => {
+    const specialist = await getSpecialist("unknown");
     expect(specialist).toBeUndefined();
   });
 
@@ -63,14 +63,14 @@ describe("DIAL_249–DIAL_259: Query Helpers", () => {
       strategyFnName: "firstAvailable",
     });
 
-    const proposers = getProposers("query-test");
+    const proposers = await getProposers("query-test");
     expect(proposers).toHaveLength(2);
     expect(proposers.map((p) => p.specialistId)).toContain("p1");
     expect(proposers.map((p) => p.specialistId)).toContain("p2");
   });
 
-  test("DIAL_252: getProposers returns empty array for unknown machine", () => {
-    const proposers = getProposers("nonexistent");
+  test("DIAL_252: getProposers returns empty array for unknown machine", async () => {
+    const proposers = await getProposers("nonexistent");
     expect(proposers).toEqual([]);
   });
 
@@ -81,13 +81,13 @@ describe("DIAL_249–DIAL_259: Query Helpers", () => {
       strategyFnName: "firstProposal",
     });
 
-    const arbiter = getArbiter("query-test");
+    const arbiter = await getArbiter("query-test");
     expect(arbiter).toBeDefined();
     expect(arbiter!.specialistId).toBe("a1");
   });
 
-  test("DIAL_255: getArbiter returns undefined when no arbiter registered", () => {
-    const arbiter = getArbiter("query-test");
+  test("DIAL_255: getArbiter returns undefined when no arbiter registered", async () => {
+    const arbiter = await getArbiter("query-test");
     expect(arbiter).toBeUndefined();
   });
 
@@ -105,13 +105,13 @@ describe("DIAL_249–DIAL_259: Query Helpers", () => {
       roundId: session.currentRoundId,
     });
 
-    const proposals = getProposalsForRound(session.sessionId, session.currentRoundId);
+    const proposals = await getProposalsForRound(session.sessionId, session.currentRoundId);
     expect(proposals).toHaveLength(1);
     expect(proposals[0].sessionId).toBe(session.sessionId);
     expect(proposals[0].roundId).toBe(session.currentRoundId);
   });
 
-  test("DIAL_259: round query helpers return empty arrays for unknown round", () => {
-    expect(getProposalsForRound("unknown", "unknown")).toEqual([]);
+  test("DIAL_259: round query helpers return empty arrays for unknown round", async () => {
+    expect(await getProposalsForRound("unknown", "unknown")).toEqual([]);
   });
 });

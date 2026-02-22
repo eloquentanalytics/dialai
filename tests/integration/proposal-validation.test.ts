@@ -15,8 +15,8 @@ import {
 import type { MachineDefinition } from "../../src/dialai/types.js";
 
 describe("Integration: Proposal Validation", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   const machine: MachineDefinition = {
@@ -103,7 +103,7 @@ describe("Integration: Proposal Validation", () => {
       roundId: session.currentRoundId,
     });
 
-    const roundProposals = getProposalsForRound(
+    const roundProposals = await getProposalsForRound(
       session.sessionId,
       session.currentRoundId
     );

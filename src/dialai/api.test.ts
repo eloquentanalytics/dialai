@@ -57,8 +57,8 @@ const multiStateMachine: MachineDefinition = {
 };
 
 describe("Session Management", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   it("creates a session with correct initial state", async () => {
@@ -97,8 +97,8 @@ describe("Session Management", () => {
 });
 
 describe("Specialist Registration", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   describe("registerProposer", () => {
@@ -211,7 +211,7 @@ describe("Specialist Registration", () => {
         strategyFnName: "random",
       });
 
-      const proposers = getProposers("test-machine");
+      const proposers = await getProposers("test-machine");
 
       expect(proposers).toHaveLength(2);
       expect(proposers.map((p) => p.specialistId)).toContain("p1");
@@ -225,7 +225,7 @@ describe("Specialist Registration", () => {
         strategyFnName: "firstProposal",
       });
 
-      const arbiter = getArbiter("test-machine");
+      const arbiter = await getArbiter("test-machine");
 
       expect(arbiter).toBeDefined();
       expect(arbiter!.specialistId).toBe("arb");
@@ -234,8 +234,8 @@ describe("Specialist Registration", () => {
 });
 
 describe("Decision Cycle", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   describe("submitProposal", () => {

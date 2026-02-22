@@ -18,8 +18,8 @@ const mockContext: ProposerContext = {
 };
 
 describe("Evaluation System", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   describe("evaluateAlignment", () => {
@@ -31,7 +31,7 @@ describe("Evaluation System", () => {
       });
 
       // Create exemplars where ai-1 matched 2 out of 3 times
-      createExemplar("test-machine", "a", mockContext, "to_b", "b", [
+      await createExemplar("test-machine", "a", mockContext, "to_b", "b", [
         {
           proposalId: "p1",
           sessionId: "s1",
@@ -45,7 +45,7 @@ describe("Evaluation System", () => {
         },
       ]);
 
-      createExemplar("test-machine", "a", mockContext, "to_c", "c", [
+      await createExemplar("test-machine", "a", mockContext, "to_c", "c", [
         {
           proposalId: "p2",
           sessionId: "s1",
@@ -59,7 +59,7 @@ describe("Evaluation System", () => {
         },
       ]);
 
-      createExemplar("test-machine", "a", mockContext, "to_b", "b", [
+      await createExemplar("test-machine", "a", mockContext, "to_b", "b", [
         {
           proposalId: "p3",
           sessionId: "s1",
@@ -73,7 +73,7 @@ describe("Evaluation System", () => {
         },
       ]);
 
-      const result = evaluateAlignment("ai-1", "test-machine");
+      const result = await evaluateAlignment("ai-1", "test-machine");
 
       expect(result.specialistId).toBe("ai-1");
       expect(result.machineName).toBe("test-machine");
@@ -89,7 +89,7 @@ describe("Evaluation System", () => {
         strategyFnName: "firstAvailable",
       });
 
-      createExemplar("test-machine", "a", mockContext, "to_b", "b", [
+      await createExemplar("test-machine", "a", mockContext, "to_b", "b", [
         {
           proposalId: "p1",
           sessionId: "s1",
@@ -103,7 +103,7 @@ describe("Evaluation System", () => {
         },
       ]);
 
-      createExemplar("test-machine", "a", mockContext, "to_c", "c", [
+      await createExemplar("test-machine", "a", mockContext, "to_c", "c", [
         {
           proposalId: "p2",
           sessionId: "s1",
@@ -117,7 +117,7 @@ describe("Evaluation System", () => {
         },
       ]);
 
-      const result = evaluateAlignment("ai-1", "test-machine", { maxRounds: 1 });
+      const result = await evaluateAlignment("ai-1", "test-machine", { maxRounds: 1 });
 
       expect(result.totalExemplars).toBe(1);
       expect(result.matchingDecisions).toBe(1);
@@ -130,16 +130,16 @@ describe("Evaluation System", () => {
         strategyFnName: "firstAvailable",
       });
 
-      const result = evaluateAlignment("ai-1", "test-machine");
+      const result = await evaluateAlignment("ai-1", "test-machine");
 
       expect(result.totalExemplars).toBe(0);
       expect(result.alignmentScore).toBe(0);
     });
 
-    it("throws for unknown specialist", () => {
-      expect(() =>
+    it("throws for unknown specialist", async () => {
+      await expect(
         evaluateAlignment("unknown", "test-machine")
-      ).toThrow("Specialist not found");
+      ).rejects.toThrow("Specialist not found");
     });
   });
 
@@ -151,7 +151,7 @@ describe("Evaluation System", () => {
         strategyFnName: "firstAvailable",
       });
 
-      createExemplar("test-machine", "a", mockContext, "to_b", "b", [
+      await createExemplar("test-machine", "a", mockContext, "to_b", "b", [
         {
           proposalId: "p1",
           sessionId: "s1",
@@ -167,7 +167,7 @@ describe("Evaluation System", () => {
         },
       ]);
 
-      createExemplar("test-machine", "a", mockContext, "to_c", "c", [
+      await createExemplar("test-machine", "a", mockContext, "to_c", "c", [
         {
           proposalId: "p2",
           sessionId: "s1",
@@ -183,7 +183,7 @@ describe("Evaluation System", () => {
         },
       ]);
 
-      const result = evaluateAccuracy("ai-1", "test-machine");
+      const result = await evaluateAccuracy("ai-1", "test-machine");
 
       expect(result.specialistId).toBe("ai-1");
       expect(result.totalDecisions).toBe(2);
@@ -202,7 +202,7 @@ describe("Evaluation System", () => {
 
       // Create 3 exemplars
       for (let i = 0; i < 3; i++) {
-        createExemplar("test-machine", "a", mockContext, "to_b", "b", [
+        await createExemplar("test-machine", "a", mockContext, "to_b", "b", [
           {
             proposalId: `p${i}`,
             sessionId: "s1",
@@ -217,15 +217,15 @@ describe("Evaluation System", () => {
         ]);
       }
 
-      const result = evaluateAccuracy("ai-1", "test-machine", { lookback: 2 });
+      const result = await evaluateAccuracy("ai-1", "test-machine", { lookback: 2 });
 
       expect(result.totalDecisions).toBe(2);
     });
 
-    it("throws for unknown specialist", () => {
-      expect(() =>
+    it("throws for unknown specialist", async () => {
+      await expect(
         evaluateAccuracy("unknown", "test-machine")
-      ).toThrow("Specialist not found");
+      ).rejects.toThrow("Specialist not found");
     });
   });
 });

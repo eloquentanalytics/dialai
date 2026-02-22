@@ -9,8 +9,8 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { clear } from "./store.js";
 
 describe("LLM Module", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   describe("executeWebhook", () => {

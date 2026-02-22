@@ -30,13 +30,13 @@ const mockProposals: Proposal[] = [
 ];
 
 describe("Exemplar System", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   describe("createExemplar", () => {
-    it("creates an exemplar with all fields", () => {
-      const exemplar = createExemplar(
+    it("creates an exemplar with all fields", async () => {
+      const exemplar = await createExemplar(
         "test-machine",
         "a",
         mockContext,
@@ -54,8 +54,8 @@ describe("Exemplar System", () => {
       expect(exemplar.createdAt).toBeInstanceOf(Date);
     });
 
-    it("stores a deep copy of proposals", () => {
-      const exemplar = createExemplar(
+    it("stores a deep copy of proposals", async () => {
+      const exemplar = await createExemplar(
         "test-machine",
         "a",
         mockContext,
@@ -70,26 +70,26 @@ describe("Exemplar System", () => {
   });
 
   describe("getExemplars", () => {
-    it("returns exemplars for a machine", () => {
-      createExemplar("test-machine", "a", mockContext, "to_b", "b", mockProposals);
-      createExemplar("test-machine", "b", mockContext, "to_c", "c", mockProposals);
-      createExemplar("other-machine", "a", mockContext, "to_b", "b", mockProposals);
+    it("returns exemplars for a machine", async () => {
+      await createExemplar("test-machine", "a", mockContext, "to_b", "b", mockProposals);
+      await createExemplar("test-machine", "b", mockContext, "to_c", "c", mockProposals);
+      await createExemplar("other-machine", "a", mockContext, "to_b", "b", mockProposals);
 
-      const exemplars = getExemplars("test-machine");
+      const exemplars = await getExemplars("test-machine");
       expect(exemplars).toHaveLength(2);
     });
 
-    it("filters by state", () => {
-      createExemplar("test-machine", "a", mockContext, "to_b", "b", mockProposals);
-      createExemplar("test-machine", "b", mockContext, "to_c", "c", mockProposals);
+    it("filters by state", async () => {
+      await createExemplar("test-machine", "a", mockContext, "to_b", "b", mockProposals);
+      await createExemplar("test-machine", "b", mockContext, "to_c", "c", mockProposals);
 
-      const exemplars = getExemplars("test-machine", "a");
+      const exemplars = await getExemplars("test-machine", "a");
       expect(exemplars).toHaveLength(1);
       expect(exemplars[0].state).toBe("a");
     });
 
-    it("returns empty for unknown machine", () => {
-      expect(getExemplars("unknown")).toHaveLength(0);
+    it("returns empty for unknown machine", async () => {
+      expect(await getExemplars("unknown")).toHaveLength(0);
     });
   });
 });

@@ -17,8 +17,8 @@ import {
 import type { MachineDefinition } from "../../src/dialai/types.js";
 
 describe("Integration: Progressive Alignment Growth", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   const machine: MachineDefinition = {
@@ -38,29 +38,29 @@ describe("Integration: Progressive Alignment Growth", () => {
     },
   };
 
-  it("DIAL_291: alignment grows with consistent matching", () => {
+  it("DIAL_291: alignment grows with consistent matching", async () => {
     // Need to register so isHumanSpecialist check works
     // updateAlignment directly doesn't require registration for non-human specialists
     for (let i = 0; i < 10; i++) {
-      updateAlignment("consistent-bot", "alignment-growth", true);
+      await updateAlignment("consistent-bot", "alignment-growth", true);
     }
 
     // Wilson(10,10) ≈ 0.7225 — confidence grows with more evidence
-    const score = getAlignmentScore("consistent-bot", "alignment-growth");
+    const score = await getAlignmentScore("consistent-bot", "alignment-growth");
     expect(score).toBeGreaterThan(0.7);
     expect(score).toBeLessThan(1.0);
   });
 
-  it("DIAL_292: alignment decreases with mismatches", () => {
+  it("DIAL_292: alignment decreases with mismatches", async () => {
     for (let i = 0; i < 5; i++) {
-      updateAlignment("mixed-bot", "alignment-growth", true);
+      await updateAlignment("mixed-bot", "alignment-growth", true);
     }
     for (let i = 0; i < 5; i++) {
-      updateAlignment("mixed-bot", "alignment-growth", false);
+      await updateAlignment("mixed-bot", "alignment-growth", false);
     }
 
     // Wilson(5,10) ≈ 0.2366
-    expect(getAlignmentScore("mixed-bot", "alignment-growth")).toBeCloseTo(0.2366, 2);
+    expect(await getAlignmentScore("mixed-bot", "alignment-growth")).toBeCloseTo(0.2366, 2);
   });
 
   it("DIAL_293: high-alignment specialist reaches consensus faster", async () => {
@@ -84,13 +84,13 @@ describe("Integration: Progressive Alignment Growth", () => {
     });
 
     // high-align has alignment 9/10 → Wilson ≈ 0.60, low-align has alignment 1/10 → Wilson ≈ 0.02
-    for (let i = 0; i < 9; i++) updateAlignment("high-align", "alignment-growth", true);
-    updateAlignment("high-align", "alignment-growth", false);
-    updateAlignment("low-align", "alignment-growth", true);
-    for (let i = 0; i < 9; i++) updateAlignment("low-align", "alignment-growth", false);
+    for (let i = 0; i < 9; i++) await updateAlignment("high-align", "alignment-growth", true);
+    await updateAlignment("high-align", "alignment-growth", false);
+    await updateAlignment("low-align", "alignment-growth", true);
+    for (let i = 0; i < 9; i++) await updateAlignment("low-align", "alignment-growth", false);
 
-    expect(getAlignmentScore("high-align", "alignment-growth")).toBeCloseTo(0.5958, 2);
-    expect(getAlignmentScore("low-align", "alignment-growth")).toBeCloseTo(0.0179, 2);
+    expect(await getAlignmentScore("high-align", "alignment-growth")).toBeCloseTo(0.5958, 2);
+    expect(await getAlignmentScore("low-align", "alignment-growth")).toBeCloseTo(0.0179, 2);
 
     // Both submit opposing proposals
     // high-align uses firstAvailable -> "approve"
@@ -133,13 +133,13 @@ describe("Integration: Progressive Alignment Growth", () => {
     });
 
     // low-bot alignment 3/10 → Wilson ≈ 0.108, high-bot alignment 7/10 → Wilson ≈ 0.397
-    for (let i = 0; i < 3; i++) updateAlignment("low-bot", "alignment-growth", true);
-    for (let i = 0; i < 7; i++) updateAlignment("low-bot", "alignment-growth", false);
-    for (let i = 0; i < 7; i++) updateAlignment("high-bot", "alignment-growth", true);
-    for (let i = 0; i < 3; i++) updateAlignment("high-bot", "alignment-growth", false);
+    for (let i = 0; i < 3; i++) await updateAlignment("low-bot", "alignment-growth", true);
+    for (let i = 0; i < 7; i++) await updateAlignment("low-bot", "alignment-growth", false);
+    for (let i = 0; i < 7; i++) await updateAlignment("high-bot", "alignment-growth", true);
+    for (let i = 0; i < 3; i++) await updateAlignment("high-bot", "alignment-growth", false);
 
-    expect(getAlignmentScore("low-bot", "alignment-growth")).toBeCloseTo(0.108, 2);
-    expect(getAlignmentScore("high-bot", "alignment-growth")).toBeCloseTo(0.397, 2);
+    expect(await getAlignmentScore("low-bot", "alignment-growth")).toBeCloseTo(0.108, 2);
+    expect(await getAlignmentScore("high-bot", "alignment-growth")).toBeCloseTo(0.397, 2);
 
     // low-bot proposes "approve" (firstAvailable), high-bot proposes "reject" (lastAvailable)
     await submitProposal({

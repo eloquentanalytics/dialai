@@ -7,8 +7,8 @@ import {
 import type { ProposerContext, ProposerStrategyResult } from "../../src/dialai/types.js";
 
 describe("DIAL_026–DIAL_037: Specialist Registration — Proposers", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   test("DIAL_026: registers proposer with strategyFn (mode 1)", async () => {
@@ -153,7 +153,7 @@ describe("DIAL_026–DIAL_037: Specialist Registration — Proposers", () => {
       strategyFnName: "firstAvailable",
     });
 
-    const stored = getSpecialist("p1");
+    const stored = await getSpecialist("p1");
     expect(stored).toBeDefined();
     expect(stored!.role).toBe("proposer");
     expect(stored!.specialistId).toBe("p1");

@@ -5,12 +5,7 @@
  * and the decision cycle.
  */
 
-import {
-  sessions,
-  specialists,
-  proposals,
-  decisionLog,
-} from "./store.js";
+import { getStore } from "./store.js";
 import {
   proposerStrategies,
   arbiterStrategies,
@@ -68,13 +63,13 @@ export async function createSession(
     metaJson,
   };
 
-  sessions.set(session.sessionId, session);
+  await getStore().setSession(session);
 
   // Auto-register per-state specialists that have a strategyFnName (built-in strategy)
   for (const stateDef of Object.values(normalized.states)) {
     if (!stateDef.specialists) continue;
     for (const spec of stateDef.specialists) {
-      if (specialists.has(spec.specialistId)) continue;
+      if (await getStore().hasSpecialist(spec.specialistId)) continue;
       if (!spec.strategyFnName) continue;
 
       const machineName = spec.machineName ?? normalized.machineName;
@@ -112,7 +107,7 @@ export async function createSession(
  * @throws If session not found
  */
 export async function getSession(sessionId: string): Promise<Session> {
-  const session = sessions.get(sessionId);
+  const session = await getStore().getSession(sessionId);
   if (!session) {
     throw new Error(`Session not found: ${sessionId}`);
   }
@@ -125,7 +120,7 @@ export async function getSession(sessionId: string): Promise<Session> {
  * @returns Array of all sessions
  */
 export async function getSessions(): Promise<Session[]> {
-  return [...sessions.values()];
+  return getStore().getAllSessions();
 }
 
 // ============================================================================
@@ -195,7 +190,7 @@ function validateArbiterExecutionMode(opts: RegisterArbiterOptions): void {
 export async function registerProposer(
   opts: RegisterProposerOptions
 ): Promise<Proposer> {
-  if (specialists.has(opts.specialistId)) {
+  if (await getStore().hasSpecialist(opts.specialistId)) {
     throw new Error(`Specialist already exists: ${opts.specialistId}`);
   }
 
@@ -220,7 +215,7 @@ export async function registerProposer(
     threshold: opts.threshold,
   };
 
-  specialists.set(opts.specialistId, proposer);
+  await getStore().setSpecialist(proposer);
   return proposer;
 }
 
@@ -233,7 +228,7 @@ export async function registerProposer(
 export async function registerArbiter(
   opts: RegisterArbiterOptions
 ): Promise<Arbiter> {
-  if (specialists.has(opts.specialistId)) {
+  if (await getStore().hasSpecialist(opts.specialistId)) {
     throw new Error(`Specialist already exists: ${opts.specialistId}`);
   }
 
@@ -254,33 +249,31 @@ export async function registerArbiter(
     threshold: opts.threshold,
   };
 
-  specialists.set(opts.specialistId, arbiter);
+  await getStore().setSpecialist(arbiter);
   return arbiter;
 }
 
 /**
  * Gets a specialist by ID.
  */
-export function getSpecialist(specialistId: string): Specialist | Arbiter | undefined {
-  return specialists.get(specialistId);
+export async function getSpecialist(specialistId: string): Promise<(Specialist | Arbiter) | undefined> {
+  return getStore().getSpecialist(specialistId);
 }
 
 /**
  * Gets all proposers for a machine.
  */
-export function getProposers(machineName: string): Proposer[] {
-  return [...specialists.values()].filter(
-    (s): s is Proposer => s.role === "proposer" && s.machineName === machineName
-  );
+export async function getProposers(machineName: string): Promise<Proposer[]> {
+  const all = await getStore().getSpecialistsByMachineAndRole(machineName, "proposer");
+  return all as Proposer[];
 }
 
 /**
  * Gets the arbiter for a machine.
  */
-export function getArbiter(machineName: string): Arbiter | undefined {
-  return [...specialists.values()].find(
-    (s): s is Arbiter => s.role === "arbiter" && s.machineName === machineName
-  );
+export async function getArbiter(machineName: string): Promise<Arbiter | undefined> {
+  const all = await getStore().getSpecialistsByMachineAndRole(machineName, "arbiter");
+  return (all[0] as Arbiter) ?? undefined;
 }
 
 // ============================================================================
@@ -290,37 +283,40 @@ export function getArbiter(machineName: string): Arbiter | undefined {
 /**
  * Enables a specialist (sets enabled = true).
  */
-export function enableSpecialist(specialistId: string): void {
-  const specialist = specialists.get(specialistId);
+export async function enableSpecialist(specialistId: string): Promise<void> {
+  const specialist = await getStore().getSpecialist(specialistId);
   if (!specialist) {
     throw new Error(`Specialist not found: ${specialistId}`);
   }
   (specialist as Proposer | Arbiter).enabled = true;
+  await getStore().setSpecialist(specialist);
 }
 
 /**
  * Disables a specialist (sets enabled = false).
  */
-export function disableSpecialist(specialistId: string): void {
-  const specialist = specialists.get(specialistId);
+export async function disableSpecialist(specialistId: string): Promise<void> {
+  const specialist = await getStore().getSpecialist(specialistId);
   if (!specialist) {
     throw new Error(`Specialist not found: ${specialistId}`);
   }
   (specialist as Proposer | Arbiter).enabled = false;
+  await getStore().setSpecialist(specialist);
 }
 
 /**
  * Gets enabled proposers for a machine (enabled is true or undefined).
  */
-export function getEnabledProposers(machineName: string): Proposer[] {
-  return getProposers(machineName).filter((p) => p.enabled !== false);
+export async function getEnabledProposers(machineName: string): Promise<Proposer[]> {
+  const proposers = await getProposers(machineName);
+  return proposers.filter((p) => p.enabled !== false);
 }
 
 /**
  * Gets the enabled arbiter for a machine.
  */
-export function getEnabledArbiter(machineName: string): Arbiter | undefined {
-  const arbiter = getArbiter(machineName);
+export async function getEnabledArbiter(machineName: string): Promise<Arbiter | undefined> {
+  const arbiter = await getArbiter(machineName);
   if (arbiter && arbiter.enabled === false) return undefined;
   return arbiter;
 }
@@ -334,7 +330,7 @@ export function getEnabledArbiter(machineName: string): Arbiter | undefined {
  * Falls back to getProposers(machineName) if state has no specialists.
  * Respects both state-level `disabled` and global `enabled` flags.
  */
-export function getProposersForState(session: Session): Proposer[] {
+export async function getProposersForState(session: Session): Promise<Proposer[]> {
   const stateDef = session.machine.states[session.currentState];
   if (!stateDef?.specialists) {
     return getProposers(session.machineName);
@@ -343,7 +339,7 @@ export function getProposersForState(session: Session): Proposer[] {
   const result: Proposer[] = [];
   for (const spec of stateDef.specialists) {
     if (spec.role !== "proposer") continue;
-    const registered = specialists.get(spec.specialistId);
+    const registered = await getStore().getSpecialist(spec.specialistId);
     if (!registered || registered.role !== "proposer") continue;
     result.push(registered);
   }
@@ -354,7 +350,7 @@ export function getProposersForState(session: Session): Proposer[] {
  * Gets enabled proposers for the current state.
  * Filters out specialists that are disabled at the state level or globally.
  */
-export function getEnabledProposersForState(session: Session): Proposer[] {
+export async function getEnabledProposersForState(session: Session): Promise<Proposer[]> {
   const stateDef = session.machine.states[session.currentState];
   if (!stateDef?.specialists) {
     return getEnabledProposers(session.machineName);
@@ -366,7 +362,8 @@ export function getEnabledProposersForState(session: Session): Proposer[] {
     if (spec.disabled) disabledInState.add(spec.specialistId);
   }
 
-  return getProposersForState(session).filter(
+  const proposers = await getProposersForState(session);
+  return proposers.filter(
     (p) => p.enabled !== false && !disabledInState.has(p.specialistId)
   );
 }
@@ -375,7 +372,7 @@ export function getEnabledProposersForState(session: Session): Proposer[] {
  * Gets the arbiter declared in the current state's specialists array.
  * Falls back to getArbiter(machineName).
  */
-export function getArbiterForState(session: Session): Arbiter | undefined {
+export async function getArbiterForState(session: Session): Promise<Arbiter | undefined> {
   const stateDef = session.machine.states[session.currentState];
   if (!stateDef?.specialists) {
     return getArbiter(session.machineName);
@@ -383,7 +380,7 @@ export function getArbiterForState(session: Session): Arbiter | undefined {
 
   for (const spec of stateDef.specialists) {
     if (spec.role !== "arbiter") continue;
-    const registered = specialists.get(spec.specialistId);
+    const registered = await getStore().getSpecialist(spec.specialistId);
     if (registered && registered.role === "arbiter") {
       return registered;
     }
@@ -549,7 +546,7 @@ export async function submitProposal(
     numOutputTokens,
   } = opts;
   const session = await getSession(sessionId);
-  const specialist = specialists.get(specialistId);
+  const specialist = await getStore().getSpecialist(specialistId);
 
   if (!specialist) {
     throw new Error(`Specialist not found: ${specialistId}`);
@@ -602,20 +599,18 @@ export async function submitProposal(
     createdAt: new Date(),
   };
 
-  proposals.set(proposal.proposalId, proposal);
+  await getStore().setProposal(proposal);
   return proposal;
 }
 
 /**
  * Gets all proposals for a session's current round.
  */
-export function getProposalsForRound(
+export async function getProposalsForRound(
   sessionId: string,
   roundId: string
-): Proposal[] {
-  return [...proposals.values()].filter(
-    (p) => p.sessionId === sessionId && p.roundId === roundId
-  );
+): Promise<Proposal[]> {
+  return getStore().getProposalsByRound(sessionId, roundId);
 }
 
 /**
@@ -626,13 +621,13 @@ export async function evaluateConsensus(
   sessionId: string
 ): Promise<ConsensusResult> {
   const session = await getSession(sessionId);
-  const arbiter = getArbiterForState(session);
+  const arbiter = await getArbiterForState(session);
 
   if (!arbiter) {
     throw new Error(`No arbiter registered for machine: ${session.machineName}`);
   }
 
-  const roundProposals = getProposalsForRound(sessionId, session.currentRoundId);
+  const roundProposals = await getProposalsForRound(sessionId, session.currentRoundId);
 
   const ctx = buildArbiterContext(
     session,
@@ -643,7 +638,7 @@ export async function evaluateConsensus(
   // Build alignment scores for context (per-state if state has specialists)
   const stateDef = session.machine.states[session.currentState];
   const stateParam = stateDef?.specialists ? session.currentState : undefined;
-  const records = getAllAlignmentRecords(session.machineName, stateParam);
+  const records = await getAllAlignmentRecords(session.machineName, stateParam);
   const alignmentScores: Record<string, number> = {};
   for (const r of records) {
     alignmentScores[r.specialistId] = r.alignmentScore;
@@ -705,7 +700,7 @@ function parseConsensusMargin(reasoning: string): number | null {
 /**
  * Builds and stores a DecisionRecord for monitoring.
  */
-function emitDecisionRecord(
+async function emitDecisionRecord(
   session: Session,
   roundId: string,
   transitionName: string,
@@ -714,9 +709,9 @@ function emitDecisionRecord(
   roundProposals: Proposal[],
   consensusReasoning: string | null,
   threshold: number
-): void {
+): Promise<void> {
   const alignmentSnapshot: Record<string, number> = {};
-  for (const r of getAllAlignmentRecords(session.machineName)) {
+  for (const r of await getAllAlignmentRecords(session.machineName)) {
     alignmentSnapshot[r.specialistId] = r.alignmentScore;
   }
 
@@ -736,7 +731,7 @@ function emitDecisionRecord(
     timestamp: new Date(),
   };
 
-  decisionLog.set(record.decisionId, record);
+  await getStore().setDecisionRecord(record);
 }
 
 /**
@@ -775,11 +770,11 @@ export async function submitArbitration(
   };
 
   // Determine if specialist is human
-  const specialist = specialistId ? specialists.get(specialistId) : undefined;
+  const specialist = specialistId ? await getStore().getSpecialist(specialistId) : undefined;
   const isHuman = specialist != null && "isHuman" in specialist && specialist.isHuman === true;
 
   const currentStateDef = session.machine.states[session.currentState];
-  const roundProposals = getProposalsForRound(sessionId, effectiveRoundId);
+  const roundProposals = await getProposalsForRound(sessionId, effectiveRoundId);
 
   const path = classifyArbitration(
     session.currentRoundId,
@@ -825,7 +820,7 @@ export async function submitArbitration(
     case "humanOverride": {
       // Create exemplar from human decision
       const proposerCtx = buildProposerContext(session);
-      createExemplar(
+      await createExemplar(
         session.machineName,
         session.currentState,
         proposerCtx,
@@ -836,7 +831,7 @@ export async function submitArbitration(
 
       // Update alignment for all specialists (per-state if applicable)
       const stateHasSpecs = !!currentStateDef?.specialists;
-      updateAlignmentAfterHumanDecision(
+      await updateAlignmentAfterHumanDecision(
         session.machineName,
         path.transitionName,
         roundProposals,
@@ -844,8 +839,8 @@ export async function submitArbitration(
       );
 
       // Emit decision record before executeTransition deletes proposals
-      const arbiter = getArbiterForState(session);
-      emitDecisionRecord(
+      const arbiter = await getArbiterForState(session);
+      await emitDecisionRecord(
         session, effectiveRoundId,
         path.transitionName, path.toState, true,
         roundProposals, null,
@@ -894,7 +889,7 @@ export async function submitArbitration(
       }
 
       // Find the winning proposal
-      const winningProposal = proposals.get(consensusResult.winningProposalId!);
+      const winningProposal = await getStore().getProposal(consensusResult.winningProposalId!);
       if (!winningProposal) {
         return {
           ...base,
@@ -907,8 +902,8 @@ export async function submitArbitration(
       }
 
       // Emit decision record before executeTransition deletes proposals
-      const evalArbiter = getArbiterForState(session);
-      emitDecisionRecord(
+      const evalArbiter = await getArbiterForState(session);
+      await emitDecisionRecord(
         session, effectiveRoundId,
         winningProposal.transitionName, winningProposal.toState, false,
         roundProposals, consensusResult.reasoning,
@@ -985,11 +980,7 @@ export async function executeTransition(
   session.currentRoundId = generateUUID();
 
   // Clear proposals for this session
-  for (const [id, proposal] of proposals.entries()) {
-    if (proposal.sessionId === sessionId) {
-      proposals.delete(id);
-    }
-  }
+  await getStore().deleteProposalsBySession(sessionId);
 
   return session;
 }

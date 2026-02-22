@@ -33,8 +33,8 @@ function twoOptionMachine(): MachineDefinition {
 }
 
 describe("DIAL_128–DIAL_142: Submit Arbitration", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   test("DIAL_128: evaluates consensus and executes transition when reached", async () => {
@@ -239,7 +239,7 @@ describe("DIAL_128–DIAL_142: Submit Arbitration", () => {
       reasoning: "Human chose approve",
     });
 
-    const exemplarList = getExemplars("arbitration-test");
+    const exemplarList = await getExemplars("arbitration-test");
     expect(exemplarList.length).toBeGreaterThanOrEqual(1);
     expect(exemplarList[0].humanTransitionName).toBe("approve");
   });
@@ -276,7 +276,7 @@ describe("DIAL_128–DIAL_142: Submit Arbitration", () => {
       reasoning: "Human chose approve",
     });
 
-    const records = getAllAlignmentRecords("arbitration-test");
+    const records = await getAllAlignmentRecords("arbitration-test");
     expect(records.length).toBeGreaterThanOrEqual(1);
     // bot1 proposed "approve" (firstAvailable), human chose "approve" => matched
     const bot1Record = records.find((r) => r.specialistId === "bot1");

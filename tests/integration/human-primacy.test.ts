@@ -19,8 +19,8 @@ import {
 import type { MachineDefinition } from "../../src/dialai/types.js";
 
 describe("Integration: Human Primacy", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   const machine: MachineDefinition = {
@@ -69,8 +69,8 @@ describe("Integration: Human Primacy", () => {
     });
 
     // Seed high alignment for AI proposers
-    for (let i = 0; i < 10; i++) updateAlignment("ai-1", "human-primacy", true);
-    for (let i = 0; i < 10; i++) updateAlignment("ai-2", "human-primacy", true);
+    for (let i = 0; i < 10; i++) await updateAlignment("ai-1", "human-primacy", true);
+    for (let i = 0; i < 10; i++) await updateAlignment("ai-2", "human-primacy", true);
 
     // Both AI proposers submit "approve" (firstAvailable)
     await submitProposal({
@@ -103,12 +103,12 @@ describe("Integration: Human Primacy", () => {
     expect(updated.currentState).toBe("rejected");
 
     // Exemplar was created capturing the human decision
-    const exemplarList = getExemplars("human-primacy");
+    const exemplarList = await getExemplars("human-primacy");
     expect(exemplarList).toHaveLength(1);
     expect(exemplarList[0].humanTransitionName).toBe("reject");
 
     // Alignment records updated — AI proposers that proposed "approve" get a mismatch
-    const records = getAllAlignmentRecords("human-primacy");
+    const records = await getAllAlignmentRecords("human-primacy");
     const ai1Record = records.find((r) => r.specialistId === "ai-1");
     const ai2Record = records.find((r) => r.specialistId === "ai-2");
 

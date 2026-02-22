@@ -21,8 +21,8 @@ import type {
 } from "../../src/dialai/types.js";
 
 describe("E2E: Edge Cases and Error Recovery", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   it("DIAL_393: session already at goalState — runSession returns immediately", async () => {
@@ -135,7 +135,7 @@ describe("E2E: Edge Cases and Error Recovery", () => {
     expect(proposal.reasoning).toBe("I picked something invalid");
 
     // Verify it's stored in the proposals map
-    const stored = getProposalsForRound(session.sessionId, session.currentRoundId);
+    const stored = await getProposalsForRound(session.sessionId, session.currentRoundId);
     expect(stored).toHaveLength(1);
     expect(stored[0].transitionName).toBe("nonexistent");
   });
@@ -195,7 +195,7 @@ describe("E2E: Edge Cases and Error Recovery", () => {
       });
     }
 
-    const allProposals = getProposalsForRound(session.sessionId, session.currentRoundId);
+    const allProposals = await getProposalsForRound(session.sessionId, session.currentRoundId);
     expect(allProposals).toHaveLength(100);
 
     // All proposals should be for "go" transition
@@ -242,7 +242,7 @@ describe("E2E: Edge Cases and Error Recovery", () => {
     }
 
     expect(results).toHaveLength(10);
-    const stored = getProposalsForRound(session.sessionId, session.currentRoundId);
+    const stored = await getProposalsForRound(session.sessionId, session.currentRoundId);
     expect(stored).toHaveLength(10);
 
     // All proposal IDs should be unique
@@ -505,8 +505,8 @@ describe("E2E: Edge Cases and Error Recovery", () => {
     });
 
     // Session B should have no proposals
-    const proposalsA = getProposalsForRound(sessionA.sessionId, sessionA.currentRoundId);
-    const proposalsB = getProposalsForRound(sessionB.sessionId, sessionB.currentRoundId);
+    const proposalsA = await getProposalsForRound(sessionA.sessionId, sessionA.currentRoundId);
+    const proposalsB = await getProposalsForRound(sessionB.sessionId, sessionB.currentRoundId);
 
     expect(proposalsA).toHaveLength(1);
     expect(proposalsB).toHaveLength(0);

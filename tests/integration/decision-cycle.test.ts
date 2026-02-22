@@ -17,8 +17,8 @@ import {
 import type { MachineDefinition } from "../../src/dialai/types.js";
 
 describe("Integration: Decision Cycle", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   it("DIAL_277: completes a full decision cycle with alignment-weighted consensus", async () => {
@@ -61,10 +61,10 @@ describe("Integration: Decision Cycle", () => {
     });
 
     // Seed alignment: p1 has high alignment, p2 has low
-    for (let i = 0; i < 9; i++) updateAlignment("p1", "consensus-test", true);
-    updateAlignment("p1", "consensus-test", false);
-    for (let i = 0; i < 2; i++) updateAlignment("p2", "consensus-test", true);
-    for (let i = 0; i < 8; i++) updateAlignment("p2", "consensus-test", false);
+    for (let i = 0; i < 9; i++) await updateAlignment("p1", "consensus-test", true);
+    await updateAlignment("p1", "consensus-test", false);
+    for (let i = 0; i < 2; i++) await updateAlignment("p2", "consensus-test", true);
+    for (let i = 0; i < 8; i++) await updateAlignment("p2", "consensus-test", false);
 
     // Submit proposals
     const propA = await submitProposal({

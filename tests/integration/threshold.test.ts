@@ -17,8 +17,8 @@ import {
 import type { MachineDefinition } from "../../src/dialai/types.js";
 
 describe("Integration: Consensus Threshold Behavior", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   const machine: MachineDefinition = {
@@ -86,10 +86,10 @@ describe("Integration: Consensus Threshold Behavior", () => {
 
     // leader alignment = 0.8, runner-up alignment = 0.2
     // margin = (0.8 - 0.2) / 1.0 = 0.6 >= 0.5
-    for (let i = 0; i < 8; i++) updateAlignment("leader", "threshold-test", true);
-    for (let i = 0; i < 2; i++) updateAlignment("leader", "threshold-test", false);
-    for (let i = 0; i < 2; i++) updateAlignment("runner-up", "threshold-test", true);
-    for (let i = 0; i < 8; i++) updateAlignment("runner-up", "threshold-test", false);
+    for (let i = 0; i < 8; i++) await updateAlignment("leader", "threshold-test", true);
+    for (let i = 0; i < 2; i++) await updateAlignment("leader", "threshold-test", false);
+    for (let i = 0; i < 2; i++) await updateAlignment("runner-up", "threshold-test", true);
+    for (let i = 0; i < 8; i++) await updateAlignment("runner-up", "threshold-test", false);
 
     // leader proposes "approve" (firstAvailable), runner-up proposes "reject" (lastAvailable)
     await submitProposal({
@@ -129,10 +129,10 @@ describe("Integration: Consensus Threshold Behavior", () => {
 
     // strong = 0.8, weak = 0.2
     // margin = (0.8 - 0.2) / 1.0 = 0.6 < 0.9 — not enough
-    for (let i = 0; i < 8; i++) updateAlignment("strong", "threshold-test", true);
-    for (let i = 0; i < 2; i++) updateAlignment("strong", "threshold-test", false);
-    for (let i = 0; i < 2; i++) updateAlignment("weak", "threshold-test", true);
-    for (let i = 0; i < 8; i++) updateAlignment("weak", "threshold-test", false);
+    for (let i = 0; i < 8; i++) await updateAlignment("strong", "threshold-test", true);
+    for (let i = 0; i < 2; i++) await updateAlignment("strong", "threshold-test", false);
+    for (let i = 0; i < 2; i++) await updateAlignment("weak", "threshold-test", true);
+    for (let i = 0; i < 8; i++) await updateAlignment("weak", "threshold-test", false);
 
     await submitProposal({
       sessionId: session.sessionId,
@@ -172,8 +172,8 @@ describe("Integration: Consensus Threshold Behavior", () => {
 
     // Both proposers have alignment and propose the same transition ("approve")
     // All proposals for same transition means margin = 1.0, but threshold=1.0 blocks all
-    for (let i = 0; i < 5; i++) updateAlignment("p1", "threshold-test", true);
-    for (let i = 0; i < 5; i++) updateAlignment("p2", "threshold-test", true);
+    for (let i = 0; i < 5; i++) await updateAlignment("p1", "threshold-test", true);
+    for (let i = 0; i < 5; i++) await updateAlignment("p2", "threshold-test", true);
 
     await submitProposal({
       sessionId: session.sessionId,
@@ -220,7 +220,7 @@ describe("Integration: Consensus Threshold Behavior", () => {
       threshold: 0.9,
     });
 
-    const effectiveThreshold = getEffectiveThreshold(session);
+    const effectiveThreshold = await getEffectiveThreshold(session);
     // State-level threshold (0.2) takes priority over machine-level (0.8) and arbiter (0.9)
     expect(effectiveThreshold).toBe(0.2);
   });
@@ -254,7 +254,7 @@ describe("Integration: Consensus Threshold Behavior", () => {
       threshold: 0.9,
     });
 
-    const effectiveThreshold = getEffectiveThreshold(session);
+    const effectiveThreshold = await getEffectiveThreshold(session);
     // Machine-level threshold (0.6) takes priority over arbiter threshold (0.9)
     expect(effectiveThreshold).toBe(0.6);
   });

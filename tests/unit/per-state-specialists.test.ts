@@ -80,8 +80,8 @@ function multiStateMachine(): MachineDefinition {
 }
 
 describe("Per-state specialist lookup", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   test("getProposersForState returns state-level proposers when declared", async () => {
@@ -97,7 +97,7 @@ describe("Per-state specialist lookup", () => {
     });
 
     const session = await createSession(perStateMachine());
-    const proposers = getProposersForState(session);
+    const proposers = await getProposersForState(session);
 
     expect(proposers).toHaveLength(2);
     expect(proposers.map((p) => p.specialistId)).toEqual(["state-p1", "state-p2"]);
@@ -111,7 +111,7 @@ describe("Per-state specialist lookup", () => {
     });
 
     const session = await createSession(machineLevelMachine());
-    const proposers = getProposersForState(session);
+    const proposers = await getProposersForState(session);
 
     expect(proposers).toHaveLength(1);
     expect(proposers[0].specialistId).toBe("machine-p1");
@@ -130,7 +130,7 @@ describe("Per-state specialist lookup", () => {
     });
 
     const session = await createSession(perStateMachine());
-    const enabled = getEnabledProposersForState(session);
+    const enabled = await getEnabledProposersForState(session);
 
     expect(enabled).toHaveLength(1);
     expect(enabled[0].specialistId).toBe("state-p1");
@@ -151,7 +151,7 @@ describe("Per-state specialist lookup", () => {
       strategyFnName: "firstAvailable",
     });
 
-    const arbiter = getArbiterForState(session);
+    const arbiter = await getArbiterForState(session);
     expect(arbiter).toBeDefined();
     expect(arbiter!.specialistId).toBe("state-arbiter");
   });
@@ -164,7 +164,7 @@ describe("Per-state specialist lookup", () => {
     });
 
     const session = await createSession(machineLevelMachine());
-    const arbiter = getArbiterForState(session);
+    const arbiter = await getArbiterForState(session);
 
     expect(arbiter).toBeDefined();
     expect(arbiter!.specialistId).toBe("machine-arb");
@@ -174,13 +174,13 @@ describe("Per-state specialist lookup", () => {
     await createSession(perStateMachine());
 
     // state-arbiter should have been auto-registered
-    const arbiter = getSpecialist("state-arbiter");
+    const arbiter = await getSpecialist("state-arbiter");
     expect(arbiter).toBeDefined();
     expect(arbiter!.role).toBe("arbiter");
 
     // state-p1 and state-p2 have no strategyFnName, so NOT auto-registered
-    expect(getSpecialist("state-p1")).toBeUndefined();
-    expect(getSpecialist("state-p2")).toBeUndefined();
+    expect(await getSpecialist("state-p1")).toBeUndefined();
+    expect(await getSpecialist("state-p2")).toBeUndefined();
   });
 
   test("createSession does not duplicate auto-registration of existing specialists", async () => {
@@ -198,8 +198,8 @@ describe("Per-state specialist lookup", () => {
 });
 
 describe("Per-state alignment tracking", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   test("alignment tracked per-state with 3-part key", async () => {
@@ -209,11 +209,11 @@ describe("Per-state alignment tracking", () => {
       strategyFnName: "firstAvailable",
     });
 
-    updateAlignment("p1", "test", true, "state-a");
-    updateAlignment("p1", "test", false, "state-b");
+    await updateAlignment("p1", "test", true, "state-a");
+    await updateAlignment("p1", "test", false, "state-b");
 
-    expect(getAlignmentScore("p1", "test", "state-a")).toBeCloseTo(0.2065, 3);
-    expect(getAlignmentScore("p1", "test", "state-b")).toBe(0);
+    expect(await getAlignmentScore("p1", "test", "state-a")).toBeCloseTo(0.2065, 3);
+    expect(await getAlignmentScore("p1", "test", "state-b")).toBe(0);
   });
 
   test("alignment without state uses 2-part key (backward compat)", async () => {
@@ -223,10 +223,10 @@ describe("Per-state alignment tracking", () => {
       strategyFnName: "firstAvailable",
     });
 
-    updateAlignment("p1", "test", true);
-    expect(getAlignmentScore("p1", "test")).toBeCloseTo(0.2065, 3);
+    await updateAlignment("p1", "test", true);
+    expect(await getAlignmentScore("p1", "test")).toBeCloseTo(0.2065, 3);
     // Per-state key should not exist
-    expect(getAlignmentScore("p1", "test", "some-state")).toBe(0);
+    expect(await getAlignmentScore("p1", "test", "some-state")).toBe(0);
   });
 
   test("per-state and non-state alignment are independent", async () => {
@@ -236,11 +236,11 @@ describe("Per-state alignment tracking", () => {
       strategyFnName: "firstAvailable",
     });
 
-    updateAlignment("p1", "test", true);
-    updateAlignment("p1", "test", false, "state-a");
+    await updateAlignment("p1", "test", true);
+    await updateAlignment("p1", "test", false, "state-a");
 
-    expect(getAlignmentScore("p1", "test")).toBeCloseTo(0.2065, 3);
-    expect(getAlignmentScore("p1", "test", "state-a")).toBe(0);
+    expect(await getAlignmentScore("p1", "test")).toBeCloseTo(0.2065, 3);
+    expect(await getAlignmentScore("p1", "test", "state-a")).toBe(0);
   });
 
   test("getAllAlignmentRecords filters by state when provided", async () => {
@@ -255,20 +255,20 @@ describe("Per-state alignment tracking", () => {
       strategyFnName: "lastAvailable",
     });
 
-    updateAlignment("p1", "test", true, "state-a");
-    updateAlignment("p2", "test", true, "state-b");
-    updateAlignment("p1", "test", true); // no state
+    await updateAlignment("p1", "test", true, "state-a");
+    await updateAlignment("p2", "test", true, "state-b");
+    await updateAlignment("p1", "test", true); // no state
 
-    const stateA = getAllAlignmentRecords("test", "state-a");
+    const stateA = await getAllAlignmentRecords("test", "state-a");
     expect(stateA).toHaveLength(1);
     expect(stateA[0].specialistId).toBe("p1");
 
-    const stateB = getAllAlignmentRecords("test", "state-b");
+    const stateB = await getAllAlignmentRecords("test", "state-b");
     expect(stateB).toHaveLength(1);
     expect(stateB[0].specialistId).toBe("p2");
 
     // Without state filter: returns all records for the machine
-    const all = getAllAlignmentRecords("test");
+    const all = await getAllAlignmentRecords("test");
     expect(all).toHaveLength(3);
   });
 
@@ -279,9 +279,9 @@ describe("Per-state alignment tracking", () => {
       strategyFnName: "firstAvailable",
     });
 
-    updateAlignment("p1", "test", true, "my-state");
+    await updateAlignment("p1", "test", true, "my-state");
 
-    const records = getAllAlignmentRecords("test", "my-state");
+    const records = await getAllAlignmentRecords("test", "my-state");
     expect(records).toHaveLength(1);
     expect(records[0].state).toBe("my-state");
   });
@@ -293,17 +293,17 @@ describe("Per-state alignment tracking", () => {
       strategyFnName: "firstAvailable",
     });
 
-    updateAlignment("p1", "test", true);
+    await updateAlignment("p1", "test", true);
 
-    const records = getAllAlignmentRecords("test");
+    const records = await getAllAlignmentRecords("test");
     expect(records).toHaveLength(1);
     expect(records[0].state).toBeUndefined();
   });
 });
 
 describe("Multi-state specialist declarations", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   test("different states can declare different specialists", async () => {
@@ -321,19 +321,19 @@ describe("Multi-state specialist declarations", () => {
     const session = await createSession(multiStateMachine());
 
     // In "review" state, should get legal-reviewer
-    const reviewProposers = getProposersForState(session);
+    const reviewProposers = await getProposersForState(session);
     expect(reviewProposers).toHaveLength(1);
     expect(reviewProposers[0].specialistId).toBe("legal-reviewer");
 
     // review-arbiter and build-arbiter auto-registered by createSession
-    const reviewArbiter = getArbiterForState(session);
+    const reviewArbiter = await getArbiterForState(session);
     expect(reviewArbiter?.specialistId).toBe("review-arbiter");
   });
 });
 
 describe("Disabled flag", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   test("disabled specialist is in getProposersForState but not getEnabledProposersForState", async () => {
@@ -350,10 +350,10 @@ describe("Disabled flag", () => {
 
     const session = await createSession(perStateMachine());
 
-    const all = getProposersForState(session);
+    const all = await getProposersForState(session);
     expect(all).toHaveLength(2);
 
-    const enabled = getEnabledProposersForState(session);
+    const enabled = await getEnabledProposersForState(session);
     expect(enabled).toHaveLength(1);
     expect(enabled[0].specialistId).toBe("state-p1");
   });
@@ -368,11 +368,11 @@ describe("Disabled flag", () => {
     const session = await createSession(perStateMachine());
 
     // In "active" state, state-p2 is disabled
-    const enabledActive = getEnabledProposersForState(session);
+    const enabledActive = await getEnabledProposersForState(session);
     expect(enabledActive.find((p) => p.specialistId === "state-p2")).toBeUndefined();
 
     // But the specialist itself is globally enabled (enabled !== false)
-    const specialist = getSpecialist("state-p2");
+    const specialist = await getSpecialist("state-p2");
     expect(specialist).toBeDefined();
     expect((specialist as { enabled?: boolean }).enabled).not.toBe(false);
   });

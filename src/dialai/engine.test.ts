@@ -8,8 +8,8 @@ import { runSession } from "./engine.js";
 import type { MachineDefinition } from "./types.js";
 
 describe("runSession", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   it("runs a simple machine to completion", async () => {

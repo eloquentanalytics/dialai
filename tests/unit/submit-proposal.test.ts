@@ -25,8 +25,8 @@ function twoOptionMachine(): MachineDefinition {
 }
 
 describe("DIAL_056–DIAL_071: Proposal Submission", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   test("DIAL_056: submits proposal via strategyFn invocation", async () => {

@@ -8,8 +8,8 @@ import {
 import type { MachineDefinition } from "../../src/dialai/types.js";
 
 describe("DIAL_011–DIAL_025: Machine Definition Validation", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   test("DIAL_011: rejects non-object input", () => {

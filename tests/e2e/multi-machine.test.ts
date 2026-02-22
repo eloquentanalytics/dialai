@@ -27,8 +27,8 @@ import type {
 } from "../../src/dialai/types.js";
 
 describe("E2E: Multi-Machine Isolation", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   const machineA: MachineDefinition = {
@@ -64,8 +64,8 @@ describe("E2E: Multi-Machine Isolation", () => {
       strategyFnName: "firstAvailable",
     });
 
-    const proposersA = getProposers("machine-a");
-    const proposersB = getProposers("machine-b");
+    const proposersA = await getProposers("machine-a");
+    const proposersB = await getProposers("machine-b");
 
     expect(proposersA).toHaveLength(1);
     expect(proposersA[0].specialistId).toBe("p-a");
@@ -88,22 +88,22 @@ describe("E2E: Multi-Machine Isolation", () => {
     });
 
     // Seed alignment for shared-p-a on machine-a
-    updateAlignment("shared-p-a", "machine-a", true);
-    updateAlignment("shared-p-a", "machine-a", true);
+    await updateAlignment("shared-p-a", "machine-a", true);
+    await updateAlignment("shared-p-a", "machine-a", true);
 
     // Seed alignment for shared-p-b on machine-b
-    updateAlignment("shared-p-b", "machine-b", false);
+    await updateAlignment("shared-p-b", "machine-b", false);
 
     // Verify independent alignment records
-    expect(getAlignmentScore("shared-p-a", "machine-a")).toBeCloseTo(0.3423, 3);
-    expect(getAlignmentScore("shared-p-b", "machine-b")).toBe(0);
+    expect(await getAlignmentScore("shared-p-a", "machine-a")).toBeCloseTo(0.3423, 3);
+    expect(await getAlignmentScore("shared-p-b", "machine-b")).toBe(0);
 
     // Cross-machine queries return 0 (no record)
-    expect(getAlignmentScore("shared-p-a", "machine-b")).toBe(0);
-    expect(getAlignmentScore("shared-p-b", "machine-a")).toBe(0);
+    expect(await getAlignmentScore("shared-p-a", "machine-b")).toBe(0);
+    expect(await getAlignmentScore("shared-p-b", "machine-a")).toBe(0);
 
-    const recordsA = getAllAlignmentRecords("machine-a");
-    const recordsB = getAllAlignmentRecords("machine-b");
+    const recordsA = await getAllAlignmentRecords("machine-a");
+    const recordsB = await getAllAlignmentRecords("machine-b");
 
     expect(recordsA).toHaveLength(1);
     expect(recordsA[0].specialistId).toBe("shared-p-a");
@@ -123,10 +123,10 @@ describe("E2E: Multi-Machine Isolation", () => {
       history: [],
     };
 
-    createExemplar("machine-a", "start", ctx, "finish", "end", []);
+    await createExemplar("machine-a", "start", ctx, "finish", "end", []);
 
-    const exemplarsA = getExemplars("machine-a");
-    const exemplarsB = getExemplars("machine-b");
+    const exemplarsA = await getExemplars("machine-a");
+    const exemplarsB = await getExemplars("machine-b");
 
     expect(exemplarsA).toHaveLength(1);
     expect(exemplarsA[0].humanTransitionName).toBe("finish");
@@ -175,8 +175,8 @@ describe("E2E: Multi-Machine Isolation", () => {
     });
 
     // Check proposals are isolated
-    const proposals1 = getProposalsForRound(session1.sessionId, session1.currentRoundId);
-    const proposals2 = getProposalsForRound(session2.sessionId, session2.currentRoundId);
+    const proposals1 = await getProposalsForRound(session1.sessionId, session1.currentRoundId);
+    const proposals2 = await getProposalsForRound(session2.sessionId, session2.currentRoundId);
 
     expect(proposals1).toHaveLength(1);
     expect(proposals2).toHaveLength(0);
@@ -188,7 +188,7 @@ describe("E2E: Multi-Machine Isolation", () => {
       roundId: session2.currentRoundId,
     });
 
-    const proposals2After = getProposalsForRound(session2.sessionId, session2.currentRoundId);
+    const proposals2After = await getProposalsForRound(session2.sessionId, session2.currentRoundId);
     expect(proposals2After).toHaveLength(1);
 
     // Arbitrate session 1

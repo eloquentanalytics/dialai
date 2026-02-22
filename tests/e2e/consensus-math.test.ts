@@ -28,8 +28,8 @@ import type {
 } from "../../src/dialai/types.js";
 
 describe("E2E: Consensus Math Verification", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   const machine: MachineDefinition = {
@@ -56,18 +56,18 @@ describe("E2E: Consensus Math Verification", () => {
    * than the raw rate, especially for small sample sizes. Use large
    * totalComparisons (1000+) to get Wilson scores close to the raw rate.
    */
-  function seedAlignment(
+  async function seedAlignment(
     specialistId: string,
     machineName: string,
     score: number,
     totalComparisons: number = 10
-  ): void {
+  ): Promise<void> {
     const matches = Math.round(score * totalComparisons);
     for (let i = 0; i < matches; i++) {
-      updateAlignment(specialistId, machineName, true);
+      await updateAlignment(specialistId, machineName, true);
     }
     for (let i = 0; i < totalComparisons - matches; i++) {
-      updateAlignment(specialistId, machineName, false);
+      await updateAlignment(specialistId, machineName, false);
     }
   }
 
@@ -102,12 +102,12 @@ describe("E2E: Consensus Math Verification", () => {
     });
 
     // Seed alignment with large sample size so Wilson scores are close to raw rates
-    seedAlignment("p1", "math-test", 0.9, 1000);
-    seedAlignment("p2", "math-test", 0.6, 1000);
+    await seedAlignment("p1", "math-test", 0.9, 1000);
+    await seedAlignment("p2", "math-test", 0.6, 1000);
 
     // Verify alignment scores are non-trivial (Wilson scores will be below raw rates)
-    expect(getAlignmentScore("p1", "math-test")).toBeGreaterThan(0.8);
-    expect(getAlignmentScore("p2", "math-test")).toBeGreaterThan(0.5);
+    expect(await getAlignmentScore("p1", "math-test")).toBeGreaterThan(0.8);
+    expect(await getAlignmentScore("p2", "math-test")).toBeGreaterThan(0.5);
 
     // Submit proposals
     await submitProposal({
@@ -172,13 +172,13 @@ describe("E2E: Consensus Math Verification", () => {
     });
 
     // Seed alignment with 10000 samples so Wilson ≈ raw rate
-    seedAlignment("pA", "math-test", 0.9, 10000);
-    seedAlignment("pB", "math-test", 0.6, 10000);
-    seedAlignment("pC", "math-test", 0.3, 10000);
+    await seedAlignment("pA", "math-test", 0.9, 10000);
+    await seedAlignment("pB", "math-test", 0.6, 10000);
+    await seedAlignment("pC", "math-test", 0.3, 10000);
 
-    expect(getAlignmentScore("pA", "math-test")).toBeGreaterThan(0.8);
-    expect(getAlignmentScore("pB", "math-test")).toBeGreaterThan(0.5);
-    expect(getAlignmentScore("pC", "math-test")).toBeGreaterThan(0.2);
+    expect(await getAlignmentScore("pA", "math-test")).toBeGreaterThan(0.8);
+    expect(await getAlignmentScore("pB", "math-test")).toBeGreaterThan(0.5);
+    expect(await getAlignmentScore("pC", "math-test")).toBeGreaterThan(0.2);
 
     await submitProposal({
       sessionId: session.sessionId,
@@ -242,11 +242,11 @@ describe("E2E: Consensus Math Verification", () => {
     });
 
     // Seed alignment with large sample size so Wilson scores are close to raw rates
-    seedAlignment("pX", "math-test", 0.75, 1000);
-    seedAlignment("pY", "math-test", 0.25, 1000);
+    await seedAlignment("pX", "math-test", 0.75, 1000);
+    await seedAlignment("pY", "math-test", 0.25, 1000);
 
-    expect(getAlignmentScore("pX", "math-test")).toBeGreaterThan(0.7);
-    expect(getAlignmentScore("pY", "math-test")).toBeGreaterThan(0.2);
+    expect(await getAlignmentScore("pX", "math-test")).toBeGreaterThan(0.7);
+    expect(await getAlignmentScore("pY", "math-test")).toBeGreaterThan(0.2);
 
     await submitProposal({
       sessionId: session.sessionId,
@@ -301,11 +301,11 @@ describe("E2E: Consensus Math Verification", () => {
     });
 
     // Seed alignment with large sample size so Wilson scores are close to raw rates
-    seedAlignment("pHigh", "math-test", 0.6, 1000);
-    seedAlignment("pLow", "math-test", 0.4, 1000);
+    await seedAlignment("pHigh", "math-test", 0.6, 1000);
+    await seedAlignment("pLow", "math-test", 0.4, 1000);
 
-    expect(getAlignmentScore("pHigh", "math-test")).toBeGreaterThan(0.5);
-    expect(getAlignmentScore("pLow", "math-test")).toBeGreaterThan(0.3);
+    expect(await getAlignmentScore("pHigh", "math-test")).toBeGreaterThan(0.5);
+    expect(await getAlignmentScore("pLow", "math-test")).toBeGreaterThan(0.3);
 
     await submitProposal({
       sessionId: session.sessionId,

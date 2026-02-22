@@ -26,8 +26,8 @@ import {
 import type { MachineDefinition } from "../../src/dialai/types.js";
 
 describe("E2E: Self-Healing and Re-enablement", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   const machine: MachineDefinition = {
@@ -65,22 +65,22 @@ describe("E2E: Self-Healing and Re-enablement", () => {
     });
 
     // Disable 2 of 3
-    disableSpecialist("p2");
-    disableSpecialist("p3");
+    await disableSpecialist("p2");
+    await disableSpecialist("p3");
 
-    let enabled = getEnabledProposers("self-heal");
+    let enabled = await getEnabledProposers("self-heal");
     expect(enabled).toHaveLength(1);
     expect(enabled[0].specialistId).toBe("p1");
 
     // Re-enable all disabled proposers (simulating selfHeal behavior)
-    const allProposers = getProposers("self-heal");
+    const allProposers = await getProposers("self-heal");
     for (const p of allProposers) {
       if (p.enabled === false) {
-        enableSpecialist(p.specialistId);
+        await enableSpecialist(p.specialistId);
       }
     }
 
-    enabled = getEnabledProposers("self-heal");
+    enabled = await getEnabledProposers("self-heal");
     expect(enabled).toHaveLength(3);
   });
 
@@ -111,13 +111,13 @@ describe("E2E: Self-Healing and Re-enablement", () => {
     });
 
     // Give champion high alignment to trigger champion mode
-    for (let i = 0; i < 10; i++) updateAlignment("champion", machineName, true);
+    for (let i = 0; i < 10; i++) await updateAlignment("champion", machineName, true);
 
     // Disable backups before runSession
-    disableSpecialist("backup1");
-    disableSpecialist("backup2");
+    await disableSpecialist("backup1");
+    await disableSpecialist("backup2");
 
-    expect(getEnabledProposers(machineName)).toHaveLength(1);
+    expect((await getEnabledProposers(machineName)).length).toBe(1);
 
     // runSession: champion mode -> single proposal -> aheadByK with threshold 0.5
     // Single proposal + alignment > 0 => consensus reached on firstAvailable "approve"
@@ -129,7 +129,7 @@ describe("E2E: Self-Healing and Re-enablement", () => {
 
     // After runSession, disabled proposers should be re-enabled via selfHeal
     // selfHeal is called when champion path either fails or after trip line check
-    const enabled = getEnabledProposers(machineName);
+    const enabled = await getEnabledProposers(machineName);
     // All proposers should be enabled (selfHeal re-enables all)
     expect(enabled.length).toBeGreaterThanOrEqual(1);
   });
@@ -149,27 +149,27 @@ describe("E2E: Self-Healing and Re-enablement", () => {
     });
 
     // Seed alignment history
-    updateAlignment("p1", machineName, true);
-    updateAlignment("p1", machineName, true);
-    updateAlignment("p1", machineName, false);
-    updateAlignment("p2", machineName, true);
-    updateAlignment("p2", machineName, false);
+    await updateAlignment("p1", machineName, true);
+    await updateAlignment("p1", machineName, true);
+    await updateAlignment("p1", machineName, false);
+    await updateAlignment("p2", machineName, true);
+    await updateAlignment("p2", machineName, false);
 
-    const recordsBefore = getAllAlignmentRecords(machineName);
-    const p1ScoreBefore = getAlignmentScore("p1", machineName);
-    const p2ScoreBefore = getAlignmentScore("p2", machineName);
+    const recordsBefore = await getAllAlignmentRecords(machineName);
+    const p1ScoreBefore = await getAlignmentScore("p1", machineName);
+    const p2ScoreBefore = await getAlignmentScore("p2", machineName);
 
     // Disable and re-enable
-    disableSpecialist("p1");
-    disableSpecialist("p2");
-    enableSpecialist("p1");
-    enableSpecialist("p2");
+    await disableSpecialist("p1");
+    await disableSpecialist("p2");
+    await enableSpecialist("p1");
+    await enableSpecialist("p2");
 
     // Alignment records should be unchanged
-    const recordsAfter = getAllAlignmentRecords(machineName);
+    const recordsAfter = await getAllAlignmentRecords(machineName);
     expect(recordsAfter).toHaveLength(recordsBefore.length);
-    expect(getAlignmentScore("p1", machineName)).toBe(p1ScoreBefore);
-    expect(getAlignmentScore("p2", machineName)).toBe(p2ScoreBefore);
+    expect(await getAlignmentScore("p1", machineName)).toBe(p1ScoreBefore);
+    expect(await getAlignmentScore("p2", machineName)).toBe(p2ScoreBefore);
 
     const p1Record = recordsAfter.find((r) => r.specialistId === "p1");
     expect(p1Record!.matchingChoices).toBe(2);
@@ -196,11 +196,11 @@ describe("E2E: Self-Healing and Re-enablement", () => {
     });
 
     // Disable one proposer
-    disableSpecialist("disabled");
+    await disableSpecialist("disabled");
 
     // Create a session manually and submit proposals for one round to inspect
     const session = await createSession(machine);
-    const enabledProposers = getEnabledProposers(machineName);
+    const enabledProposers = await getEnabledProposers(machineName);
 
     // Only "active" should be enabled
     expect(enabledProposers).toHaveLength(1);
@@ -215,7 +215,7 @@ describe("E2E: Self-Healing and Re-enablement", () => {
       });
     }
 
-    const proposals = getProposalsForRound(session.sessionId, session.currentRoundId);
+    const proposals = await getProposalsForRound(session.sessionId, session.currentRoundId);
     expect(proposals).toHaveLength(1);
     expect(proposals[0].specialistId).toBe("active");
     // The disabled proposer should not have a proposal
@@ -243,18 +243,18 @@ describe("E2E: Self-Healing and Re-enablement", () => {
     });
 
     // Seed alignment for both
-    for (let i = 0; i < 5; i++) updateAlignment("p1", machineName, true);
-    for (let i = 0; i < 5; i++) updateAlignment("p2", machineName, true);
+    for (let i = 0; i < 5; i++) await updateAlignment("p1", machineName, true);
+    for (let i = 0; i < 5; i++) await updateAlignment("p2", machineName, true);
 
     // Disable both
-    disableSpecialist("p1");
-    disableSpecialist("p2");
-    expect(getEnabledProposers(machineName)).toHaveLength(0);
+    await disableSpecialist("p1");
+    await disableSpecialist("p2");
+    expect((await getEnabledProposers(machineName)).length).toBe(0);
 
     // Re-enable both (simulating selfHeal)
-    enableSpecialist("p1");
-    enableSpecialist("p2");
-    expect(getEnabledProposers(machineName)).toHaveLength(2);
+    await enableSpecialist("p1");
+    await enableSpecialist("p2");
+    expect((await getEnabledProposers(machineName)).length).toBe(2);
 
     // Both re-enabled proposers can submit proposals and reach consensus
     const session = await createSession(machine);

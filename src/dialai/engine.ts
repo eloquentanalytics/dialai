@@ -40,7 +40,7 @@ const CHAMPION_THRESHOLD = 0.8;
  * Gets the effective consensus threshold for a session's current state.
  * Priority: state > machine > arbiter > 0.5
  */
-export function getEffectiveThreshold(session: Session): number {
+export async function getEffectiveThreshold(session: Session): Promise<number> {
   const stateDef = session.machine.states[session.currentState];
   if (stateDef?.consensusThreshold !== undefined) {
     return stateDef.consensusThreshold;
@@ -48,7 +48,7 @@ export function getEffectiveThreshold(session: Session): number {
   if (session.machine.consensusThreshold !== undefined) {
     return session.machine.consensusThreshold;
   }
-  const arbiter = getArbiterForState(session);
+  const arbiter = await getArbiterForState(session);
   if (arbiter?.threshold !== undefined) {
     return arbiter.threshold;
   }
@@ -59,18 +59,18 @@ export function getEffectiveThreshold(session: Session): number {
  * Selects a champion proposer — the highest-alignment proposer above threshold.
  * Returns undefined if no proposer qualifies.
  */
-export function selectChampion(
+export async function selectChampion(
   machineName: string,
   threshold: number,
   proposers?: Proposer[],
   state?: string
-): string | undefined {
-  const effectiveProposers = proposers ?? getEnabledProposers(machineName);
+): Promise<string | undefined> {
+  const effectiveProposers = proposers ?? await getEnabledProposers(machineName);
   let bestId: string | undefined;
   let bestScore = -1;
 
   for (const p of effectiveProposers) {
-    const score = getAlignmentScore(p.specialistId, machineName, state);
+    const score = await getAlignmentScore(p.specialistId, machineName, state);
     if (score >= threshold && score > bestScore) {
       bestScore = score;
       bestId = p.specialistId;
@@ -83,12 +83,12 @@ export function selectChampion(
 /**
  * Self-healing: re-enable all disabled proposers for a machine.
  */
-function selfHeal(machineName: string): void {
-  const allProposers = getProposers(machineName);
+async function selfHeal(machineName: string): Promise<void> {
+  const allProposers = await getProposers(machineName);
 
   for (const p of allProposers) {
     if (p.enabled === false) {
-      enableSpecialist(p.specialistId);
+      await enableSpecialist(p.specialistId);
     }
   }
 }
@@ -106,17 +106,17 @@ async function tickOneSession(session: Session): Promise<TickResult | null> {
   }
 
   // Check what's already been submitted this round
-  const roundProposals = getProposalsForRound(
+  const roundProposals = await getProposalsForRound(
     session.sessionId,
     session.currentRoundId
   );
   const submitted = new Set(roundProposals.map((p) => p.specialistId));
 
   // Get enabled proposers (state-aware), champion-first ordering
-  const enabledProposers = getEnabledProposersForState(session);
+  const enabledProposers = await getEnabledProposersForState(session);
   const stateDef = session.machine.states[session.currentState];
   const stateParam = stateDef?.specialists ? session.currentState : undefined;
-  const championId = selectChampion(machineName, CHAMPION_THRESHOLD, enabledProposers, stateParam);
+  const championId = await selectChampion(machineName, CHAMPION_THRESHOLD, enabledProposers, stateParam);
 
   const ordered = championId
     ? [
@@ -156,9 +156,9 @@ async function tickOneSession(session: Session): Promise<TickResult | null> {
     if (result.executed) {
       // Trip line: if champion degraded, self-heal
       if (championId) {
-        const currentScore = getAlignmentScore(championId, machineName, stateParam);
+        const currentScore = await getAlignmentScore(championId, machineName, stateParam);
         if (currentScore < CHAMPION_THRESHOLD) {
-          selfHeal(machineName);
+          await selfHeal(machineName);
         }
       }
 
@@ -257,13 +257,10 @@ export async function runSession(
   }
 
   // Register per-state specialists (deduplicated, strategyFnName only)
-  // Note: createSession already auto-registers these, but runSession may be
-  // called on machines created before createSession was updated. This ensures
-  // backward compat.
   for (const stateDef of Object.values(normalizedMachine.states)) {
     if (!stateDef.specialists) continue;
     for (const spec of stateDef.specialists) {
-      if (getSpecialist(spec.specialistId)) continue;
+      if (await getSpecialist(spec.specialistId)) continue;
       if (!spec.strategyFnName) continue;
 
       const machineName = spec.machineName ?? normalizedMachine.machineName;
@@ -291,7 +288,7 @@ export async function runSession(
   }
 
   // Register default proposer if none specified
-  const proposers = getProposers(normalizedMachine.machineName);
+  const proposers = await getProposers(normalizedMachine.machineName);
   if (proposers.length === 0) {
     await registerProposer({
       specialistId: `__default_proposer_${session.sessionId}`,
@@ -301,14 +298,14 @@ export async function runSession(
   }
 
   // Register default arbiter if none specified (always firstProposal)
-  let arbiter = getArbiter(normalizedMachine.machineName);
+  let arbiter = await getArbiter(normalizedMachine.machineName);
   if (!arbiter) {
     await registerArbiter({
       specialistId: `__default_arbiter_${session.sessionId}`,
       machineName: normalizedMachine.machineName,
       strategyFnName: "firstProposal",
     });
-    arbiter = getArbiter(normalizedMachine.machineName);
+    arbiter = await getArbiter(normalizedMachine.machineName);
   }
 
   // Tick loop: keep ticking until session is terminal or needs human

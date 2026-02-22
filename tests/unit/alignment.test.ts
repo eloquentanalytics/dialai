@@ -31,19 +31,19 @@ function twoOptionMachine(): MachineDefinition {
 }
 
 /** Seeds alignment by calling updateAlignment repeatedly. */
-function seedAlignment(
+async function seedAlignment(
   specialistId: string,
   machineName: string,
   matches: number,
   total: number
-): void {
-  for (let i = 0; i < matches; i++) updateAlignment(specialistId, machineName, true);
-  for (let i = 0; i < total - matches; i++) updateAlignment(specialistId, machineName, false);
+): Promise<void> {
+  for (let i = 0; i < matches; i++) await updateAlignment(specialistId, machineName, true);
+  for (let i = 0; i < total - matches; i++) await updateAlignment(specialistId, machineName, false);
 }
 
 describe("DIAL_198–DIAL_211: Alignment Score Tracking", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   test("DIAL_198: new AI specialist starts at alignment 0", async () => {
@@ -53,7 +53,7 @@ describe("DIAL_198–DIAL_211: Alignment Score Tracking", () => {
       strategyFnName: "firstAvailable",
     });
 
-    expect(getAlignmentScore("p1", "align-test")).toBe(0);
+    expect(await getAlignmentScore("p1", "align-test")).toBe(0);
   });
 
   test("DIAL_199: human specialist always returns alignment 1.0", async () => {
@@ -64,7 +64,7 @@ describe("DIAL_198–DIAL_211: Alignment Score Tracking", () => {
       isHuman: true,
     });
 
-    expect(getAlignmentScore("human1", "align-test")).toBe(1.0);
+    expect(await getAlignmentScore("human1", "align-test")).toBe(1.0);
   });
 
   test("DIAL_200: isHumanSpecialist returns true for human-registered specialist", async () => {
@@ -75,11 +75,11 @@ describe("DIAL_198–DIAL_211: Alignment Score Tracking", () => {
       isHuman: true,
     });
 
-    expect(isHumanSpecialist("human1")).toBe(true);
+    expect(await isHumanSpecialist("human1")).toBe(true);
   });
 
-  test("DIAL_201: isHumanSpecialist returns false for unknown specialist", () => {
-    expect(isHumanSpecialist("unknown")).toBe(false);
+  test("DIAL_201: isHumanSpecialist returns false for unknown specialist", async () => {
+    expect(await isHumanSpecialist("unknown")).toBe(false);
   });
 
   test("DIAL_202: updateAlignment increments matching choices", async () => {
@@ -89,9 +89,9 @@ describe("DIAL_198–DIAL_211: Alignment Score Tracking", () => {
       strategyFnName: "firstAvailable",
     });
 
-    updateAlignment("p1", "align-test", true);
+    await updateAlignment("p1", "align-test", true);
 
-    const records = getAllAlignmentRecords("align-test");
+    const records = await getAllAlignmentRecords("align-test");
     expect(records).toHaveLength(1);
     expect(records[0].matchingChoices).toBe(1);
     expect(records[0].totalComparisons).toBe(1);
@@ -104,9 +104,9 @@ describe("DIAL_198–DIAL_211: Alignment Score Tracking", () => {
       strategyFnName: "firstAvailable",
     });
 
-    updateAlignment("p1", "align-test", false);
+    await updateAlignment("p1", "align-test", false);
 
-    const records = getAllAlignmentRecords("align-test");
+    const records = await getAllAlignmentRecords("align-test");
     expect(records[0].matchingChoices).toBe(0);
     expect(records[0].totalComparisons).toBe(1);
   });
@@ -118,11 +118,11 @@ describe("DIAL_198–DIAL_211: Alignment Score Tracking", () => {
       strategyFnName: "firstAvailable",
     });
 
-    expect(getAllAlignmentRecords("align-test")).toHaveLength(0);
+    expect(await getAllAlignmentRecords("align-test")).toHaveLength(0);
 
-    updateAlignment("p1", "align-test", true);
+    await updateAlignment("p1", "align-test", true);
 
-    const records = getAllAlignmentRecords("align-test");
+    const records = await getAllAlignmentRecords("align-test");
     expect(records).toHaveLength(1);
     expect(records[0].specialistId).toBe("p1");
     expect(records[0].machineName).toBe("align-test");
@@ -137,9 +137,9 @@ describe("DIAL_198–DIAL_211: Alignment Score Tracking", () => {
       isHuman: true,
     });
 
-    updateAlignment("human1", "align-test", true);
+    await updateAlignment("human1", "align-test", true);
 
-    expect(getAllAlignmentRecords("align-test")).toHaveLength(0);
+    expect(await getAllAlignmentRecords("align-test")).toHaveLength(0);
   });
 
   test("DIAL_206: alignment score uses Wilson lower bound", async () => {
@@ -149,9 +149,9 @@ describe("DIAL_198–DIAL_211: Alignment Score Tracking", () => {
       strategyFnName: "firstAvailable",
     });
 
-    seedAlignment("p1", "align-test", 18, 20);
+    await seedAlignment("p1", "align-test", 18, 20);
 
-    expect(getAlignmentScore("p1", "align-test")).toBeCloseTo(0.699, 2);
+    expect(await getAlignmentScore("p1", "align-test")).toBeCloseTo(0.699, 2);
   });
 
   test("DIAL_207: updateAlignmentAfterHumanDecision checks proposers", async () => {
@@ -179,13 +179,13 @@ describe("DIAL_198–DIAL_211: Alignment Score Tracking", () => {
       roundId: session.currentRoundId,
     });
 
-    const proposals = getProposalsForRound(session.sessionId, session.currentRoundId);
+    const proposals = await getProposalsForRound(session.sessionId, session.currentRoundId);
 
     // Human chose "approve"
-    updateAlignmentAfterHumanDecision("align-test", "approve", proposals);
+    await updateAlignmentAfterHumanDecision("align-test", "approve", proposals);
 
-    expect(getAlignmentScore("p-match", "align-test")).toBeCloseTo(0.2065, 3);
-    expect(getAlignmentScore("p-miss", "align-test")).toBe(0);
+    expect(await getAlignmentScore("p-match", "align-test")).toBeCloseTo(0.2065, 3);
+    expect(await getAlignmentScore("p-miss", "align-test")).toBe(0);
   });
 
   test("DIAL_211: getAllAlignmentRecords filters by machineName", async () => {
@@ -200,10 +200,10 @@ describe("DIAL_198–DIAL_211: Alignment Score Tracking", () => {
       strategyFnName: "firstAvailable",
     });
 
-    updateAlignment("p1", "align-test", true);
-    updateAlignment("p2", "other-machine", true);
+    await updateAlignment("p1", "align-test", true);
+    await updateAlignment("p2", "other-machine", true);
 
-    const records = getAllAlignmentRecords("align-test");
+    const records = await getAllAlignmentRecords("align-test");
     expect(records).toHaveLength(1);
     expect(records[0].specialistId).toBe("p1");
   });

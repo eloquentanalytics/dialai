@@ -15,8 +15,8 @@ import {
 import type { Proposal } from "./types.js";
 
 describe("Alignment System", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   describe("isHumanSpecialist", () => {
@@ -28,7 +28,7 @@ describe("Alignment System", () => {
         strategyFnName: "firstAvailable",
       });
 
-      expect(isHumanSpecialist("human-1")).toBe(true);
+      expect(await isHumanSpecialist("human-1")).toBe(true);
     });
 
     it("returns false for AI specialists", async () => {
@@ -38,11 +38,11 @@ describe("Alignment System", () => {
         strategyFnName: "firstAvailable",
       });
 
-      expect(isHumanSpecialist("ai-1")).toBe(false);
+      expect(await isHumanSpecialist("ai-1")).toBe(false);
     });
 
-    it("returns false for unknown specialists", () => {
-      expect(isHumanSpecialist("unknown")).toBe(false);
+    it("returns false for unknown specialists", async () => {
+      expect(await isHumanSpecialist("unknown")).toBe(false);
     });
 
     it("does not match on specialistId strings", async () => {
@@ -53,7 +53,7 @@ describe("Alignment System", () => {
         // isHuman not set
       });
 
-      expect(isHumanSpecialist("human")).toBe(false);
+      expect(await isHumanSpecialist("human")).toBe(false);
     });
   });
 
@@ -66,11 +66,11 @@ describe("Alignment System", () => {
         strategyFnName: "firstAvailable",
       });
 
-      expect(getAlignmentScore("human-1", "align-test")).toBe(1.0);
+      expect(await getAlignmentScore("human-1", "align-test")).toBe(1.0);
     });
 
-    it("returns 0 for unknown specialists", () => {
-      expect(getAlignmentScore("unknown", "align-test")).toBe(0);
+    it("returns 0 for unknown specialists", async () => {
+      expect(await getAlignmentScore("unknown", "align-test")).toBe(0);
     });
 
     it("returns 0 for AI specialists with no data", async () => {
@@ -80,7 +80,7 @@ describe("Alignment System", () => {
         strategyFnName: "firstAvailable",
       });
 
-      expect(getAlignmentScore("ai-1", "align-test")).toBe(0);
+      expect(await getAlignmentScore("ai-1", "align-test")).toBe(0);
     });
   });
 
@@ -92,9 +92,9 @@ describe("Alignment System", () => {
         strategyFnName: "firstAvailable",
       });
 
-      updateAlignment("ai-1", "align-test", true);
+      await updateAlignment("ai-1", "align-test", true);
 
-      expect(getAlignmentScore("ai-1", "align-test")).toBeCloseTo(0.2065, 3);
+      expect(await getAlignmentScore("ai-1", "align-test")).toBeCloseTo(0.2065, 3);
     });
 
     it("calculates correct score over multiple updates", async () => {
@@ -104,11 +104,11 @@ describe("Alignment System", () => {
         strategyFnName: "firstAvailable",
       });
 
-      updateAlignment("ai-1", "align-test", true);
-      updateAlignment("ai-1", "align-test", false);
-      updateAlignment("ai-1", "align-test", true);
+      await updateAlignment("ai-1", "align-test", true);
+      await updateAlignment("ai-1", "align-test", false);
+      await updateAlignment("ai-1", "align-test", true);
 
-      expect(getAlignmentScore("ai-1", "align-test")).toBeCloseTo(0.2077, 3);
+      expect(await getAlignmentScore("ai-1", "align-test")).toBeCloseTo(0.2077, 3);
     });
 
     it("does not track alignment for human specialists", async () => {
@@ -119,10 +119,10 @@ describe("Alignment System", () => {
         strategyFnName: "firstAvailable",
       });
 
-      updateAlignment("human-1", "align-test", false);
+      await updateAlignment("human-1", "align-test", false);
 
       // Human alignment is always 1.0, not tracked
-      expect(getAlignmentScore("human-1", "align-test")).toBe(1.0);
+      expect(await getAlignmentScore("human-1", "align-test")).toBe(1.0);
     });
   });
 
@@ -164,10 +164,10 @@ describe("Alignment System", () => {
         },
       ];
 
-      updateAlignmentAfterHumanDecision("align-test", "to_b", proposals);
+      await updateAlignmentAfterHumanDecision("align-test", "to_b", proposals);
 
-      expect(getAlignmentScore("ai-1", "align-test")).toBeCloseTo(0.2065, 3); // matched
-      expect(getAlignmentScore("ai-2", "align-test")).toBe(0); // did not match
+      expect(await getAlignmentScore("ai-1", "align-test")).toBeCloseTo(0.2065, 3); // matched
+      expect(await getAlignmentScore("ai-2", "align-test")).toBe(0); // did not match
     });
   });
 
@@ -184,17 +184,17 @@ describe("Alignment System", () => {
         strategyFnName: "lastAvailable",
       });
 
-      updateAlignment("ai-1", "align-test", true);
-      updateAlignment("ai-2", "align-test", false);
+      await updateAlignment("ai-1", "align-test", true);
+      await updateAlignment("ai-2", "align-test", false);
 
-      const records = getAllAlignmentRecords("align-test");
+      const records = await getAllAlignmentRecords("align-test");
       expect(records).toHaveLength(2);
       expect(records.find((r) => r.specialistId === "ai-1")?.alignmentScore).toBeCloseTo(0.2065, 3);
       expect(records.find((r) => r.specialistId === "ai-2")?.alignmentScore).toBe(0);
     });
 
-    it("returns empty for unknown machine", () => {
-      expect(getAllAlignmentRecords("unknown")).toHaveLength(0);
+    it("returns empty for unknown machine", async () => {
+      expect(await getAllAlignmentRecords("unknown")).toHaveLength(0);
     });
   });
 });

@@ -39,8 +39,8 @@ function noTransitionContext(): ProposerContext {
 }
 
 describe("DIAL_143–DIAL_150: Proposer Strategies", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   test("DIAL_143: firstAvailable picks first transition by insertion order", async () => {

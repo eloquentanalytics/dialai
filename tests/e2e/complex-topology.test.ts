@@ -20,8 +20,8 @@ import type {
 } from "../../src/dialai/types.js";
 
 describe("E2E: Complex State Machine Topologies", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   it("DIAL_383: cycle in state machine (non-goal state loops)", async () => {

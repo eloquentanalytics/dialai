@@ -21,8 +21,8 @@ import {
 import type { MachineDefinition } from "../../src/dialai/types.js";
 
 describe("E2E: Trip Line — Alignment Degradation", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   const CHAMPION_THRESHOLD = 0.8;
@@ -59,18 +59,18 @@ describe("E2E: Trip Line — Alignment Degradation", () => {
     });
 
     // Set champion-p alignment high enough: 90/100 → Wilson ≈ 0.83
-    for (let i = 0; i < 90; i++) updateAlignment("champion-p", machineName, true);
-    for (let i = 0; i < 10; i++) updateAlignment("champion-p", machineName, false);
+    for (let i = 0; i < 90; i++) await updateAlignment("champion-p", machineName, true);
+    for (let i = 0; i < 10; i++) await updateAlignment("champion-p", machineName, false);
 
-    expect(getAlignmentScore("champion-p", machineName)).toBeGreaterThanOrEqual(CHAMPION_THRESHOLD);
-    expect(selectChampion(machineName, CHAMPION_THRESHOLD)).toBe("champion-p");
+    expect(await getAlignmentScore("champion-p", machineName)).toBeGreaterThanOrEqual(CHAMPION_THRESHOLD);
+    expect(await selectChampion(machineName, CHAMPION_THRESHOLD)).toBe("champion-p");
 
     // Degrade alignment: add many mismatches to drop below threshold
-    for (let i = 0; i < 20; i++) updateAlignment("champion-p", machineName, false);
+    for (let i = 0; i < 20; i++) await updateAlignment("champion-p", machineName, false);
 
     // Now 90/120 → Wilson ≈ 0.67
-    expect(getAlignmentScore("champion-p", machineName)).toBeLessThan(CHAMPION_THRESHOLD);
-    expect(selectChampion(machineName, CHAMPION_THRESHOLD)).toBeUndefined();
+    expect(await getAlignmentScore("champion-p", machineName)).toBeLessThan(CHAMPION_THRESHOLD);
+    expect(await selectChampion(machineName, CHAMPION_THRESHOLD)).toBeUndefined();
   });
 
   it("DIAL_369: trip line reverts to full solicitation cascade", async () => {
@@ -99,18 +99,18 @@ describe("E2E: Trip Line — Alignment Degradation", () => {
     });
 
     // Champion starts above threshold: 90/100 → Wilson ≈ 0.83
-    for (let i = 0; i < 90; i++) updateAlignment("champion-p", machineName, true);
-    for (let i = 0; i < 10; i++) updateAlignment("champion-p", machineName, false);
-    expect(selectChampion(machineName, CHAMPION_THRESHOLD)).toBe("champion-p");
+    for (let i = 0; i < 90; i++) await updateAlignment("champion-p", machineName, true);
+    for (let i = 0; i < 10; i++) await updateAlignment("champion-p", machineName, false);
+    expect(await selectChampion(machineName, CHAMPION_THRESHOLD)).toBe("champion-p");
 
     // Degrade champion below threshold
-    for (let i = 0; i < 20; i++) updateAlignment("champion-p", machineName, false);
+    for (let i = 0; i < 20; i++) await updateAlignment("champion-p", machineName, false);
     // Now 90/120 → Wilson ≈ 0.67
-    expect(getAlignmentScore("champion-p", machineName)).toBeLessThan(CHAMPION_THRESHOLD);
-    expect(selectChampion(machineName, CHAMPION_THRESHOLD)).toBeUndefined();
+    expect(await getAlignmentScore("champion-p", machineName)).toBeLessThan(CHAMPION_THRESHOLD);
+    expect(await selectChampion(machineName, CHAMPION_THRESHOLD)).toBeUndefined();
 
     // All proposers should still be available for full cascade
-    const enabled = getEnabledProposers(machineName);
+    const enabled = await getEnabledProposers(machineName);
     expect(enabled).toHaveLength(3);
     const enabledIds = enabled.map((p) => p.specialistId).sort();
     expect(enabledIds).toEqual(["champion-p", "p2", "p3"]);
@@ -154,16 +154,16 @@ describe("E2E: Trip Line — Alignment Degradation", () => {
       });
     }
 
-    const exemplarsBefore = getExemplars(machineName);
+    const exemplarsBefore = await getExemplars(machineName);
     expect(exemplarsBefore).toHaveLength(3);
 
     // Degrade champion alignment
     for (let i = 0; i < 5; i++) {
-      updateAlignment("champion-p", machineName, false);
+      await updateAlignment("champion-p", machineName, false);
     }
 
     // Alignment degraded, but exemplars remain intact
-    const exemplarsAfter = getExemplars(machineName);
+    const exemplarsAfter = await getExemplars(machineName);
     expect(exemplarsAfter).toHaveLength(3);
     expect(exemplarsAfter.map((e) => e.humanTransitionName)).toEqual([
       "approve",
@@ -188,16 +188,16 @@ describe("E2E: Trip Line — Alignment Degradation", () => {
     });
 
     // Initial high alignment: 90/100 → Wilson ≈ 0.83
-    for (let i = 0; i < 90; i++) updateAlignment("champion-p", machineName, true);
-    for (let i = 0; i < 10; i++) updateAlignment("champion-p", machineName, false);
-    expect(selectChampion(machineName, CHAMPION_THRESHOLD)).toBe("champion-p");
+    for (let i = 0; i < 90; i++) await updateAlignment("champion-p", machineName, true);
+    for (let i = 0; i < 10; i++) await updateAlignment("champion-p", machineName, false);
+    expect(await selectChampion(machineName, CHAMPION_THRESHOLD)).toBe("champion-p");
 
     // Degrade below threshold
-    for (let i = 0; i < 20; i++) updateAlignment("champion-p", machineName, false);
+    for (let i = 0; i < 20; i++) await updateAlignment("champion-p", machineName, false);
     // 90/120 → Wilson ≈ 0.67 -> not champion
-    expect(selectChampion(machineName, CHAMPION_THRESHOLD)).toBeUndefined();
+    expect(await selectChampion(machineName, CHAMPION_THRESHOLD)).toBeUndefined();
 
-    const recordsBefore = getAllAlignmentRecords(machineName);
+    const recordsBefore = await getAllAlignmentRecords(machineName);
     const totalBefore = recordsBefore.find((r) => r.specialistId === "champion-p")!
       .totalComparisons;
 
@@ -225,7 +225,7 @@ describe("E2E: Trip Line — Alignment Degradation", () => {
     });
 
     // New alignment data collected
-    const recordsAfter = getAllAlignmentRecords(machineName);
+    const recordsAfter = await getAllAlignmentRecords(machineName);
     const totalAfter = recordsAfter.find((r) => r.specialistId === "champion-p")!
       .totalComparisons;
     expect(totalAfter).toBe(totalBefore + 1);
@@ -247,14 +247,14 @@ describe("E2E: Trip Line — Alignment Degradation", () => {
     });
 
     // Start with high alignment: 90/100 → Wilson ≈ 0.83
-    for (let i = 0; i < 90; i++) updateAlignment("champion-p", machineName, true);
-    for (let i = 0; i < 10; i++) updateAlignment("champion-p", machineName, false);
-    expect(selectChampion(machineName, CHAMPION_THRESHOLD)).toBe("champion-p");
+    for (let i = 0; i < 90; i++) await updateAlignment("champion-p", machineName, true);
+    for (let i = 0; i < 10; i++) await updateAlignment("champion-p", machineName, false);
+    expect(await selectChampion(machineName, CHAMPION_THRESHOLD)).toBe("champion-p");
 
     // Degrade below threshold
-    for (let i = 0; i < 20; i++) updateAlignment("champion-p", machineName, false);
+    for (let i = 0; i < 20; i++) await updateAlignment("champion-p", machineName, false);
     // 90/120 → Wilson ≈ 0.67 -> not champion
-    expect(selectChampion(machineName, CHAMPION_THRESHOLD)).toBeUndefined();
+    expect(await selectChampion(machineName, CHAMPION_THRESHOLD)).toBeUndefined();
 
     // Register human for recovery calibration
     await registerProposer({
@@ -284,13 +284,13 @@ describe("E2E: Trip Line — Alignment Degradation", () => {
 
     // champion-p proposed "approve" (firstAvailable), human chose "approve" -> all match
     // Now 90+130 = 220 matches out of 120+130 = 250 total → Wilson(220,250) ≈ 0.83
-    const score = getAlignmentScore("champion-p", machineName);
+    const score = await getAlignmentScore("champion-p", machineName);
     expect(score).toBeGreaterThanOrEqual(CHAMPION_THRESHOLD);
 
     // Champion mode re-entered
     // Note: human specialist also qualifies (alignment 1.0), but champion-p
     // must also be above threshold. Verify champion-p qualifies.
-    const champion = selectChampion(machineName, CHAMPION_THRESHOLD);
+    const champion = await selectChampion(machineName, CHAMPION_THRESHOLD);
     // selectChampion picks highest alignment; human returns 1.0 so it may pick human.
     // The important assertion: champion-p's alignment recovered above threshold.
     expect(score).toBeGreaterThanOrEqual(CHAMPION_THRESHOLD);

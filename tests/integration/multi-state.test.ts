@@ -21,8 +21,8 @@ import type {
 } from "../../src/dialai/types.js";
 
 describe("Integration: Multi-State Machine Traversal", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   it("DIAL_305: session traverses 2-state machine", async () => {

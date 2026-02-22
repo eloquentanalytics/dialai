@@ -12,8 +12,8 @@ import {
 } from "../../src/dialai/index.js";
 
 describe("DIAL_237–DIAL_248: Enable/Disable Specialists", () => {
-  beforeEach(() => {
-    clear();
+  beforeEach(async () => {
+    await clear();
   });
 
   test("DIAL_237: enableSpecialist sets enabled=true", async () => {
@@ -23,8 +23,8 @@ describe("DIAL_237–DIAL_248: Enable/Disable Specialists", () => {
       strategyFnName: "firstAvailable",
     });
 
-    disableSpecialist("p1");
-    enableSpecialist("p1");
+    await disableSpecialist("p1");
+    await enableSpecialist("p1");
     expect(proposer.enabled).toBe(true);
   });
 
@@ -35,12 +35,12 @@ describe("DIAL_237–DIAL_248: Enable/Disable Specialists", () => {
       strategyFnName: "firstAvailable",
     });
 
-    disableSpecialist("p1");
+    await disableSpecialist("p1");
     expect(proposer.enabled).toBe(false);
   });
 
-  test("DIAL_239: enableSpecialist throws for unknown specialist", () => {
-    expect(() => enableSpecialist("unknown")).toThrow("Specialist not found");
+  test("DIAL_239: enableSpecialist throws for unknown specialist", async () => {
+    await expect(enableSpecialist("unknown")).rejects.toThrow("Specialist not found");
   });
 
   test("DIAL_241: newly registered specialist has enabled undefined (treated as true)", async () => {
@@ -51,7 +51,7 @@ describe("DIAL_237–DIAL_248: Enable/Disable Specialists", () => {
     });
 
     expect(proposer.enabled).toBeUndefined();
-    const enabled = getEnabledProposers("test");
+    const enabled = await getEnabledProposers("test");
     expect(enabled).toHaveLength(1);
   });
 
@@ -67,9 +67,9 @@ describe("DIAL_237–DIAL_248: Enable/Disable Specialists", () => {
       strategyFnName: "lastAvailable",
     });
 
-    disableSpecialist("p1");
+    await disableSpecialist("p1");
 
-    const enabled = getEnabledProposers("test");
+    const enabled = await getEnabledProposers("test");
     expect(enabled).toHaveLength(1);
     expect(enabled[0].specialistId).toBe("p2");
   });
@@ -81,9 +81,9 @@ describe("DIAL_237–DIAL_248: Enable/Disable Specialists", () => {
       strategyFnName: "firstProposal",
     });
 
-    disableSpecialist("a1");
+    await disableSpecialist("a1");
 
-    const arbiter = getEnabledArbiter("test");
+    const arbiter = await getEnabledArbiter("test");
     expect(arbiter).toBeUndefined();
   });
 
@@ -94,11 +94,11 @@ describe("DIAL_237–DIAL_248: Enable/Disable Specialists", () => {
       strategyFnName: "firstAvailable",
     });
 
-    disableSpecialist("p1");
-    expect(getEnabledProposers("test")).toHaveLength(0);
+    await disableSpecialist("p1");
+    expect(await getEnabledProposers("test")).toHaveLength(0);
 
-    enableSpecialist("p1");
-    expect(getEnabledProposers("test")).toHaveLength(1);
+    await enableSpecialist("p1");
+    expect(await getEnabledProposers("test")).toHaveLength(1);
   });
 
   test("DIAL_248: enable/disable does not affect alignment history", async () => {
@@ -109,16 +109,16 @@ describe("DIAL_237–DIAL_248: Enable/Disable Specialists", () => {
     });
 
     // Build some alignment
-    updateAlignment("p1", "test", true);
-    updateAlignment("p1", "test", true);
-    updateAlignment("p1", "test", false);
-    const scoreBefore = getAlignmentScore("p1", "test");
+    await updateAlignment("p1", "test", true);
+    await updateAlignment("p1", "test", true);
+    await updateAlignment("p1", "test", false);
+    const scoreBefore = await getAlignmentScore("p1", "test");
 
     // Disable and re-enable
-    disableSpecialist("p1");
-    enableSpecialist("p1");
+    await disableSpecialist("p1");
+    await enableSpecialist("p1");
 
-    const scoreAfter = getAlignmentScore("p1", "test");
+    const scoreAfter = await getAlignmentScore("p1", "test");
     expect(scoreAfter).toBe(scoreBefore);
   });
 });
