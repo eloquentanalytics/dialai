@@ -9,6 +9,14 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./store-postgres": {
+      "import": "./dist/dialai/store-postgres.js",
+      "types": "./dist/dialai/store-postgres.d.ts"
+    },
+    "./migrations": {
+      "import": "./dist/dialai/migrations/migrate.js",
+      "types": "./dist/dialai/migrations/migrate.d.ts"
     }
   },
   "bin": {
