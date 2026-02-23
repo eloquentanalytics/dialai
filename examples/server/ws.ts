@@ -125,6 +125,9 @@ async function sendSnapshot(ws: WebSocket, sessionId: string): Promise<void> {
   const snapshot = await buildSnapshot(sessionId);
   if (snapshot) {
     ws.send(JSON.stringify(snapshot));
+  } else {
+    ws.send(JSON.stringify({ type: "error", code: "SESSION_NOT_FOUND" }));
+    ws.close();
   }
 }
 

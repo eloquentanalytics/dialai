@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSession } from "./hooks/useSession.js";
 import { useVisitor } from "./hooks/useVisitor.js";
@@ -10,6 +10,7 @@ export function SessionView() {
   const navigate = useNavigate();
   const { session, proposals, lastTickResults, collapseMetrics, decisions, view, visitors, tickMeta, loading } = useSession(id);
   const { identity, register, clear } = useVisitor(name);
+  const redirectTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // Navigate to updated URL when state changes
   useEffect(() => {
@@ -20,10 +21,30 @@ export function SessionView() {
 
   // Redirect to machine list if session not found (loading finished but no session)
   useEffect(() => {
-    if (!loading && !session) {
+    if (!loading && !session && id) {
       navigate("/", { replace: true });
     }
-  }, [loading, session, navigate]);
+  }, [loading, session, navigate, id]);
+
+  // Fallback: redirect if loading takes too long (6 seconds)
+  useEffect(() => {
+    if (loading && id) {
+      redirectTimer.current = setTimeout(() => {
+        if (!session) {
+          navigate("/", { replace: true });
+        }
+      }, 6000);
+      return () => {
+        if (redirectTimer.current) {
+          clearTimeout(redirectTimer.current);
+        }
+      };
+    } else {
+      if (redirectTimer.current) {
+        clearTimeout(redirectTimer.current);
+      }
+    }
+  }, [loading, session, navigate, id]);
 
   if (loading || !session) {
     return (

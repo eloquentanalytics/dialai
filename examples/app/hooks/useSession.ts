@@ -32,9 +32,39 @@ export function useSession(sessionId: string | undefined): SessionData {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const reconnectDelay = useRef(1000);
+  const timeoutTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const hasReceivedSnapshot = useRef(false);
+  const sessionNotFound = useRef(false);
 
   const connect = useCallback(() => {
     if (!sessionId) return;
+    
+    // Don't reconnect if we've already determined the session doesn't exist
+    if (sessionNotFound.current) {
+      return;
+    }
+
+    // Reset state
+    hasReceivedSnapshot.current = false;
+    setLoading(true);
+    setSession(null);
+
+    // Clear any existing timeout
+    if (timeoutTimer.current) {
+      clearTimeout(timeoutTimer.current);
+    }
+
+    // Set a timeout: if no snapshot received within 5 seconds, assume session doesn't exist
+    timeoutTimer.current = setTimeout(() => {
+      if (!hasReceivedSnapshot.current) {
+        sessionNotFound.current = true;
+        setLoading(false);
+        setSession(null);
+        if (wsRef.current) {
+          wsRef.current.close();
+        }
+      }
+    }, 5000);
 
     // Derive WS URL from current location (works in dev proxy + production)
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
@@ -51,6 +81,10 @@ export function useSession(sessionId: string | undefined): SessionData {
       try {
         const snapshot = JSON.parse(event.data as string);
         if (snapshot.type === "snapshot") {
+          hasReceivedSnapshot.current = true;
+          if (timeoutTimer.current) {
+            clearTimeout(timeoutTimer.current);
+          }
           const sessionData = snapshot.session;
           setSession(sessionData);
           setView(sessionData?.view ?? null);
@@ -61,6 +95,16 @@ export function useSession(sessionId: string | undefined): SessionData {
           setVisitors(snapshot.visitors ?? []);
           setTickMeta(snapshot.tickMeta ?? null);
           setLoading(false);
+        } else if (snapshot.type === "error") {
+          // Server sent an error (e.g., session not found)
+          sessionNotFound.current = true;
+          hasReceivedSnapshot.current = true;
+          if (timeoutTimer.current) {
+            clearTimeout(timeoutTimer.current);
+          }
+          setLoading(false);
+          setSession(null);
+          ws.close();
         }
       } catch {
         // ignore parse errors
@@ -69,6 +113,10 @@ export function useSession(sessionId: string | undefined): SessionData {
 
     ws.onclose = () => {
       wsRef.current = null;
+      // Only reconnect if we haven't determined the session doesn't exist
+      if (sessionNotFound.current || hasReceivedSnapshot.current) {
+        return;
+      }
       // Reconnect with exponential backoff
       reconnectTimer.current = setTimeout(() => {
         reconnectDelay.current = Math.min(reconnectDelay.current * 2, 30_000);
@@ -82,10 +130,13 @@ export function useSession(sessionId: string | undefined): SessionData {
   }, [sessionId]);
 
   useEffect(() => {
+    // Reset sessionNotFound when sessionId changes
+    sessionNotFound.current = false;
     connect();
 
     return () => {
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
+      if (timeoutTimer.current) clearTimeout(timeoutTimer.current);
       if (wsRef.current) {
         wsRef.current.onclose = null; // prevent reconnect on intentional close
         wsRef.current.close();
