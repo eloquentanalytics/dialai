@@ -29,7 +29,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "dev": "tsc --watch -p tsconfig.build.json",
-    "test": "vitest",
+    "test": "vitest run",
     "test:coverage": "vitest --coverage",
     "lint": "eslint src tests --ext .ts",
     "lint:fix": "eslint src tests --ext .ts --fix",
