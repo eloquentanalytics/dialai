@@ -38,7 +38,7 @@ A session starts in its **initial state** — the starting point defined in the 
 When a session is **not in its goal state**, the [arbiter](./arbitration.md) drives a decision cycle:
 
 1. The arbiter solicits proposals from enabled proposers
-2. The arbiter counts proposals per transition and checks [ahead-by-k consensus](./consensus-strategies.md#aheadbyk-default) after each arriving proposal
+2. The arbiter groups proposals by transition and checks [alignment margin consensus](./consensus-strategies.md#alignmentmargin-default) after each arriving proposal
 3. When consensus is reached (or a human submits a proposal, which always wins), the transition executes
 4. The session moves to a new state and a new round begins
 
@@ -67,9 +67,9 @@ Each state can have:
 - **transitions**: A map of transition names to target states. If omitted, the state is terminal.
 - **consensusThreshold**: The consensus threshold for this state (float, 0–1). Controls the alignment-weighted margin required for auto-approval. Higher = more deliberation required. If omitted, resolved by priority: machine > arbiter > 0.5.
 
-### The Ahead-by-k Threshold
+### The Alignment Margin Threshold
 
-Each state has a **consensus threshold** (the ahead-by-k parameter) that controls how easily the arbiter can reach consensus:
+Each state has a **consensus threshold** (the alignment margin threshold) that controls how easily the arbiter can reach consensus:
 
 | Value | Behavior |
 |-------|----------|

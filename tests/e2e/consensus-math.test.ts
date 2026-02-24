@@ -2,9 +2,9 @@
  * E2E Tests - Consensus Math Verification
  * DIAL_408–DIAL_415
  *
- * Tests the exact alignment-weighted margin calculations in the aheadByK strategy.
+ * Tests the exact alignment-weighted margin calculations in the alignmentMargin strategy.
  *
- * The aheadByK formula:
+ * The alignmentMargin formula:
  * 1. Group proposals by transitionName
  * 2. Score each group = sum of alignment scores of proposers
  * 3. margin = (leaderScore - runnerUpScore) / totalAlignment
@@ -97,7 +97,7 @@ describe("E2E: Consensus Math Verification", () => {
     await registerArbiter({
       specialistId: "arbiter",
       machineName: "math-test",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 
@@ -167,7 +167,7 @@ describe("E2E: Consensus Math Verification", () => {
     await registerArbiter({
       specialistId: "arbiter",
       machineName: "math-test",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 
@@ -237,7 +237,7 @@ describe("E2E: Consensus Math Verification", () => {
     await registerArbiter({
       specialistId: "arbiter",
       machineName: "math-test",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 
@@ -296,7 +296,7 @@ describe("E2E: Consensus Math Verification", () => {
     await registerArbiter({
       specialistId: "arbiter",
       machineName: "math-test",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.3,
     });
 

@@ -57,7 +57,7 @@ describe("Integration: Cold Start — Human Decision Flow", () => {
     await registerArbiter({
       specialistId: "arbiter",
       machineName: "cold-start",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 
@@ -80,7 +80,7 @@ describe("Integration: Cold Start — Human Decision Flow", () => {
     expect(result.consensusReached).toBe(false);
   });
 
-  it("DIAL_286: cold start: aheadByK returns 'Cold start' reasoning", async () => {
+  it("DIAL_286: cold start: alignmentMargin returns 'Cold start' reasoning", async () => {
     const session = await createSession(machine);
 
     await registerProposer({
@@ -96,7 +96,7 @@ describe("Integration: Cold Start — Human Decision Flow", () => {
     await registerArbiter({
       specialistId: "arbiter",
       machineName: "cold-start",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 
@@ -127,7 +127,7 @@ describe("Integration: Cold Start — Human Decision Flow", () => {
     await registerArbiter({
       specialistId: "arbiter",
       machineName: "cold-start",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 
@@ -160,7 +160,7 @@ describe("Integration: Cold Start — Human Decision Flow", () => {
     await registerArbiter({
       specialistId: "arbiter",
       machineName: "cold-start",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 
@@ -201,7 +201,7 @@ describe("Integration: Cold Start — Human Decision Flow", () => {
     await registerArbiter({
       specialistId: "arbiter",
       machineName: "cold-start",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 
@@ -260,7 +260,7 @@ describe("Integration: Cold Start — Human Decision Flow", () => {
     await registerArbiter({
       specialistId: "arbiter",
       machineName: "cold-start",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 
@@ -293,7 +293,7 @@ describe("Integration: Cold Start — Human Decision Flow", () => {
     });
 
     const consensusResult = await evaluateConsensus(session2.sessionId);
-    // Single proposal with threshold <= 1 auto-passes in aheadByK
+    // Single proposal with threshold <= 1 auto-passes in alignmentMargin
     expect(consensusResult.consensusReached).toBe(true);
   });
 });

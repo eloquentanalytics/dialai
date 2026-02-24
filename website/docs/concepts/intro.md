@@ -4,13 +4,13 @@ sidebar_position: 1
 
 # Core Concepts
 
-DIAL orchestrates **specialists** — both AI and human — that compete and collaborate to navigate **state machines** through **decision cycles**. An **arbiter** drives each cycle, counting proposals per transition and declaring consensus when one transition is ahead by k proposals.
+DIAL orchestrates **specialists** — both AI and human — that compete and collaborate to navigate **state machines** through **decision cycles**. An **arbiter** drives each cycle, grouping proposals by transition and declaring consensus when one transition's alignment-weighted margin exceeds the threshold.
 
 ## The Big Picture
 
 ### Task Specialists, Not Agents
 
-DIAL does not guide a single agent toward completing a task. It simultaneously solicits proposals from an arbitrary number of models, prompts, and strategies — all competing at the same decision point. Each registered proposer independently analyzes the current state and suggests a transition. The arbiter counts proposals per transition and declares a winner when one transition is ahead by k proposals.
+DIAL does not guide a single agent toward completing a task. It simultaneously solicits proposals from an arbitrary number of models, prompts, and strategies — all competing at the same decision point. Each registered proposer independently analyzes the current state and suggests a transition. The arbiter groups proposals by transition and declares a winner when one transition's alignment-weighted margin exceeds the threshold.
 
 This is mass simultaneous solicitation, not sequential A/B testing. Specialists are interchangeable and compete on the quality of their contributions, measured against human ground truth.
 
@@ -31,7 +31,7 @@ A **session** is an instance of a state machine. It starts in an initial state a
 | Role | Description | Can be AI? | Can be Human? |
 |------|-------------|------------|---------------|
 | **Proposer** | Analyzes state, suggests transitions | Yes | Yes |
-| **Arbiter** | Counts proposals per transition, evaluates ahead-by-k consensus (built-in) | No | No |
+| **Arbiter** | Evaluates alignment margin consensus via alignment-weighted margin (built-in) | No | No |
 
 Specialists can be **enabled** or **disabled**. Disabled specialists remain registered (with their alignment history intact) but stop receiving requests. The arbiter can re-enable disabled specialists when needed — for example, if an enabled proposer submits an invalid proposal.
 

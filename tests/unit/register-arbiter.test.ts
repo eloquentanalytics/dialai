@@ -29,10 +29,10 @@ describe("DIAL_049–DIAL_051: Specialist Registration — Arbiters", () => {
     const arbiter = await registerArbiter({
       specialistId: "a1",
       machineName: "test",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
     });
 
-    expect(arbiter.strategyFnName).toBe("aheadByK");
+    expect(arbiter.strategyFnName).toBe("alignmentMargin");
   });
 
   test("DIAL_051: registers arbiter with strategyWebhookUrl", async () => {

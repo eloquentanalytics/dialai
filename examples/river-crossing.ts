@@ -264,7 +264,7 @@ function buildRiverCrossingMachine(): MachineDefinition {
           { role: "proposer", specialistId: "human-optimal", isHuman: true, disabled: true },
           { role: "proposer", specialistId: "llm-cautious" },
           { role: "proposer", specialistId: "llm-greedy" },
-          { role: "arbiter", specialistId: "river-arbiter", strategyFnName: "aheadByK", threshold: 0.4 },
+          { role: "arbiter", specialistId: "river-arbiter", strategyFnName: "alignmentMargin", threshold: 0.4 },
         ],
       },
       solved: {},
@@ -400,7 +400,7 @@ async function main(): Promise<void> {
   console.log("  human-optimal   forces BFS-optimal moves (isHuman=true, disabled)");
   console.log("  llm-cautious    learns from exemplars, greedy fallback (move items right)");
   console.log("  llm-greedy      random valid move (never learns)\n");
-  console.log("Arbiter: aheadByK, threshold=0.4\n");
+  console.log("Arbiter: alignmentMargin, threshold=0.4\n");
 
   const machine = buildRiverCrossingMachine();
   const TRAINING_ROUNDS = 3;
@@ -429,7 +429,7 @@ async function main(): Promise<void> {
     strategyFn: llmGreedyStrategy,
   });
 
-  // Arbiter auto-registered by createSession (has strategyFnName: "aheadByK")
+  // Arbiter auto-registered by createSession (has strategyFnName: "alignmentMargin")
 
   // ── Phase 1: Training ────────────────────────────────────────────────
   console.log("─── Phase 1: Cold Start Training ──────────────────────────────────────");

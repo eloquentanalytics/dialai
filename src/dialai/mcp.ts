@@ -118,7 +118,7 @@ export function createMcpServer(): Server {
               strategyFnName: {
                 type: "string",
                 description:
-                  "Built-in strategy: firstProposal, aheadByK",
+                  "Built-in strategy: firstProposal, alignmentMargin",
               },
               threshold: { type: "number", description: "Strategy-specific threshold" },
             },

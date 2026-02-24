@@ -35,9 +35,9 @@ Each registered proposer submits a transition proposal.
 
 ### 2. Arbitrate
 
-The arbiter evaluates consensus using ahead-by-k.
+The arbiter evaluates consensus using alignment margin.
 
-**How it works**: Proposals are endorsements. The arbiter counts endorsements and applies the ahead-by-k threshold to determine consensus. Human proposals always win.
+**How it works**: Proposals are endorsements. The arbiter counts endorsements and applies the alignment margin threshold to determine consensus. Human proposals always win.
 
 **Human primacy**: When proposals don't produce consensus, only a human specialist can force a decision via `submitArbitration`.
 
@@ -60,7 +60,7 @@ Verbose output shows:
 ```
 [PROPOSE] ai-proposer: approve -> approved
 [PROPOSE] ai-proposer-2: reject -> draft
-[ARBITRATE] consensus reached: approve (ahead-by-k)
+[ARBITRATE] consensus reached: approve (alignment margin)
 [EXECUTE] draft -> approved
 ```
 
@@ -75,7 +75,7 @@ Configure max cycles to prevent infinite loops:
 ```json
 {
   "arbiter": {
-    "strategy": "ahead-by-k",
+    "strategy": "alignment margin",
     "maxCycles": 5
   }
 }

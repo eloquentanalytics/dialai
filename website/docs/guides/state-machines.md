@@ -151,7 +151,7 @@ Machines can include embedded AI specialist and arbiter configuration at the sta
       },
 
       "arbiter": {
-        "aheadByK": 2
+        "alignmentMargin": 2
       }
     },
     "done": {}
@@ -201,11 +201,11 @@ The `arbiter` block controls consensus evaluation:
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `aheadByK` | `number` | `1` | Proposals the leading transition must be ahead by |
+| `alignmentMargin` | `number` | `1` | Proposals the leading transition must be ahead by |
 | `modelId` | `string` | — | LLM for reasoning synthesis (optional) |
 | `contextFn` | `string` | — | Context function for reasoning synthesis |
 
-Higher `aheadByK` values require stronger consensus. See [Arbitration](../concepts/arbitration.md) for details.
+Higher `alignmentMargin` values require stronger consensus. See [Arbitration](../concepts/arbitration.md) for details.
 
 ## Design Patterns
 
@@ -310,7 +310,7 @@ const agentLoop: MachineDefinition = {
 
 ### Document Generation
 
-For open-ended generation tasks, the specialist proposals *are* the candidate outputs. Each proposal endorses a transition, and the leading transition wins once it is ahead by k. The human can always override by proposing directly.
+For open-ended generation tasks, the specialist proposals *are* the candidate outputs. Each proposal endorses a transition, and the leading transition wins once it is alignment margin. The human can always override by proposing directly.
 
 ```typescript
 const docGen: MachineDefinition = {

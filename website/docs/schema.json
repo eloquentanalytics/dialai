@@ -34,7 +34,7 @@
     },
     "consensusThreshold": {
       "type": "number",
-      "description": "Default consensus threshold for the machine (ahead-by-k)"
+      "description": "Default consensus threshold for the machine (alignment margin)"
     }
   },
   "$defs": {
@@ -54,7 +54,7 @@
         },
         "consensusThreshold": {
           "type": "number",
-          "description": "Consensus threshold override for this state (ahead-by-k)"
+          "description": "Consensus threshold override for this state (alignment margin)"
         }
       }
     },

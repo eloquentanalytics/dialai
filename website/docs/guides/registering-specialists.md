@@ -39,7 +39,7 @@ import { registerArbiter } from "dialai";
 registerArbiter({
   specialistId: "consensus-arbiter",
   machineName: "my-task",
-  strategyFnName: "aheadByK",
+  strategyFnName: "alignmentMargin",
   threshold: 0.5,
 });
 ```
@@ -164,7 +164,7 @@ Reference a built-in strategy by name. The orchestrator loads the strategy from 
 registerArbiter({
   specialistId: "consensus-arbiter",
   machineName: "document-review",
-  strategyFnName: "aheadByK",
+  strategyFnName: "alignmentMargin",
   threshold: 0.5,
 });
 ```
@@ -344,14 +344,14 @@ function random(ctx: ProposerContext) -> Proposal:
 
 | Strategy | Description | Key Parameter |
 |----------|-------------|---------------|
-| `aheadByK` | **Default.** Alignment-weighted margin; consensus when margin exceeds threshold | `threshold` (float, default: 0.5) |
+| `alignmentMargin` | **Default.** Alignment-weighted margin; consensus when margin exceeds threshold | `threshold` (float, default: 0.5) |
 | `firstProposal` | Immediately selects the first proposal received | -- |
 
-#### `aheadByK` *(Default)*
+#### `alignmentMargin` *(Default)*
 
 The default strategy. Groups proposals by transition, scores by alignment-weighted margin. Consensus when the margin exceeds the threshold.
 
-See [Consensus Strategies](/docs/concepts/consensus-strategies#aheadbyk-default) for full documentation.
+See [Consensus Strategies](/docs/concepts/consensus-strategies#alignmentmargin-default) for full documentation.
 
 #### `firstProposal`
 
@@ -366,8 +366,8 @@ Common combinations of proposer and arbiter strategies:
 | Use Case | Proposer | Arbiter |
 |----------|----------|---------|
 | **Testing/Dev** | `firstAvailable` | `firstProposal` |
-| **Production** | (LLM) | `aheadByK` (threshold=0.5) |
-| **High-stakes** | (LLM) | `aheadByK` (threshold=0.8+) |
+| **Production** | (LLM) | `alignmentMargin` (threshold=0.5) |
+| **High-stakes** | (LLM) | `alignmentMargin` (threshold=0.8+) |
 
 ### Implementing Custom Strategies
 

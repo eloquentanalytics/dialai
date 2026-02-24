@@ -64,7 +64,7 @@ describe("Integration: Human Primacy", () => {
     await registerArbiter({
       specialistId: "arbiter",
       machineName: "human-primacy",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 

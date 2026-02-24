@@ -290,7 +290,7 @@ const definition: MachineDefinition = {
         { role: "proposer", specialistId: "llm-careful" },
         { role: "proposer", specialistId: "llm-gpt4o-mini" },
         { role: "proposer", specialistId: "llm-random" },
-        { role: "arbiter", specialistId: "hanoi-arbiter", strategyFnName: "aheadByK", threshold: 1.0 },
+        { role: "arbiter", specialistId: "hanoi-arbiter", strategyFnName: "alignmentMargin", threshold: 1.0 },
       ],
     },
     solved: {},

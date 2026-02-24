@@ -448,7 +448,7 @@ export interface DecisionRecord {
   proposals: Proposal[];
   /** Alignment scores at decision time */
   alignmentSnapshot: Record<string, number>;
-  /** Consensus margin from aheadByK, or null if human-forced */
+  /** Consensus margin from alignmentMargin, or null if human-forced */
   consensusMargin: number | null;
   /** The arbiter threshold at decision time */
   threshold: number;

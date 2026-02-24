@@ -79,7 +79,7 @@ describe("Integration: Progressive Alignment Growth", () => {
     await registerArbiter({
       specialistId: "arbiter",
       machineName: "alignment-growth",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 
@@ -128,7 +128,7 @@ describe("Integration: Progressive Alignment Growth", () => {
     await registerArbiter({
       specialistId: "arbiter",
       machineName: "alignment-growth",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.6,
     });
 

@@ -142,7 +142,7 @@ Session ID:     a1b2c3d4-...
 
 1. **Session created** in `initialState` (`pending`) with a fresh `currentRoundId`
 2. **Proposers solicited**: each returns a proposed transition (`complete`)
-3. **Arbitration submitted**: guards checked, ahead-by-k consensus evaluated
+3. **Arbitration submitted**: guards checked, alignment margin consensus evaluated
 4. **Transition executed**: `currentState` moves to `done`, `currentRoundId` regenerated
 5. **Cycle repeats** until `currentState === goalState` (already there, done)
 

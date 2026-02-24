@@ -711,7 +711,7 @@ export function classifyArbitration(
 }
 
 /**
- * Parses the consensus margin from an aheadByK reasoning string.
+ * Parses the consensus margin from an alignmentMargin reasoning string.
  */
 function parseConsensusMargin(reasoning: string): number | null {
   const match = reasoning.match(/margin ([\d.]+)/);

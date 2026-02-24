@@ -115,7 +115,7 @@ export async function firstProposal(
 }
 
 /**
- * Ahead-by-K consensus strategy using alignment-weighted margin.
+ * Alignment margin consensus strategy.
  *
  * Single proposal: consensus immediately (no competing proposals needed).
  * Multiple proposals: alignment-weighted margin.
@@ -128,7 +128,7 @@ export async function firstProposal(
  *
  * Setting threshold = 1 requires unanimity (all proposals must agree).
  */
-export async function aheadByK(
+export async function alignmentMargin(
   ctx: ArbiterContext
 ): Promise<ArbiterStrategyResult> {
   const threshold = ctx.threshold ?? 1;
@@ -215,5 +215,5 @@ export const arbiterStrategies: Record<
   (ctx: ArbiterContext) => Promise<ArbiterStrategyResult>
 > = {
   firstProposal,
-  aheadByK,
+  alignmentMargin,
 };

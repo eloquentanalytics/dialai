@@ -8,7 +8,7 @@ import {
   lastAvailable,
   randomProposer,
   firstProposal,
-  aheadByK,
+  alignmentMargin,
 } from "./strategies.js";
 import type {
   ProposerContext,
@@ -126,7 +126,7 @@ describe("Arbiter Strategies", () => {
     });
   });
 
-  describe("aheadByK", () => {
+  describe("alignmentMargin", () => {
     it("returns consensus for single proposal with threshold < 1", async () => {
       const propA = makeProposal({ proposalId: "prop-a" });
 
@@ -141,7 +141,7 @@ describe("Arbiter Strategies", () => {
         threshold: 0.9,
       };
 
-      const result = await aheadByK(ctx);
+      const result = await alignmentMargin(ctx);
 
       expect(result.consensusReached).toBe(true);
       expect(result.winningProposalId).toBe("prop-a");
@@ -161,7 +161,7 @@ describe("Arbiter Strategies", () => {
         threshold: 1,
       };
 
-      const result = await aheadByK(ctx);
+      const result = await alignmentMargin(ctx);
 
       // Single proposal is auto-approved at threshold=1 (threshold <= 1)
       expect(result.consensusReached).toBe(true);
@@ -182,7 +182,7 @@ describe("Arbiter Strategies", () => {
         threshold: 2,
       };
 
-      const result = await aheadByK(ctx);
+      const result = await alignmentMargin(ctx);
 
       expect(result.consensusReached).toBe(false);
       expect(result.reasoning).toContain("Cold start");
@@ -204,7 +204,7 @@ describe("Arbiter Strategies", () => {
         threshold: 0.5,
       };
 
-      const result = await aheadByK(ctx);
+      const result = await alignmentMargin(ctx);
 
       expect(result.consensusReached).toBe(true);
       expect(result.winningProposalId).toBe("prop-a");
@@ -226,7 +226,7 @@ describe("Arbiter Strategies", () => {
         threshold: 0.5,
       };
 
-      const result = await aheadByK(ctx);
+      const result = await alignmentMargin(ctx);
 
       expect(result.consensusReached).toBe(false);
     });
@@ -247,7 +247,7 @@ describe("Arbiter Strategies", () => {
         threshold: 0.5,
       };
 
-      const result = await aheadByK(ctx);
+      const result = await alignmentMargin(ctx);
 
       expect(result.consensusReached).toBe(false);
       expect(result.reasoning).toContain("Cold start");
@@ -265,7 +265,7 @@ describe("Arbiter Strategies", () => {
         threshold: 1,
       };
 
-      const result = await aheadByK(ctx);
+      const result = await alignmentMargin(ctx);
 
       expect(result.consensusReached).toBe(false);
       expect(result.reasoning).toBe("No proposals");
@@ -288,7 +288,7 @@ describe("Arbiter Strategies", () => {
         threshold: 0.5,
       };
 
-      const result = await aheadByK(ctx);
+      const result = await alignmentMargin(ctx);
 
       expect(result.consensusReached).toBe(true);
       // s2 has highest alignment in the winning "approve" group

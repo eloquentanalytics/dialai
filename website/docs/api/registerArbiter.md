@@ -25,7 +25,7 @@ Define an arbiter in your machine JSON file:
   },
   "specialists": [
     { "role": "proposer", "specialistId": "ai-proposer", "strategyFnName": "firstAvailable" },
-    { "role": "arbiter", "specialistId": "consensus-arbiter", "strategyFnName": "aheadByK", "threshold": 0.5 }
+    { "role": "arbiter", "specialistId": "consensus-arbiter", "strategyFnName": "alignmentMargin", "threshold": 0.5 }
   ]
 }
 ```
@@ -56,8 +56,8 @@ Session complete: approved
 
 1. The session started in the `pending` state
 2. The proposer submitted a proposal to transition via `approve`
-3. The arbiter evaluated consensus using the `aheadByK` strategy
-4. With only a single proposal and no competing proposals, `aheadByK` auto-approves (threshold <= 1.0)
+3. The arbiter evaluated consensus using the `alignmentMargin` strategy
+4. With only a single proposal and no competing proposals, `alignmentMargin` auto-approves (threshold <= 1.0)
 5. The transition executed, moving to `approved`
 
 ## Programmatic Usage
@@ -69,17 +69,17 @@ import { registerArbiter } from "dialai";
 const arbiter = await registerArbiter({
   specialistId: "consensus-arbiter",
   machineName: "document-review",
-  strategyFnName: "aheadByK",
+  strategyFnName: "alignmentMargin",
   threshold: 0.5,  // Require 0.5 alignment-weighted margin for consensus
 });
 
-// Using a custom strategy function (count-based, distinct from the built-in aheadByK)
+// Using a custom strategy function (count-based, distinct from the built-in alignmentMargin)
 const customArbiter = await registerArbiter({
   specialistId: "custom-arbiter",
   machineName: "document-review",
   strategyFn: async (ctx) => {
     // Custom count-based strategy: counts raw proposals per transition
-    // (ignores alignment scores, unlike the built-in aheadByK which uses alignment-weighted margin)
+    // (ignores alignment scores, unlike the built-in alignmentMargin which uses alignment-weighted margin)
     const counts: Record<string, number> = {};
     for (const p of ctx.proposals) {
       counts[p.transitionName] = (counts[p.transitionName] || 0) + 1;
@@ -93,7 +93,7 @@ const customArbiter = await registerArbiter({
         reasoning: `Transition "${sorted[0][0]}" ahead by ${sorted.length === 1 ? sorted[0][1] : sorted[0][1] - sorted[1][1]} proposals`,
       };
     }
-    return { consensusReached: false, reasoning: "No transition ahead by k proposals yet" };
+    return { consensusReached: false, reasoning: "No transition alignment margin proposals yet" };
   },
 });
 ```
@@ -108,12 +108,12 @@ Arbiters support two built-in consensus strategies via `strategyFnName`:
 
 | Strategy | Description | Threshold Usage |
 |----------|-------------|-----------------|
-| `aheadByK` | Consensus when alignment-weighted margin exceeds threshold | `threshold` = minimum margin required (float 0-1) |
+| `alignmentMargin` | Consensus when alignment-weighted margin exceeds threshold | `threshold` = minimum margin required (float 0-1) |
 | `firstProposal` | Accepts the first valid proposal immediately | Not used |
 
 Each proposal is weighted by the proposer's alignment score. Human proposals carry alignment = 1.0 (the highest weight) but still go through the normal consensus algorithm. To override consensus entirely, use `submitArbitration` with an explicit `transitionName`.
 
-### aheadByK
+### alignmentMargin
 
 The default strategy. Groups proposals by transition and scores each group by sum of proposer alignment scores. Computes an alignment-weighted margin between the leader and runner-up. Declares consensus when the margin exceeds the threshold. A single proposal with no competing proposals is auto-approved when threshold <= 1.0. If all alignment scores are 0 (cold start), no consensus is reached and human input is required.
 
@@ -121,7 +121,7 @@ The default strategy. Groups proposals by transition and scores each group by su
 await registerArbiter({
   specialistId: "proposal-arbiter",
   machineName: "my-task",
-  strategyFnName: "aheadByK",
+  strategyFnName: "alignmentMargin",
   threshold: 0.5,  // Need 0.5 alignment-weighted margin
 });
 ```

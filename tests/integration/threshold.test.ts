@@ -49,7 +49,7 @@ describe("Integration: Consensus Threshold Behavior", () => {
     await registerArbiter({
       specialistId: "arbiter",
       machineName: "threshold-test",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.0,
     });
 
@@ -80,7 +80,7 @@ describe("Integration: Consensus Threshold Behavior", () => {
     await registerArbiter({
       specialistId: "arbiter",
       machineName: "threshold-test",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 
@@ -123,7 +123,7 @@ describe("Integration: Consensus Threshold Behavior", () => {
     await registerArbiter({
       specialistId: "arbiter",
       machineName: "threshold-test",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.9,
     });
 
@@ -166,7 +166,7 @@ describe("Integration: Consensus Threshold Behavior", () => {
     await registerArbiter({
       specialistId: "arbiter",
       machineName: "threshold-test",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 1.0,
     });
 
@@ -217,7 +217,7 @@ describe("Integration: Consensus Threshold Behavior", () => {
     await registerArbiter({
       specialistId: "arbiter",
       machineName: "state-override",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.9,
     });
 
@@ -251,7 +251,7 @@ describe("Integration: Consensus Threshold Behavior", () => {
     await registerArbiter({
       specialistId: "arbiter",
       machineName: "machine-override",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.9,
     });
 

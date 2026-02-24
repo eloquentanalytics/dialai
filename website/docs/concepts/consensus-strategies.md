@@ -4,7 +4,7 @@ sidebar_position: 12
 
 # Consensus Strategies
 
-DIAL's consensus mechanism is **Ahead-by-k** — an alignment-weighted margin approach where each proposal acts as an endorsement of its transition, weighted by the proposer's alignment score. Consensus is reached when one transition's alignment-weighted margin exceeds the configured threshold. DIAL also ships with `firstProposal` as a convenience strategy for testing and single-proposer setups.
+DIAL's consensus mechanism is **alignment margin** — an alignment-weighted margin approach where each proposal acts as an endorsement of its transition, weighted by the proposer's alignment score. Consensus is reached when one transition's alignment-weighted margin exceeds the configured threshold. DIAL also ships with `firstProposal` as a convenience strategy for testing and single-proposer setups.
 
 ## Overview
 
@@ -12,7 +12,7 @@ In DIAL, every proposal is an endorsement weighted by the proposer's alignment s
 
 Consensus is reached when the leading transition's alignment-weighted margin exceeds the threshold. The winning proposal is from the **highest-alignment proposer** within the winning transition group.
 
-## `aheadByK` *(Default)*
+## `alignmentMargin` *(Default)*
 
 The default strategy. Each proposal endorses a transition, weighted by the proposer's alignment score. The arbiter groups proposals by transition, computes alignment-weighted margins, and declares consensus when the leader's margin exceeds the threshold.
 
@@ -55,7 +55,7 @@ The **threshold** is a float (0–1). Higher thresholds require a more dominant 
 ### Algorithm
 
 ```
-function aheadByK(ctx) -> ConsensusResult:
+function alignmentMargin(ctx) -> ConsensusResult:
     threshold = ctx.threshold ?? 1
 
     if len(ctx.proposals) == 0:
@@ -206,7 +206,7 @@ function firstProposal(ctx) -> ConsensusResult:
 
 ## Progressive Collapse
 
-With `aheadByK`, progressive collapse happens naturally:
+With `alignmentMargin`, progressive collapse happens naturally:
 
 1. **Cold start**: No alignment data exists. All alignment scores are zero. System always blocks for human. Human decisions generate exemplars and alignment data.
 2. **Calibration**: Alignment scores grow as human decisions accumulate. Multiple proposals per round start arriving. If well-aligned specialists agree, the margin grows and consensus becomes possible.
@@ -215,7 +215,7 @@ With `aheadByK`, progressive collapse happens naturally:
 5. **Champion**: One specialist handles the task solo. A single proposal is auto-approved immediately (no competing proposals).
 6. **Collapsed**: A fine-tuned, cheap model replaces the original specialist. Same accuracy, fraction of the cost.
 
-The strategy never changes — the same `aheadByK` algorithm handles every stage. What changes is **how many specialists propose**, **how aligned they are**, and **how much they agree**.
+The strategy never changes — the same `alignmentMargin` algorithm handles every stage. What changes is **how many specialists propose**, **how aligned they are**, and **how much they agree**.
 
 ## Related Concepts
 

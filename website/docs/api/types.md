@@ -51,7 +51,7 @@ interface MachineDefinition {
   goalState: string;                      // Rest state where the session is headed
   states: Record<string, StateDefinition>;
   specialists?: SpecialistDefinition[];   // Optional specialists to register
-  consensusThreshold?: number;            // Default consensus threshold (ahead-by-k)
+  consensusThreshold?: number;            // Default consensus threshold (alignment margin)
 }
 ```
 
@@ -155,7 +155,7 @@ interface Arbiter {
   machineName: string;
   enabled?: boolean;              // Whether this specialist is enabled (default true)
   strategyFn?: (ctx: ArbiterContext) => Promise<ArbiterStrategyResult>;
-  strategyFnName?: string;        // Built-in: "aheadByK" | "firstProposal"
+  strategyFnName?: string;        // Built-in: "alignmentMargin" | "firstProposal"
   strategyWebhookUrl?: string;
   webhookTokenName?: string;
   threshold?: number;             // Strategy-specific threshold
@@ -221,7 +221,7 @@ interface ArbiterContext {
 
 ```typescript
 const arbiterStrategy = async (ctx: ArbiterContext) => {
-  // Alignment-weighted margin (matching the built-in aheadByK)
+  // Alignment-weighted margin (matching the built-in alignmentMargin)
   const scores = ctx.alignmentScores ?? {};
   const groups = new Map<string, { score: number; bestId: string; bestAlign: number }>();
   let totalAlign = 0;
@@ -372,7 +372,7 @@ interface RegisterArbiterOptions {
     reasoning: string;
   }>;
   strategyWebhookUrl?: string;
-  strategyFnName?: string;  // Built-in: "aheadByK" | "firstProposal"
+  strategyFnName?: string;  // Built-in: "alignmentMargin" | "firstProposal"
 
   // For webhooks:
   webhookTokenName?: string;
@@ -566,7 +566,7 @@ interface DecisionRecord {
   isHuman: boolean;
   proposals: Proposal[];                     // Snapshot of all proposals
   alignmentSnapshot: Record<string, number>; // Alignment scores at decision time
-  consensusMargin: number | null;            // Margin from aheadByK, or null if human-forced
+  consensusMargin: number | null;            // Margin from alignmentMargin, or null if human-forced
   threshold: number;                         // Arbiter threshold at decision time
   timestamp: Date;
 }

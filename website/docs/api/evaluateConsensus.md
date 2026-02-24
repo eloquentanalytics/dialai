@@ -17,7 +17,7 @@ import { createSession, registerProposer, registerArbiter, submitProposal, evalu
 const session = await createSession(machine);
 await registerProposer({ specialistId: "p1", machineName: machine.machineName, strategyFnName: "firstAvailable" });
 await registerProposer({ specialistId: "p2", machineName: machine.machineName, strategyFnName: "random" });
-await registerArbiter({ specialistId: "arbiter", machineName: machine.machineName, strategyFnName: "aheadByK", threshold: 1 });
+await registerArbiter({ specialistId: "arbiter", machineName: machine.machineName, strategyFnName: "alignmentMargin", threshold: 1 });
 
 // Submit proposals
 const propA = await submitProposal({ sessionId: session.sessionId, specialistId: "p1" });

@@ -74,7 +74,7 @@ cat machine.json | jq '.machine.states.draft.transitions | keys'
 
 **Causes**:
 - Proposals don't converge on a single action
-- Ahead-by-k threshold not met
+- Alignment margin threshold not met
 
 **Fix**:
 - Lower the k value

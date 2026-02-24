@@ -147,7 +147,7 @@ import { registerArbiter } from "dialai";
 const arbiter = await registerArbiter({
   specialistId: "consensus-arbiter",
   machineName: "my-task",
-  strategyFnName: "aheadByK",
+  strategyFnName: "alignmentMargin",
   threshold: 2,
 });
 ```
@@ -159,7 +159,7 @@ registerArbiter(opts: {
   specialistId: string;
   machineName: string;
   strategyFn?: (ctx: ArbiterContext) => Promise<ConsensusResult>;
-  strategyFnName?: string;   // "aheadByK"
+  strategyFnName?: string;   // "alignmentMargin"
   strategyWebhookUrl?: string;
   webhookTokenName?: string;
   threshold?: number;
@@ -187,7 +187,7 @@ interface ArbiterContext {
 }
 ```
 
-Example custom arbiter using ahead-by-k logic on proposals:
+Example custom arbiter using alignment margin logic on proposals:
 
 ```typescript
 const arbiter = await registerArbiter({

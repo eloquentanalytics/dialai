@@ -20,7 +20,7 @@ The arbiter is a fully deterministic, built-in component — never an AI model o
 
 The arbiter does not wait for all responses before evaluating. It re-evaluates after every contribution.
 
-## Ahead-by-k Consensus
+## Alignment Margin Consensus
 
 ### How It Works
 

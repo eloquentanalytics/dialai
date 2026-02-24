@@ -15,7 +15,7 @@
  *                       choices or falls back to a greedy heuristic.
  *   "llm-random"     — random valid move from reconstructed board state.
  *
- * Arbiter: aheadByK, threshold=0.4 (declared on the state).
+ * Arbiter: alignmentMargin, threshold=0.4 (declared on the state).
  *
  * Usage:
  *   npx tsx examples/hanoi.ts
@@ -307,7 +307,7 @@ function buildHanoiMachine(): MachineDefinition {
           { role: "proposer", specialistId: "llm-careful" },
           { role: "proposer", specialistId: "llm-gpt4o-mini" },
           { role: "proposer", specialistId: "llm-random" },
-          { role: "arbiter", specialistId: "hanoi-arbiter", strategyFnName: "aheadByK", threshold: 1.0 },
+          { role: "arbiter", specialistId: "hanoi-arbiter", strategyFnName: "alignmentMargin", threshold: 1.0 },
         ],
       },
       solved: {},
@@ -444,7 +444,7 @@ async function main(): Promise<void> {
   console.log("  llm-careful     learns from exemplars, greedy fallback");
   console.log("  llm-gpt4o-mini  GPT-4o-mini with n-shot exemplars");
   console.log("  llm-random      random valid move (never learns)\n");
-  console.log("Arbiter: aheadByK, threshold=1.0\n");
+  console.log("Arbiter: alignmentMargin, threshold=1.0\n");
 
   const machine = buildHanoiMachine();
   const TRAINING_ROUNDS = 2;
@@ -478,7 +478,7 @@ async function main(): Promise<void> {
     strategyFn: llmRandomStrategy,
   });
 
-  // Arbiter auto-registered by createSession (has strategyFnName: "aheadByK")
+  // Arbiter auto-registered by createSession (has strategyFnName: "alignmentMargin")
 
   // ── Phase 1: Training ────────────────────────────────────────────────
   console.log("─── Phase 1: Cold Start Training ──────────────────────────────────────");

@@ -11,7 +11,7 @@ Specialists are the pluggable actors that participate in sessions. They can be A
 | Role | Description | Can be AI? | Can be Human? |
 |------|-------------|------------|---------------|
 | **Proposer** | Analyzes state, suggests transitions | Yes | Yes |
-| **Arbiter** | Counts proposals, evaluates consensus via ahead-by-k (built-in) | No | No |
+| **Arbiter** | Evaluates consensus via alignment-weighted margin (built-in) | No | No |
 
 ### Proposers
 
@@ -24,7 +24,7 @@ Multiple proposers may propose the same transition with different reasoning (the
 
 ### The Arbiter
 
-The arbiter is a **fully deterministic, built-in component** — never an AI model or a human. It counts proposals and applies ahead-by-k counting to determine consensus:
+The arbiter is a **fully deterministic, built-in component** — never an AI model or a human. It groups proposals by transition and applies an alignment-weighted margin to determine consensus:
 
 1. **Solicits proposals** from all enabled proposers
 2. **Validates proposals** — rejects invalid transitions

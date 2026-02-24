@@ -39,7 +39,7 @@ It is always safer for the AI to assume the human had reasons, just as it is saf
 
 ### Alignment Score = 1.0
 
-Humans always have an **alignment score of 1.0** — they *are* the ground truth by definition. A human proposal always wins consensus immediately — this is the mechanism by which human primacy is enforced in the [ahead-by-k consensus](./arbitration.md).
+Humans always have an **alignment score of 1.0** — they *are* the ground truth by definition. A human proposal always wins consensus immediately — this is the mechanism by which human primacy is enforced in the [alignment margin consensus](./arbitration.md).
 
 This means a human can always override AI consensus by submitting a proposal. The human's proposal takes precedence because the arbiter recognizes human authority.
 
@@ -51,7 +51,7 @@ When the arbiter exhausts all specialists without reaching consensus, it **block
 2. The arbiter accepts it immediately — the human proposal always wins
 3. The session advances to the next state
 
-AI specialists can only contribute proposals that are counted in the ahead-by-k tally. A human proposal bypasses the tally entirely.
+AI specialists can only contribute proposals that are counted in the alignment margin tally. A human proposal bypasses the tally entirely.
 
 ### Exemplars: Ground Truth for Learning
 

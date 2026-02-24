@@ -106,7 +106,7 @@ describe("E2E: Self-Healing and Re-enablement", () => {
     await registerArbiter({
       specialistId: "arb",
       machineName,
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 
@@ -119,12 +119,12 @@ describe("E2E: Self-Healing and Re-enablement", () => {
 
     expect((await getEnabledProposers(machineName)).length).toBe(1);
 
-    // runSession: champion mode -> single proposal -> aheadByK with threshold 0.5
+    // runSession: champion mode -> single proposal -> alignmentMargin with threshold 0.5
     // Single proposal + alignment > 0 => consensus reached on firstAvailable "approve"
     // This will succeed, but the key test is that selfHeal was available
     const session = await runSession(machine);
 
-    // Session should complete (firstAvailable + firstProposal/aheadByK single proposal)
+    // Session should complete (firstAvailable + firstProposal/alignmentMargin single proposal)
     expect(session.currentState).toBe("done");
 
     // After runSession, disabled proposers should be re-enabled via selfHeal
@@ -238,7 +238,7 @@ describe("E2E: Self-Healing and Re-enablement", () => {
     await registerArbiter({
       specialistId: "arb",
       machineName,
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 

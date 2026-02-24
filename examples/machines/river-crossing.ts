@@ -228,7 +228,7 @@ const definition: MachineDefinition = {
         { role: "proposer", specialistId: "human-optimal", isHuman: true, disabled: true },
         { role: "proposer", specialistId: "llm-cautious" },
         { role: "proposer", specialistId: "llm-greedy" },
-        { role: "arbiter", specialistId: "river-arbiter", strategyFnName: "aheadByK", threshold: 0.4 },
+        { role: "arbiter", specialistId: "river-arbiter", strategyFnName: "alignmentMargin", threshold: 0.4 },
       ],
     },
     solved: {},

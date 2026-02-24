@@ -80,11 +80,11 @@ describe("DIAL_128–DIAL_142: Submit Arbitration", () => {
       machineName: "arbitration-test",
       strategyFnName: "lastAvailable",
     });
-    // Use aheadByK which requires alignment data — cold start will deny consensus
+    // Use alignmentMargin which requires alignment data — cold start will deny consensus
     await registerArbiter({
       specialistId: "a1",
       machineName: "arbitration-test",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
     });
 
     await submitProposal({

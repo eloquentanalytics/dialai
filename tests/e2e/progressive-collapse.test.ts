@@ -59,7 +59,7 @@ describe("E2E: Progressive Collapse — Cold Start through Autonomous", () => {
     await registerArbiter({
       specialistId: "arb",
       machineName: "progressive",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 
@@ -105,7 +105,7 @@ describe("E2E: Progressive Collapse — Cold Start through Autonomous", () => {
     await registerArbiter({
       specialistId: "arb",
       machineName: "progressive",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 
@@ -158,7 +158,7 @@ describe("E2E: Progressive Collapse — Cold Start through Autonomous", () => {
     await registerArbiter({
       specialistId: "arb",
       machineName: "progressive",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 
@@ -203,7 +203,7 @@ describe("E2E: Progressive Collapse — Cold Start through Autonomous", () => {
     await registerArbiter({
       specialistId: "arb",
       machineName: "progressive",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 
@@ -223,7 +223,7 @@ describe("E2E: Progressive Collapse — Cold Start through Autonomous", () => {
       roundId: session.currentRoundId,
     });
 
-    // Single proposal from aligned specialist: aheadByK grants consensus
+    // Single proposal from aligned specialist: alignmentMargin grants consensus
     const result = await evaluateConsensus(session.sessionId);
     expect(result.consensusReached).toBe(true);
   });
@@ -250,7 +250,7 @@ describe("E2E: Progressive Collapse — Cold Start through Autonomous", () => {
     await registerArbiter({
       specialistId: "arb",
       machineName,
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 
@@ -324,7 +324,7 @@ describe("E2E: Progressive Collapse — Cold Start through Autonomous", () => {
     await registerArbiter({
       specialistId: "arb",
       machineName,
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 

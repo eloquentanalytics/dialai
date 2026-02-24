@@ -56,7 +56,7 @@ describe("Integration: Decision Cycle", () => {
     await registerArbiter({
       specialistId: "arbiter",
       machineName: "consensus-test",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 
@@ -152,7 +152,7 @@ describe("Integration: Decision Cycle", () => {
     await registerArbiter({
       specialistId: "arbiter",
       machineName: "human-override",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 100, // Very high threshold to force override
     });
 

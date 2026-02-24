@@ -196,7 +196,7 @@ The CLI accepts JSON files conforming to the `MachineDefinition` type:
         }
       },
       "arbiter": {
-        "aheadByK": "number (default: 0.5)"
+        "alignmentMargin": "number (default: 0.5)"
       }
     }
   }
@@ -212,7 +212,7 @@ The CLI:
 3. Registers a built-in deterministic proposer (picks the first available transition)
 4. Loops until the session reaches the goal state:
    - Solicits proposals from all registered proposers
-   - Evaluates consensus (ahead-by-k)
+   - Evaluates consensus (alignment margin)
    - Executes the winning transition
 5. Prints the result and exits
 
@@ -224,7 +224,7 @@ The CLI:
 | `Cannot find file: <path>` | File doesn't exist | Check the file path |
 | `Invalid JSON: <message>` | Malformed JSON | Fix the JSON syntax |
 | `No transitions available from current state` | Terminal state without transitions to default | Add transitions or fix machine design |
-| `No consensus reached: <reason>` | Proposals didn't produce a winner | Add proposers or adjust aheadByK |
+| `No consensus reached: <reason>` | Proposals didn't produce a winner | Add proposers or adjust alignmentMargin |
 
 ## Related
 

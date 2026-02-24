@@ -10,7 +10,7 @@ This guide walks through the complete journey from cold start to collapsed execu
 
 Every round at every state is orchestrated by the **arbiter** — a deterministic, built-in component. The arbiter is **asynchronous by nature**. It solicits proposals from all enabled proposers at a steady pace and maintains a **proposal count per transition** that updates continuously as contributions arrive.
 
-### Core Algorithm: Ahead-by-k
+### Core Algorithm: Alignment Margin
 
 Every proposal is an endorsement of its transition, weighted by the proposer's alignment score. The arbiter groups proposals by **transition** and scores each group by the **sum of alignment scores**. If two proposers both chose the same transition, their alignment scores combine.
 
@@ -32,7 +32,7 @@ The arbiter works through these steps, checking for consensus after every arrivi
 
 2. **Exhausted — Waiting for Human** — The arbiter has solicited every enabled proposer. No transition's lead crossed the threshold. The task blocks until a human submits a proposal, which always wins immediately, creating ground truth and generating new alignment data.
 
-**Humans participate throughout, not just at the end.** While the arbiter is working through its sequence, humans can submit proposals at any time. A human proposal always wins — it bypasses the ahead-by-k tally entirely and short-circuits the process.
+**Humans participate throughout, not just at the end.** While the arbiter is working through its sequence, humans can submit proposals at any time. A human proposal always wins — it bypasses the alignment margin tally entirely and short-circuits the process.
 
 ### Proposal Clustering
 

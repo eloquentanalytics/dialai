@@ -136,7 +136,7 @@ describe("tick", () => {
   });
 
   it("reports needs_human when no consensus", async () => {
-    // Use aheadByK arbiter with no alignment data → cold start → no consensus
+    // Use alignmentMargin arbiter with no alignment data → cold start → no consensus
     const machine: MachineDefinition = {
       machineName: "needs-human",
       initialState: "pending",
@@ -165,7 +165,7 @@ describe("tick", () => {
     await registerArbiter({
       specialistId: "arb",
       machineName: "needs-human",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 

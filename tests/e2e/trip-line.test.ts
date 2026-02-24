@@ -94,7 +94,7 @@ describe("E2E: Trip Line — Alignment Degradation", () => {
     await registerArbiter({
       specialistId: "arb",
       machineName,
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 
@@ -133,7 +133,7 @@ describe("E2E: Trip Line — Alignment Degradation", () => {
     await registerArbiter({
       specialistId: "arb",
       machineName,
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 
@@ -183,7 +183,7 @@ describe("E2E: Trip Line — Alignment Degradation", () => {
     await registerArbiter({
       specialistId: "arb",
       machineName,
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 
@@ -242,7 +242,7 @@ describe("E2E: Trip Line — Alignment Degradation", () => {
     await registerArbiter({
       specialistId: "arb",
       machineName,
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 

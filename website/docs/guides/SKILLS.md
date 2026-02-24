@@ -50,7 +50,7 @@ Propose -> Arbitrate -> Execute -> (repeat until goalState)
 ```
 
 1. **Propose**: Proposers submit transition proposals (each proposal endorses a transition)
-2. **Arbitrate**: Arbiter counts proposals per transition, applies ahead-by-k consensus
+2. **Arbitrate**: Arbiter counts proposals per transition, applies alignment margin consensus
 3. **Execute**: Winning transition is applied
 
 ### Specialist Types
@@ -115,7 +115,7 @@ Human proposals always win consensus immediately.
     { "specialistId": "ai-1", "role": "proposer", "strategyFnName": "firstAvailable" },
     { "specialistId": "ai-2", "role": "proposer", "strategyFnName": "firstAvailable" },
     { "specialistId": "ai-3", "role": "proposer", "strategyFnName": "firstAvailable" },
-    { "specialistId": "arbiter", "role": "arbiter", "strategyFnName": "aheadByK", "threshold": 2 }
+    { "specialistId": "arbiter", "role": "arbiter", "strategyFnName": "alignmentMargin", "threshold": 2 }
   ]
 }
 ```

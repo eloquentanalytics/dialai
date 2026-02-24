@@ -255,11 +255,11 @@ describe("E2E: Full Session Lifecycle via runSession", () => {
       machineName: "exhausted",
       strategyFnName: "lastAvailable",
     });
-    // aheadByK arbiter with high threshold
+    // alignmentMargin arbiter with high threshold
     await registerArbiter({
       specialistId: "arb-exhausted",
       machineName: "exhausted",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 
@@ -269,7 +269,7 @@ describe("E2E: Full Session Lifecycle via runSession", () => {
 
     const session = await runSession(machine);
 
-    // Since alignment is 0 for both, aheadByK returns "Cold start" -> no consensus
+    // Since alignment is 0 for both, alignmentMargin returns "Cold start" -> no consensus
     // runSession should return the session stuck at initial state
     expect(session.currentState).toBe("pending");
     expect(session.currentState).not.toBe(machine.goalState);

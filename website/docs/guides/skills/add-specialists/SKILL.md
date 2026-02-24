@@ -87,7 +87,7 @@ Human proposals always win. AI specialists must use strategy invocation.
 
 ### AI Consensus
 
-Multiple AI proposers with ahead-by-k:
+Multiple AI proposers with alignment margin:
 
 ```json
 {
@@ -99,7 +99,7 @@ Multiple AI proposers with ahead-by-k:
     ]
   },
   "arbiter": {
-    "strategy": "ahead-by-k",
+    "strategy": "alignment margin",
     "k": 2
   }
 }

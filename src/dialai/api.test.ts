@@ -172,13 +172,13 @@ describe("Specialist Registration", () => {
       const arbiter = await registerArbiter({
         specialistId: "test-arbiter",
         machineName: "test-machine",
-        strategyFnName: "aheadByK",
+        strategyFnName: "alignmentMargin",
         threshold: 2,
       });
 
       expect(arbiter.role).toBe("arbiter");
       expect(arbiter.specialistId).toBe("test-arbiter");
-      expect(arbiter.strategyFnName).toBe("aheadByK");
+      expect(arbiter.strategyFnName).toBe("alignmentMargin");
       expect(arbiter.threshold).toBe(2);
     });
 
@@ -340,7 +340,7 @@ describe("Decision Cycle", () => {
       await registerArbiter({
         specialistId: "arbiter",
         machineName: "multi-state",
-        strategyFnName: "aheadByK",
+        strategyFnName: "alignmentMargin",
         threshold: 0.5,
       });
 
@@ -401,7 +401,7 @@ describe("Decision Cycle", () => {
       await registerArbiter({
         specialistId: "arbiter",
         machineName: "multi-state",
-        strategyFnName: "aheadByK",
+        strategyFnName: "alignmentMargin",
         threshold: 100, // Very high threshold
       });
 
@@ -428,7 +428,7 @@ describe("Decision Cycle", () => {
       await registerArbiter({
         specialistId: "arbiter",
         machineName: "multi-state",
-        strategyFnName: "aheadByK",
+        strategyFnName: "alignmentMargin",
       });
 
       const result = await submitArbitration({

@@ -96,7 +96,7 @@ export {
   proposerStrategies,
   // Arbiter strategies
   firstProposal,
-  aheadByK,
+  alignmentMargin,
   arbiterStrategies,
 } from "./strategies.js";
 

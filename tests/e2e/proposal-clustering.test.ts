@@ -54,7 +54,7 @@ describe("E2E: Proposal Clustering", () => {
     await registerArbiter({
       specialistId: "arb",
       machineName: "clustering",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 
@@ -105,7 +105,7 @@ describe("E2E: Proposal Clustering", () => {
     await registerArbiter({
       specialistId: "arb",
       machineName: "clustering",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 
@@ -167,7 +167,7 @@ describe("E2E: Proposal Clustering", () => {
     await registerArbiter({
       specialistId: "arb",
       machineName: "clustering",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.5,
     });
 
@@ -212,7 +212,7 @@ describe("E2E: Proposal Clustering", () => {
     await registerArbiter({
       specialistId: "arb",
       machineName: "clustering",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.6,
     });
 
@@ -268,7 +268,7 @@ describe("E2E: Proposal Clustering", () => {
     await registerArbiter({
       specialistId: "arb",
       machineName: "clustering",
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 0.3,
     });
 

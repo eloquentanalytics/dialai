@@ -2,7 +2,7 @@ import { describe, test, expect, beforeEach } from "vitest";
 import {
   clear,
   firstProposal,
-  aheadByK,
+  alignmentMargin,
 } from "../../src/dialai/index.js";
 import type { ArbiterContext, Proposal } from "../../src/dialai/types.js";
 
@@ -74,7 +74,7 @@ describe("DIAL_171–DIAL_178: Arbiter Strategies", () => {
     expect(result.winningProposalId).toBeUndefined();
   });
 
-  test("DIAL_173: aheadByK with single proposal and threshold<1 reaches consensus", async () => {
+  test("DIAL_173: alignmentMargin with single proposal and threshold<1 reaches consensus", async () => {
     const proposal = makeProposal({
       proposalId: "p-only",
       specialistId: "spec1",
@@ -93,13 +93,13 @@ describe("DIAL_171–DIAL_178: Arbiter Strategies", () => {
       threshold: 0.9,
     };
 
-    const result = await aheadByK(ctx);
+    const result = await alignmentMargin(ctx);
 
     expect(result.consensusReached).toBe(true);
     expect(result.winningProposalId).toBe("p-only");
   });
 
-  test("DIAL_175: aheadByK counts multiple proposals per transition with alignment weighting", async () => {
+  test("DIAL_175: alignmentMargin counts multiple proposals per transition with alignment weighting", async () => {
     const p1 = makeProposal({
       proposalId: "p-approve1",
       specialistId: "spec1",
@@ -136,7 +136,7 @@ describe("DIAL_171–DIAL_178: Arbiter Strategies", () => {
       threshold: 0.5,
     };
 
-    const result = await aheadByK(ctx);
+    const result = await alignmentMargin(ctx);
 
     expect(result.consensusReached).toBe(true);
     expect(result.winningProposalId).toBeDefined();
@@ -144,14 +144,14 @@ describe("DIAL_171–DIAL_178: Arbiter Strategies", () => {
     expect(["p-approve1", "p-approve2"]).toContain(result.winningProposalId);
   });
 
-  test("DIAL_178: aheadByK default threshold is 1 when ctx.threshold is undefined (human-only)", async () => {
+  test("DIAL_178: alignmentMargin default threshold is 1 when ctx.threshold is undefined (human-only)", async () => {
     const proposal = makeProposal({
       proposalId: "p-only",
       specialistId: "spec1",
       transitionName: "approve",
     });
 
-    // Threshold omitted (undefined) defaults to 1 in aheadByK.
+    // Threshold omitted (undefined) defaults to 1 in alignmentMargin.
     // With threshold=1, a single proposal is still auto-approved (threshold <= 1).
     const ctx: ArbiterContext = {
       sessionId: "s1",
@@ -165,7 +165,7 @@ describe("DIAL_171–DIAL_178: Arbiter Strategies", () => {
       threshold: undefined,
     };
 
-    const result = await aheadByK(ctx);
+    const result = await alignmentMargin(ctx);
 
     // Single proposal is auto-approved even at threshold=1 (threshold <= 1)
     expect(result.consensusReached).toBe(true);

@@ -182,7 +182,7 @@ describe("E2E: Champion Mode", () => {
     const machineName = "champion";
 
     // Use a multi-transition machine where champion proposes one thing
-    // but aheadByK with high threshold rejects single proposal
+    // but alignmentMargin with high threshold rejects single proposal
     await registerProposer({
       specialistId: "champ",
       machineName,
@@ -196,7 +196,7 @@ describe("E2E: Champion Mode", () => {
     await registerArbiter({
       specialistId: "arb",
       machineName,
-      strategyFnName: "aheadByK",
+      strategyFnName: "alignmentMargin",
       threshold: 2.0, // Threshold > 1 means even single proposal won't pass
     });
 
@@ -211,10 +211,10 @@ describe("E2E: Champion Mode", () => {
 
     // runSession will:
     // 1. Try champion mode (single proposal from champ)
-    // 2. aheadByK with threshold 2.0 rejects (margin can never exceed 1.0)
+    // 2. alignmentMargin with threshold 2.0 rejects (margin can never exceed 1.0)
     // 3. selfHeal called, falls through to full cascade
     // 4. Full cascade: both submit "approve"
-    // 5. aheadByK still rejects (threshold 2.0 > margin 1.0)
+    // 5. alignmentMargin still rejects (threshold 2.0 > margin 1.0)
     // 6. Final arbitration also fails -> session returns stuck
     const session = await runSession(machine);
     expect(session.currentState).toBe("pending");
