@@ -29,8 +29,8 @@ The arbiter is a **fully deterministic, built-in component** — never an AI mod
 1. **Solicits proposals** from all enabled proposers
 2. **Validates proposals** — rejects invalid transitions
 3. **Clusters proposals** by transition — proposals for the same transition combine rather than compete
-4. **Counts endorsements** continuously as proposals arrive
-5. **Declares consensus** when one transition's endorsement count leads the next-best by at least k
+4. **Scores endorsements** continuously as proposals arrive, weighted by alignment
+5. **Declares consensus** when one transition's alignment-weighted margin exceeds the threshold
 6. **Blocks for human** when all specialists have been exhausted without consensus
 7. **Self-heals** by re-enabling disabled specialists when anomalies are detected
 

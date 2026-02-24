@@ -44,7 +44,7 @@ The arbiter **validates every proposal** as it arrives. Invalid proposals are re
 
 ### Key Insight: Cost Scales with Difficulty
 
-Easy decisions resolve quickly — aligned proposers agree on the same transition, the lead reaches k, done. Harder decisions block for the human. Over time, as specialists improve through exemplar-driven few-shot learning, more decisions resolve from proposals alone, and the system gets cheaper automatically.
+Easy decisions resolve quickly — aligned proposers agree on the same transition, the margin exceeds the threshold, done. Harder decisions block for the human. Over time, as specialists improve through exemplar-driven few-shot learning, more decisions resolve from proposals alone, and the system gets cheaper automatically.
 
 ## Stage 1: Cold Start
 
