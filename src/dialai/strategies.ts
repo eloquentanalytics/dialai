@@ -73,16 +73,6 @@ export async function randomProposer(
   };
 }
 
-/**
- * Returns a weighted random transition (uniform weights for now).
- */
-export async function weightedRandom(
-  ctx: ProposerContext
-): Promise<ProposerStrategyResult> {
-  // For now, use uniform weights - could be extended with threshold param
-  return randomProposer(ctx);
-}
-
 /** Map of built-in proposer strategy names to functions */
 export const proposerStrategies: Record<
   string,
@@ -91,7 +81,6 @@ export const proposerStrategies: Record<
   firstAvailable,
   lastAvailable,
   random: randomProposer,
-  weightedRandom,
 };
 
 // ============================================================================

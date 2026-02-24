@@ -38,15 +38,16 @@ See [Arbitration](./arbitration.md) for the full algorithm and self-healing mech
 
 ## Alignment Score
 
-Every specialist has an **alignment score**: the fraction of its past choices that matched what the human chose.
+Every specialist has an **alignment score** computed using the **Wilson score lower bound** — the lower bound of a 95% confidence interval for the true match rate between the specialist's proposals and human decisions.
 
 ```
-alignment = matching_choices / total_comparisons
+alignmentScore = wilsonLowerBound(matchingChoices, totalComparisons, z=1.96)
 ```
 
 - **Humans** always have alignment = 1.0 (they are the ground truth)
 - **New AI specialists** start with alignment = 0.0 (no demonstrated alignment)
 - **Alignment grows** as the specialist's choices match human decisions
+- **Small samples are penalized**: 1 match out of 1 comparison yields ~0.21, not 1.0 — confidence requires evidence
 
 The alignment score tracks how well a specialist's proposals match human decisions over time. It is used for evaluation and progressive collapse decisions — determining when a specialist has demonstrated enough alignment to operate without human oversight.
 

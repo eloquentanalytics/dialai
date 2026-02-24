@@ -211,6 +211,7 @@ interface ProposerContext {
   prompt: string;
   transitions: Record<string, string>;
   history: TransitionRecord[];
+  metaJson?: Record<string, unknown>;
 }
 ```
 
@@ -299,7 +300,6 @@ DIAL provides built-in strategies for all specialist roles. These are referenced
 | `firstAvailable` | Proposes the first available transition (by insertion order) | -- |
 | `lastAvailable` | Proposes the last available transition (by insertion order) | -- |
 | `random` | Proposes a random available transition | -- |
-| `weightedRandom` | Proposes randomly, weighted by specialist alignment scores | -- |
 
 #### `firstAvailable`
 
@@ -340,34 +340,16 @@ function random(ctx: ProposerContext) -> Proposal:
     }
 ```
 
-#### `weightedRandom`
-
-```
-function weightedRandom(ctx: ProposerContext) -> Proposal:
-    transitions = list(ctx.transitions.keys())
-
-    # Weights are derived from specialist alignment scores,
-    # calculated as needed by the orchestrator. Currently
-    # falls back to uniform random selection.
-    name = random_choice(transitions)
-
-    return {
-        transitionName: name,
-        toState: ctx.transitions[name],
-        reasoning: "Weighted random selection"
-    }
-```
-
 ### Arbiter Strategies
 
 | Strategy | Description | Key Parameter |
 |----------|-------------|---------------|
-| `aheadByK` | **Default.** Counts proposals per transition; consensus when one leads by k | `threshold` (k value, default: 1) |
+| `aheadByK` | **Default.** Alignment-weighted margin; consensus when margin exceeds threshold | `threshold` (float, default: 0.5) |
 | `firstProposal` | Immediately selects the first proposal received | -- |
 
 #### `aheadByK` *(Default)*
 
-The default strategy. Counts proposals per transition. Consensus is reached when one transition's endorsement count leads the runner-up by at least k.
+The default strategy. Groups proposals by transition, scores by alignment-weighted margin. Consensus when the margin exceeds the threshold.
 
 See [Consensus Strategies](/docs/concepts/consensus-strategies#aheadbyk-default) for full documentation.
 

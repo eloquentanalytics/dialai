@@ -20,6 +20,13 @@ The `dialai` library provides functions for creating sessions, registering speci
 | [`evaluateConsensus`](#evaluateconsensus) | Check if consensus is reached |
 | [`executeTransition`](#executetransition) | Execute a state transition |
 | [`runSession`](#runsession) | Run a machine to completion |
+| [`tick`](#tick) | Global heartbeat — sweep all active sessions |
+| [`getProposers`](#getproposers) | List proposers for a machine |
+| [`getArbiter`](#getarbiter) | Get arbiter for a machine |
+| [`enableSpecialist`](#enablespecialist) | Re-enable a disabled specialist |
+| [`disableSpecialist`](#disablespecialist) | Disable a specialist (preserves history) |
+| [`getCollapseMetrics`](#getcollapsemetrics) | Progressive collapse monitoring |
+| [`getProposalsForRound`](#getproposalsforround) | List proposals in a round |
 
 ## Session Functions
 
@@ -31,6 +38,8 @@ Creates a new session instance from a machine definition.
 import { createSession } from "dialai";
 
 const session = await createSession(machine);
+// Or with metadata:
+// const session = await createSession(machine, { puzzleSize: 3 });
 // session.sessionId      → "a1b2c3d4-..."
 // session.currentState   → machine.initialState
 // session.history        → []
@@ -39,7 +48,7 @@ const session = await createSession(machine);
 **Signature:**
 
 ```typescript
-createSession(machine: MachineDefinition): Promise<Session>
+createSession(machine: MachineDefinition, metaJson?: Record<string, unknown>): Promise<Session>
 ```
 
 ### getSession
@@ -401,13 +410,11 @@ runSession(machine: MachineDefinition): Promise<Session>
 **Behavior:**
 
 1. Creates a session in the initial state
-2. Registers a built-in deterministic proposer (picks the first transition)
-3. Runs one decision cycle:
-   - Solicits proposals from all enabled proposers
-   - Checks consensus after proposals are collected
-   - If no consensus: returns session (exhausted, waiting for human)
-   - If consensus: executes the winning transition
-4. Returns the session (completed or waiting for human)
+2. Registers machine-level and per-state specialists from the machine definition
+3. Registers a default proposer (`firstAvailable`) if no proposers are specified
+4. Registers a default arbiter (`firstProposal`) if no arbiter is specified
+5. Loops `tick()` until the session reaches its goal state or needs human intervention
+6. Returns the session (completed or waiting for human)
 
 ## Store
 
@@ -430,6 +437,128 @@ clear();
 | `specialists` | `Map<string, Specialist>` | All registered specialists |
 | `proposals` | `Map<string, Proposal>` | All proposals by ID |
 | `clear` | `() => void` | Clears all maps |
+
+## Orchestration
+
+### tick
+
+Global heartbeat. Sweeps all active sessions, performing one atomic step per session.
+
+```typescript
+import { tick } from "dialai";
+
+const results = await tick();
+for (const r of results) {
+  console.log(`${r.sessionId}: ${r.status} → ${r.currentState}`);
+}
+```
+
+**Signature:**
+
+```typescript
+tick(): Promise<TickResult[]>
+```
+
+Per-session behavior:
+- If a proposer hasn't submitted yet → solicit that one proposer (status: `'solicited'`)
+- If all proposers submitted and consensus reached → execute transition (status: `'advanced'`)
+- If all proposers submitted but no consensus → report (status: `'needs_human'`)
+- Terminal sessions are omitted from results
+
+## Specialist Management
+
+### getProposers
+
+Returns all proposers registered for a machine.
+
+```typescript
+import { getProposers } from "dialai";
+const proposers = await getProposers("my-task");
+```
+
+**Signature:**
+
+```typescript
+getProposers(machineName: string): Promise<Proposer[]>
+```
+
+### getArbiter
+
+Returns the arbiter registered for a machine, or `undefined` if none.
+
+```typescript
+import { getArbiter } from "dialai";
+const arbiter = await getArbiter("my-task");
+```
+
+**Signature:**
+
+```typescript
+getArbiter(machineName: string): Promise<Arbiter | undefined>
+```
+
+### enableSpecialist
+
+Re-enables a previously disabled specialist.
+
+```typescript
+import { enableSpecialist } from "dialai";
+await enableSpecialist("ai-proposer-1");
+```
+
+**Signature:**
+
+```typescript
+enableSpecialist(specialistId: string): Promise<void>
+```
+
+### disableSpecialist
+
+Disables a specialist. The specialist stops receiving solicitations but its registration and alignment history are preserved.
+
+```typescript
+import { disableSpecialist } from "dialai";
+await disableSpecialist("ai-proposer-1");
+```
+
+**Signature:**
+
+```typescript
+disableSpecialist(specialistId: string): Promise<void>
+```
+
+## Monitoring
+
+### getCollapseMetrics
+
+Returns progressive collapse metrics for a machine, optionally filtered by state.
+
+```typescript
+import { getCollapseMetrics } from "dialai";
+const metrics = await getCollapseMetrics("my-task");
+console.log(`Collapse ratio: ${metrics.collapseRatio}`);
+```
+
+**Signature:**
+
+```typescript
+getCollapseMetrics(machineName: string, state?: string): Promise<CollapseMetrics>
+```
+
+### getProposalsForRound
+
+Returns all proposals submitted in a specific round.
+
+```typescript
+import { getProposalsForRound } from "dialai";
+const proposals = await getProposalsForRound(session.sessionId, session.currentRoundId);
+```
+
+**Signature:**
+
+```typescript
+getProposalsForRound(sessionId: string, roundId: string): Promise<Proposal[]>
+```
 
 ## Additional References
 

@@ -65,7 +65,7 @@ Each state can have:
 
 - **prompt**: A description of the decision to be made. This is given to all specialists and guides their proposals.
 - **transitions**: A map of transition names to target states. If omitted, the state is terminal.
-- **consensusThreshold**: The **ahead-by-k threshold** for this state (integer). Controls how many proposals the leading transition must be ahead by for consensus. Higher = more deliberation required. If omitted, uses the machine default (k=1).
+- **consensusThreshold**: The consensus threshold for this state (float, 0–1). Controls the alignment-weighted margin required for auto-approval. Higher = more deliberation required. If omitted, resolved by priority: machine > arbiter > 0.5.
 
 ### The Ahead-by-k Threshold
 
@@ -73,11 +73,12 @@ Each state has a **consensus threshold** (the ahead-by-k parameter) that control
 
 | Value | Behavior |
 |-------|----------|
-| **k = 1** | A single-proposal lead is sufficient — fast consensus when proposers agree |
-| **k = 2** | Leader must be ahead by two proposals — more deliberation required |
-| **k = 3+** | Requires strong agreement among proposers — high-stakes decisions |
+| **0.3** | Low bar — a modest alignment-weighted lead is enough |
+| **0.5** (default) | Moderate lead required — standard decisions |
+| **0.7** | Strong lead required — important decisions needing high confidence |
+| **1.0** | Human-only — no auto-approval, human must always decide |
 
-You can set different thresholds for different states. A high-stakes "approve deployment" state might use k=3, while a routine "categorize ticket" state might use k=1.
+You can set different thresholds for different states. A high-stakes "approve deployment" state might use `consensusThreshold: 1.0`, while a routine "categorize ticket" state might use `consensusThreshold: 0.3`.
 
 ## Decision Prompts
 
@@ -125,7 +126,7 @@ Each machine should model one type of decision process. If a workflow has distin
 
 ### 4. Start with High Thresholds
 
-Begin with a higher `consensusThreshold` value (e.g., k=3). This requires stronger agreement among proposers, increasing the likelihood of human participation and generating exemplars. Lower the threshold only after specialists demonstrate reliable human alignment.
+Begin with a higher `consensusThreshold` value (e.g., 0.8 or 1.0). This requires a stronger alignment-weighted margin, increasing the likelihood of human participation and generating exemplars. Lower the threshold only after specialists demonstrate reliable human alignment.
 
 ### 5. Design for Task Decomposition
 

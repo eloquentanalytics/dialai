@@ -39,7 +39,7 @@ The arbiter requests proposals from all enabled proposers. Each proposal include
 
 The arbiter **validates** each proposal as it arrives — invalid transitions are rejected. Valid proposals are **clustered by transition**: if two proposers both suggest "approve," their contributions support the same transition.
 
-After each valid proposal arrives, the arbiter re-evaluates consensus. Each proposal counts as one endorsement of its transition. The first transition to be ahead by k proposals wins. The winning proposal is the first proposal submitted for the winning transition.
+After each valid proposal arrives, the arbiter re-evaluates consensus. Each proposal endorses its transition, weighted by the proposer's alignment score. Consensus is reached when the alignment-weighted margin exceeds the threshold. The winning proposal is from the highest-alignment proposer within the winning transition group.
 
 ### Phase 2: Block for Human
 
@@ -57,13 +57,14 @@ The arbiter counts proposals per transition. Each proposal is one endorsement. T
 count(transition) = number of proposals for that transition
 ```
 
-Consensus is reached when:
+Consensus is reached when the alignment-weighted margin exceeds the threshold:
 
 ```
-count(leader) − count(runner_up) ≥ k
+margin = (leaderScore − runnerUpScore) / totalAlignment
+consensus when: threshold < 1 AND margin >= threshold
 ```
 
-Where k is the **ahead-by-k threshold** (a state-level parameter, default k=1).
+Where the **consensus threshold** is a float (default 0.5), resolved by priority: state > machine > arbiter > 0.5.
 
 See [Arbitration](./arbitration.md) for the full algorithm, including proposal clustering and self-healing.
 

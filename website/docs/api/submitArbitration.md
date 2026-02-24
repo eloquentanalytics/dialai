@@ -57,7 +57,7 @@ When checking for consensus (no `transitionName`), these guards are checked:
 
 1. **Round ID match**: The provided `roundId` must match `session.currentRoundId`
 2. **Proposal existence**: At least one proposal must exist for the current round
-3. **Ahead-by-k threshold**: The leading transition must be ahead by `k` proposals (configurable per-state, default `k=1`)
+3. **Consensus threshold**: The leading transition's alignment-weighted margin must exceed the threshold (configurable per-state, default `0.5`)
 
 When forcing a transition (with `transitionName`):
 

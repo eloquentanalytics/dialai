@@ -12,21 +12,23 @@ Every round at every state is orchestrated by the **arbiter** — a deterministi
 
 ### Core Algorithm: Ahead-by-k
 
-Every proposal is an endorsement of its transition. The arbiter groups proposals by **transition**. If two proposers both chose the same transition, their proposals combine as endorsements of the same outcome.
+Every proposal is an endorsement of its transition, weighted by the proposer's alignment score. The arbiter groups proposals by **transition** and scores each group by the **sum of alignment scores**. If two proposers both chose the same transition, their alignment scores combine.
 
-Consensus is reached when the leading transition is ahead of the runner-up by k proposals:
+Consensus is reached when the alignment-weighted margin exceeds the threshold:
 
 ```
-count(leader) − count(runner_up) ≥ k
+groupScore(T) = sum(alignmentScore for each proposer endorsing T)
+margin = (leaderScore − runnerUpScore) / totalAlignment
+consensus when: threshold < 1 AND margin >= threshold
 ```
 
-The **ahead-by-k threshold** controls consensus difficulty. Higher k = "more proposers must agree." Lower k = "a modest lead is enough."
+The **consensus threshold** is a float (default 0.5). Higher = "more alignment-weighted dominance required." Setting threshold = 1 disables auto-approval entirely.
 
 ### The Solicitation Flow
 
 The arbiter works through these steps, checking for consensus after every arriving proposal:
 
-1. **Soliciting Proposals** — The arbiter calls `submitProposal` on each enabled proposer. Proposals arrive asynchronously. As each valid proposal arrives, the arbiter clusters it by transition, updates the count, and checks the ahead-by-k threshold. If proposers all chose the same transition, the leader's count grows — instant consensus when the lead reaches k.
+1. **Soliciting Proposals** — The arbiter calls `submitProposal` on each enabled proposer. Proposals arrive asynchronously. As each valid proposal arrives, the arbiter clusters it by transition, updates the alignment-weighted score, and checks the margin against the threshold. If proposers all chose the same transition, the group score grows — consensus when the margin exceeds the threshold.
 
 2. **Exhausted — Waiting for Human** — The arbiter has solicited every enabled proposer. No transition's lead crossed the threshold. The task blocks until a human submits a proposal, which always wins immediately, creating ground truth and generating new alignment data.
 
@@ -57,11 +59,9 @@ Easy decisions resolve quickly — aligned proposers agree on the same transitio
 
 The first round begins. The arbiter solicits all enabled proposers. The responses come back — two say `approve`, one says `reject`. The arbiter validates all three. It clusters them by transition: two proposals for "approve," one for "reject."
 
-With k=1: count(approve)=2, count(reject)=1. Lead = 2-1 = 1 ≥ k. **Consensus reached on "approve."** The winning proposal is the first proposal submitted for "approve."
+But at cold start, all alignment scores are 0 — `totalAlignment = 0`. **The system blocks for human input.** Alignment data is required for the margin to be computed, so no consensus is possible until human decisions have established alignment baselines.
 
-> **When proposers agree, consensus is immediate.** The ahead-by-k mechanism doesn't depend on alignment scores — it counts proposals. Even on day 0, if proposers agree, the system proceeds autonomously.
-
-When proposers disagree and no transition achieves the required lead, the system blocks for a human.
+> **Cold start always blocks.** The alignment-weighted margin requires at least some alignment evidence. The first human decisions generate exemplars and start building alignment scores. Once alignment data exists, consensus becomes possible.
 
 ## Stage 2: The Human Decides
 
@@ -79,11 +79,13 @@ Three things happen when the human submits:
 
 ### Alignment Measurement
 
+Alignment is computed using the **Wilson score lower bound** — the lower bound of a 95% confidence interval for the true match rate:
+
 ```
-alignment = matching choices / total comparisons
+alignmentScore = wilsonLowerBound(matchingChoices, totalComparisons, z=1.96)
 ```
 
-After round 1, a proposer that chose the same transition as the human has alignment 1/1 = 1.0. A proposer that chose differently has 0/1 = 0.0. Alignment scores inform pruning decisions — which specialists to keep, which to disable.
+After round 1, a proposer that chose the same transition as the human has alignment ~0.21 (Wilson lower bound of 1/1, not 1.0). A proposer that chose differently has 0.0. The Wilson score naturally penalizes small samples — confidence requires multiple observations. After 19 matches out of 20, alignment is ~0.85. Alignment scores inform pruning decisions and weight consensus calculations.
 
 ## Stage 3: The Calibration Loop
 
@@ -107,11 +109,11 @@ Patterns are emerging. GPT-4o-mini and Claude-3.5-sonnet almost always propose w
 
 As specialists improve through exemplar-driven learning, they agree more often. When all three proposers choose the same transition, consensus is immediate from proposals alone.
 
-**Round 21 begins.** The arbiter solicits all enabled proposers. All three propose "approve." With k=1, the lead is immediate: count(approve)=3, no runner-up. Consensus declared from proposals alone. No human needed.
+**Round 21 begins.** The arbiter solicits all enabled proposers. All three propose "approve." Their alignment scores (e.g., 0.85, 0.72, 0.31) all flow into one group. With no runner-up, the margin is 1.0 — well above the default threshold of 0.5. Consensus declared from proposals alone. No human needed.
 
-**But what about rounds where they disagree?** Say two propose "approve" and one proposes "reject." With k=1: lead = 2-1 = 1 ≥ k. Consensus on "approve." The one dissenting proposer doesn't block consensus.
+**But what about rounds where they disagree?** Say two propose "approve" (alignment 0.85 + 0.72 = 1.57) and one proposes "reject" (alignment 0.31). totalAlignment = 1.88. margin = (1.57 - 0.31) / 1.88 = 0.67. With threshold=0.5: 0.67 >= 0.5. Consensus on "approve."
 
-With k=2: lead = 2-1 = 1 < 2. No consensus. Block for human. The higher threshold demands stronger agreement.
+With threshold=0.8: margin 0.67 < 0.8. No consensus. Block for human. The higher threshold demands stronger alignment-weighted agreement.
 
 ### What Changed
 
@@ -148,13 +150,13 @@ After 100 rounds, Claude-3.5-sonnet has 96% alignment. Its proposals have been a
 
 The arbiter enters **champion mode**:
 
-- The arbiter solicits only Claude-3.5-sonnet (the sole enabled proposer). With k=1 and a single proposer, its proposal is always accepted (lead of 1 with no runner-up).
+- The arbiter solicits only Claude-3.5-sonnet (the sole enabled proposer). With threshold < 1 and a single proposal, it is auto-approved immediately.
 - The human participates every 50 rounds as a spot-check, generating new exemplars and feeding the trip line.
 - If the champion submits an invalid proposal, the arbiter immediately re-enables all disabled proposers and escalates.
 
 ### Champion Selection
 
-The arbiter selects the champion: the proposer with the highest alignment score that exceeds the CHAMPION_THRESHOLD (default 0.8). If no proposer qualifies, the arbiter stays in full solicitation mode. Champion status is not permanent — the arbiter re-evaluates continuously.
+The arbiter selects the champion: the proposer with the highest alignment score that exceeds `CHAMPION_THRESHOLD = 0.8`. If no proposer qualifies, the arbiter stays in full solicitation mode. Champion status is not permanent — the arbiter re-evaluates continuously.
 
 ## Stage 7: Collapsed Execution
 
@@ -172,7 +174,7 @@ The collapsed state is not permanent. The arbiter continuously monitors the syst
 
 ### Alignment Degradation
 
-The human still participates periodically — every 50 or 100 rounds — and each participation is scored. If the champion's recent alignment drops below the CHAMPION_THRESHOLD, the **trip line fires**.
+The human still participates periodically — every 50 or 100 rounds — and each participation is scored. If the champion's recent alignment drops below `CHAMPION_THRESHOLD` (0.8), the **trip line fires**.
 
 Why would alignment drop?
 
@@ -184,7 +186,7 @@ When the trip line fires, the arbiter reverts to a more deliberative configurati
 
 ### Trip Line Mechanism
 
-Track the champion's alignment over the last N human-participated rounds (e.g., N=10). If alignment drops below the CHAMPION_THRESHOLD, the arbiter reverts: re-enables disabled specialists, increases human participation frequency. The revert is automatic and immediate.
+Track the champion's alignment over the last N human-participated rounds (e.g., N=10). If alignment drops below `CHAMPION_THRESHOLD` (0.8), the arbiter reverts: re-enables disabled specialists, increases human participation frequency. The revert is automatic and immediate.
 
 ### Immediate Self-Healing
 

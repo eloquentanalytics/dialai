@@ -91,7 +91,6 @@ export {
   firstAvailable,
   lastAvailable,
   randomProposer,
-  weightedRandom,
   proposerStrategies,
   // Arbiter strategies
   firstProposal,

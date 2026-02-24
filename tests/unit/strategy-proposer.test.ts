@@ -4,7 +4,6 @@ import {
   firstAvailable,
   lastAvailable,
   randomProposer,
-  weightedRandom,
 } from "../../src/dialai/index.js";
 import type { ProposerContext } from "../../src/dialai/types.js";
 
@@ -70,17 +69,6 @@ describe("DIAL_143–DIAL_150: Proposer Strategies", () => {
     }
   });
 
-  test("DIAL_146: weightedRandom picks from available transitions", async () => {
-    const ctx = twoTransitionContext();
-    const validNames = Object.keys(ctx.transitions);
-
-    for (let i = 0; i < 100; i++) {
-      const result = await weightedRandom(ctx);
-      expect(validNames).toContain(result.transitionName);
-      expect(result.toState).toBe(ctx.transitions[result.transitionName]);
-    }
-  });
-
   test("DIAL_147: firstAvailable with single transition", async () => {
     const ctx = singleTransitionContext();
     const result = await firstAvailable(ctx);
@@ -107,7 +95,7 @@ describe("DIAL_143–DIAL_150: Proposer Strategies", () => {
 
   test("DIAL_150: all proposer strategies return ProposerStrategyResult shape", async () => {
     const ctx = twoTransitionContext();
-    const strategies = [firstAvailable, lastAvailable, randomProposer, weightedRandom];
+    const strategies = [firstAvailable, lastAvailable, randomProposer];
 
     for (const strategy of strategies) {
       const result = await strategy(ctx);

@@ -57,10 +57,11 @@ The arbiter groups proposals by **transition** (not individual proposal). Two pr
 Consensus is reached when the leading transition is ahead of the runner-up by k proposals:
 
 ```
-count(leader) − count(runner_up) ≥ k
+margin = (leaderScore − runnerUpScore) / totalAlignment
+consensus when: threshold < 1 AND margin >= threshold
 ```
 
-The **ahead-by-k threshold** controls how much agreement is required. With k=1, a single-proposal lead is sufficient. Higher values of k require stronger agreement among proposers.
+The **consensus threshold** (a float, default 0.5) controls how much alignment-weighted agreement is required. A lower threshold allows faster consensus; a threshold of 1.0 disables auto-approval entirely (human-only mode).
 
 [Learn more about Arbitration →](./arbitration.md)
 

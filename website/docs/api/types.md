@@ -29,6 +29,10 @@ import type {
   Exemplar,
   AlignmentEvaluationResult,
   AccuracyEvaluationResult,
+  DecisionRecord,
+  CollapseMetrics,
+  TickResult,
+  TickStatus,
   SubmitProposalOptions,
   SubmitArbitrationOptions,
 } from "dialai";
@@ -91,6 +95,7 @@ interface Session {
   machine: MachineDefinition;   // The full machine definition
   history: TransitionRecord[];  // All executed transitions in order
   createdAt: Date;              // When the session was created
+  metaJson?: Record<string, unknown>;  // Arbitrary session-level metadata
 }
 ```
 
@@ -150,7 +155,7 @@ interface Arbiter {
   machineName: string;
   enabled?: boolean;              // Whether this specialist is enabled (default true)
   strategyFn?: (ctx: ArbiterContext) => Promise<ArbiterStrategyResult>;
-  strategyFnName?: string;        // Built-in: "aheadByK"
+  strategyFnName?: string;        // Built-in: "aheadByK" | "firstProposal"
   strategyWebhookUrl?: string;
   webhookTokenName?: string;
   threshold?: number;             // Strategy-specific threshold
@@ -172,6 +177,7 @@ interface ProposerContext {
   prompt: string;                       // Decision prompt for this state
   transitions: Record<string, string>;  // Available transitions (name → target)
   history: TransitionRecord[];          // All previous transitions
+  metaJson?: Record<string, unknown>;   // Session-level metadata
 }
 ```
 
@@ -207,6 +213,7 @@ interface ArbiterContext {
   humanGoldExamples?: HumanGoldExample[];    // Human gold examples (for mostSimilar)
   history: TransitionRecord[];  // All previous transitions
   threshold: number;            // Configured threshold for this arbiter
+  metaJson?: Record<string, unknown>;  // Session-level metadata
 }
 ```
 
@@ -214,27 +221,39 @@ interface ArbiterContext {
 
 ```typescript
 const arbiterStrategy = async (ctx: ArbiterContext) => {
-  // Simple ahead-by-k logic counting proposals per transition
-  const tallies: Record<string, number> = {};
+  // Alignment-weighted margin (matching the built-in aheadByK)
+  const scores = ctx.alignmentScores ?? {};
+  const groups = new Map<string, { score: number; bestId: string; bestAlign: number }>();
+  let totalAlign = 0;
+
   for (const p of ctx.proposals) {
-    tallies[p.transitionName] = (tallies[p.transitionName] ?? 0) + 1;
+    const align = scores[p.specialistId] ?? 0;
+    totalAlign += align;
+    const g = groups.get(p.transitionName);
+    if (g) {
+      g.score += align;
+      if (align > g.bestAlign) { g.bestAlign = align; g.bestId = p.proposalId; }
+    } else {
+      groups.set(p.transitionName, { score: align, bestId: p.proposalId, bestAlign: align });
+    }
   }
-  const sorted = Object.entries(tallies).sort((a, b) => b[1] - a[1]);
 
-  if (sorted.length < 2) {
-    return { consensusReached: false, reasoning: "Not enough proposals" };
+  if (totalAlign === 0) {
+    return { consensusReached: false, reasoning: "Cold start: no alignment data" };
   }
 
-  const lead = sorted[0][1] - sorted[1][1];
-  if (lead >= ctx.threshold) {
+  const sorted = [...groups.entries()].sort((a, b) => b[1].score - a[1].score);
+  const margin = (sorted[0][1].score - (sorted[1]?.[1].score ?? 0)) / totalAlign;
+
+  if (ctx.threshold < 1 && margin >= ctx.threshold) {
     return {
       consensusReached: true,
-      winningProposalId: sorted[0][0],
-      reasoning: `Proposal ahead by ${lead} proposals (threshold: ${ctx.threshold})`,
+      winningProposalId: sorted[0][1].bestId,
+      reasoning: `Margin ${margin.toFixed(2)} >= threshold ${ctx.threshold}`,
     };
   }
 
-  return { consensusReached: false, reasoning: `Lead of ${lead} below threshold ${ctx.threshold}` };
+  return { consensusReached: false, reasoning: `Margin ${margin.toFixed(2)} below threshold ${ctx.threshold}` };
 };
 ```
 
@@ -324,7 +343,7 @@ interface RegisterProposerOptions {
     reasoning: string;
   }>;
   strategyWebhookUrl?: string;
-  strategyFnName?: string;  // Built-in: "firstAvailable", "lastAvailable", "random", "weightedRandom"
+  strategyFnName?: string;  // Built-in: "firstAvailable", "lastAvailable", "random"
 
   // For LLM-based modes:
   modelId?: string;
@@ -353,7 +372,7 @@ interface RegisterArbiterOptions {
     reasoning: string;
   }>;
   strategyWebhookUrl?: string;
-  strategyFnName?: string;  // Built-in strategy: "aheadByK"
+  strategyFnName?: string;  // Built-in: "aheadByK" | "firstProposal"
 
   // For webhooks:
   webhookTokenName?: string;
@@ -392,6 +411,7 @@ interface StateDefinition {
   prompt?: string;                         // Decision prompt for this state
   transitions?: Record<string, string>;    // Map of transition names to target states
   consensusThreshold?: number;             // Consensus threshold override for this state
+  specialists?: SpecialistDefinition[];    // Per-state specialist declarations
 }
 ```
 
@@ -405,6 +425,7 @@ interface SpecialistDefinition {
   specialistId: string;
   machineName?: string;
   isHuman?: boolean;
+  disabled?: boolean;           // Per-state: don't solicit but still registered
   strategyFn?: string;
   strategyFnName?: string;
   strategyWebhookUrl?: string;
@@ -474,9 +495,10 @@ Tracks how well a specialist aligns with human decisions.
 interface AlignmentRecord {
   specialistId: string;       // The specialist being tracked
   machineName: string;        // The machine this alignment is for
+  state?: string;             // When present, alignment is tracked per-state
   matchingChoices: number;    // Number of times specialist matched human choice
   totalComparisons: number;   // Total number of comparisons
-  alignmentScore: number;     // Calculated: matchingChoices / totalComparisons
+  alignmentScore: number;     // Wilson score lower bound of matchingChoices / totalComparisons
   lastUpdated: Date;          // When this record was last updated
 }
 ```
@@ -508,7 +530,7 @@ interface AlignmentEvaluationResult {
   machineName: string;         // Machine name
   totalExemplars: number;      // Total exemplars evaluated against
   matchingDecisions: number;   // Number of matching decisions
-  alignmentScore: number;      // matchingDecisions / totalExemplars
+  alignmentScore: number;      // Wilson score lower bound of matchingDecisions / totalExemplars
 }
 ```
 
@@ -525,6 +547,69 @@ interface AccuracyEvaluationResult {
   stateMatchRate: number;        // Rate of matching target states
   totalCostUSD: number;          // Total cost in USD
   avgLatencyMsec: number;        // Average latency in milliseconds
+}
+```
+
+### DecisionRecord
+
+A record of a single arbitration decision, captured for monitoring.
+
+```typescript
+interface DecisionRecord {
+  decisionId: string;
+  sessionId: string;
+  machineName: string;
+  roundId: string;
+  fromState: string;
+  toState: string;
+  transitionName: string;
+  isHuman: boolean;
+  proposals: Proposal[];                     // Snapshot of all proposals
+  alignmentSnapshot: Record<string, number>; // Alignment scores at decision time
+  consensusMargin: number | null;            // Margin from aheadByK, or null if human-forced
+  threshold: number;                         // Arbiter threshold at decision time
+  timestamp: Date;
+}
+```
+
+### CollapseMetrics
+
+Computed metrics for progressive collapse monitoring.
+
+```typescript
+interface CollapseMetrics {
+  machineName: string;
+  totalDecisions: number;
+  humanDecisions: number;
+  aiDecisions: number;
+  collapseRatio: number;
+  recentCollapseRatio: number;
+  averageConsensusMargin: number;
+  alignmentScores: Record<string, number>;
+  specialists: SpecialistMetrics[];
+  signals: Signal[];
+}
+```
+
+### TickResult / TickStatus
+
+Types for tick-based orchestration.
+
+```typescript
+type TickStatus =
+  | "solicited"    // triggered one proposer to submit
+  | "advanced"     // consensus reached, transition executed
+  | "needs_human"; // all proposals in, no consensus
+
+interface TickResult {
+  sessionId: string;
+  machineName: string;
+  status: TickStatus;
+  currentState: string;
+  specialistId?: string;    // Set when status === 'solicited'
+  previousState?: string;   // Set when status === 'advanced'
+  transitionName?: string;  // Set when status === 'advanced'
+  reasoning?: string;       // Set when status === 'advanced'
 }
 ```
 

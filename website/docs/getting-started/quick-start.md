@@ -110,7 +110,7 @@ const proposalB = await submitProposal({
   reasoning: "I agree, let's complete it",
 });
 
-// Submit arbitration - checks for consensus (both propose "complete", ahead by k=1)
+// Submit arbitration - checks for consensus (both propose "complete")
 const result = await submitArbitration({ sessionId: session.sessionId, roundId: session.currentRoundId });
 console.log(result.executed);    // true (both proposers agreed)
 console.log(result.toState);     // "done"

@@ -100,7 +100,7 @@ export function createMcpServer(): Server {
               isHuman: { type: "boolean", description: "If true, can force arbitration" },
               strategyFnName: {
                 type: "string",
-                description: "Built-in strategy: firstAvailable, lastAvailable, random, weightedRandom",
+                description: "Built-in strategy: firstAvailable, lastAvailable, random",
               },
               threshold: { type: "number", description: "Strategy-specific threshold" },
             },

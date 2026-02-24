@@ -196,7 +196,7 @@ The CLI accepts JSON files conforming to the `MachineDefinition` type:
         }
       },
       "arbiter": {
-        "aheadByK": "number (default: 1)"
+        "aheadByK": "number (default: 0.5)"
       }
     }
   }
