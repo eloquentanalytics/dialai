@@ -36,8 +36,13 @@ pnpm-debug.log*
 *.tmp
 *.temp
 
-# Screenshots (test artifacts)
+# Screenshots and test artifacts
 /*.png
+.playwright-mcp/
+**/test-results/
+
+# Apps (developed on separate branches)
+apps/
 
 # Website build
 website/build/
