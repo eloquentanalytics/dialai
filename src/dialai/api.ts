@@ -389,6 +389,25 @@ export async function getArbiterForState(session: Session): Promise<Arbiter | un
   return getArbiter(session.machineName);
 }
 
+/**
+ * Gets the effective consensus threshold for a session's current state.
+ * Priority: state > machine > arbiter. Returns undefined if none configured.
+ */
+export async function getEffectiveThreshold(session: Session): Promise<number | undefined> {
+  const stateDef = session.machine.states[session.currentState];
+  if (stateDef?.consensusThreshold !== undefined) {
+    return stateDef.consensusThreshold;
+  }
+  if (session.machine.consensusThreshold !== undefined) {
+    return session.machine.consensusThreshold;
+  }
+  const arbiter = await getArbiterForState(session);
+  if (arbiter?.threshold !== undefined) {
+    return arbiter.threshold;
+  }
+  return undefined;
+}
+
 // ============================================================================
 // Decision Cycle Functions
 // ============================================================================
@@ -414,7 +433,7 @@ function buildProposerContext(session: Session): ProposerContext {
 function buildArbiterContext(
   session: Session,
   roundProposals: Proposal[],
-  threshold: number
+  threshold?: number
 ): ArbiterContext {
   const currentStateDef = session.machine.states[session.currentState];
   return {
@@ -629,10 +648,12 @@ export async function evaluateConsensus(
 
   const roundProposals = await getProposalsForRound(sessionId, session.currentRoundId);
 
+  const effectiveThreshold = await getEffectiveThreshold(session);
+
   const ctx = buildArbiterContext(
     session,
     roundProposals,
-    arbiter.threshold ?? 1
+    effectiveThreshold
   );
 
   // Build alignment scores for context (per-state if state has specialists)

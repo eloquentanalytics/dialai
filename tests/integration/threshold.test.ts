@@ -171,7 +171,7 @@ describe("Integration: Consensus Threshold Behavior", () => {
     });
 
     // Both proposers have alignment and propose the same transition ("approve")
-    // All proposals for same transition means margin = 1.0, but threshold=1.0 blocks all
+    // All proposals for same transition means margin = 1.0, threshold=1.0 requires unanimity
     for (let i = 0; i < 5; i++) await updateAlignment("p1", "threshold-test", true);
     for (let i = 0; i < 5; i++) await updateAlignment("p2", "threshold-test", true);
 
@@ -186,8 +186,9 @@ describe("Integration: Consensus Threshold Behavior", () => {
       roundId: session.currentRoundId,
     });
 
+    // With threshold=1.0, all proposals for same transition gives margin=1.0 >= 1.0 → consensus
     const result = await evaluateConsensus(session.sessionId);
-    expect(result.consensusReached).toBe(false);
+    expect(result.consensusReached).toBe(true);
   });
 
   it("DIAL_321: per-state threshold overrides machine default", async () => {

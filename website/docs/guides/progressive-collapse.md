@@ -4,7 +4,7 @@ sidebar_position: 5
 
 # Progressive Collapse
 
-This guide walks through the complete journey from cold start to collapsed execution — the exact algorithms, worked examples, and cost data at every stage. For the high-level overview, see [How It Works](/process).
+This guide walks through the complete journey from cold start to collapsed execution — the exact algorithms, worked examples, and cost data at every stage. For the high-level overview, see the [Core Concepts](/docs/concepts/intro).
 
 ## Stage 0: The Decision Cycle
 
@@ -19,10 +19,10 @@ Consensus is reached when the alignment-weighted margin exceeds the threshold:
 ```
 groupScore(T) = sum(alignmentScore for each proposer endorsing T)
 margin = (leaderScore − runnerUpScore) / totalAlignment
-consensus when: threshold < 1 AND margin >= threshold
+consensus when: margin >= threshold
 ```
 
-The **consensus threshold** is a float (default 0.5). Higher = "more alignment-weighted dominance required." Setting threshold = 1 disables auto-approval entirely.
+The **consensus threshold** is a float (0–1). Higher = "more alignment-weighted dominance required." Setting threshold = 1 requires unanimity — all proposals must agree on the same transition.
 
 ### The Solicitation Flow
 
@@ -97,9 +97,9 @@ After 20 rounds, alignment scores have accumulated:
 
 | Specialist | Role | Alignment |
 |-----------|------|-----------|
-| GPT-4o-mini | Proposer | 18/20 — 90% |
-| Llama-3-8B | Proposer | 12/20 — 60% |
-| Claude-3.5-sonnet | Proposer | 19/20 — 95% |
+| GPT-4o-mini | Proposer | 18/20 — alignment 0.70 |
+| Llama-3-8B | Proposer | 12/20 — alignment 0.39 |
+| Claude-3.5-sonnet | Proposer | 19/20 — alignment 0.76 |
 
 Patterns are emerging. GPT-4o-mini and Claude-3.5-sonnet almost always propose what the human would choose. Llama-3-8B is wrong 40% of the time.
 
@@ -123,11 +123,11 @@ The algorithm didn't change. The threshold didn't change. What changed is that s
 
 After 50 rounds, the alignment data is conclusive. Some specialists are consistently useful. Others are not. Pruning doesn't delete specialists — it **disables** them. They remain registered, with their alignment history intact. The arbiter can re-enable them at any time.
 
-| Specialist | Alignment (50 rounds) | Action |
+| Specialist | Alignment (Wilson) | Action |
 |-----------|----------------------|--------|
-| GPT-4o-mini (proposer) | 92% | Enabled |
-| Llama-3-8B (proposer) | 58% | Disabled — proposals frequently wrong |
-| Claude-3.5-sonnet (proposer) | 96% | Enabled |
+| GPT-4o-mini (proposer) | alignment 0.81 | Enabled |
+| Llama-3-8B (proposer) | alignment 0.44 | Disabled — proposals frequently wrong |
+| Claude-3.5-sonnet (proposer) | alignment 0.87 | Enabled |
 
 ### Pruning Criteria
 
@@ -146,11 +146,11 @@ If the sole enabled proposer submits an **invalid proposal**, the arbiter detect
 
 ## Stage 6: The Champion Emerges
 
-After 100 rounds, Claude-3.5-sonnet has 96% alignment. Its proposals have been accepted in 47 of the last 50 rounds without human intervention. It is the **champion** — the specialist that best predicts what the human would choose at this state.
+After 100 rounds, Claude-3.5-sonnet has alignment 0.90 (96/100 match rate). Its proposals have been accepted in 47 of the last 50 rounds (alignment 0.84) without human intervention. It is the **champion** — the specialist that best predicts what the human would choose at this state.
 
 The arbiter enters **champion mode**:
 
-- The arbiter solicits only Claude-3.5-sonnet (the sole enabled proposer). With threshold < 1 and a single proposal, it is auto-approved immediately.
+- The arbiter solicits only Claude-3.5-sonnet (the sole enabled proposer). With a single proposal and no competing proposals, it is auto-approved immediately.
 - The human participates every 50 rounds as a spot-check, generating new exemplars and feeding the trip line.
 - If the champion submits an invalid proposal, the arbiter immediately re-enables all disabled proposers and escalates.
 
@@ -160,7 +160,7 @@ The arbiter selects the champion: the proposer with the highest alignment score 
 
 ## Stage 7: Collapsed Execution
 
-After several hundred rounds, the system reaches its most efficient state. The champion's prompt has been optimized through [counseling](/docs/concepts/intro) — specialist reflection sessions where it reviews cases where it diverged from the human and revises its approach. The exemplar corpus is large and high-quality.
+After several hundred rounds, the system reaches its most efficient state. The champion's prompt has been optimized through iterative exemplar-driven learning — reviewing cases where it diverged from the human and revising its approach. The exemplar corpus is large and high-quality.
 
 Optionally, the exemplar corpus is used to **fine-tune a smaller, cheaper model** — like Llama-3-8B or even Llama-7B — purpose-built for this specific decision at this specific state. The fine-tuned model is registered as a new specialist, tested against human choices, and if its alignment matches or exceeds the champion, it replaces the champion at a fraction of the cost.
 

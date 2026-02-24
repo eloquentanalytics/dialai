@@ -81,7 +81,7 @@ describe("DIAL_260–DIAL_267: Engine Helpers", () => {
     expect(await getEffectiveThreshold(session)).toBe(0.7);
   });
 
-  test("DIAL_263: getEffectiveThreshold defaults to 0.5", async () => {
+  test("DIAL_263: getEffectiveThreshold returns undefined when nothing configured", async () => {
     const machine: MachineDefinition = {
       machineName: "threshold-test",
       initialState: "a",
@@ -93,7 +93,7 @@ describe("DIAL_260–DIAL_267: Engine Helpers", () => {
     };
 
     const session = await createSession(machine);
-    expect(await getEffectiveThreshold(session)).toBe(0.5);
+    expect(await getEffectiveThreshold(session)).toBeUndefined();
   });
 
   test("DIAL_264: selectChampion returns highest-alignment proposer above threshold", async () => {

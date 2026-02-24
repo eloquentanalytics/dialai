@@ -34,7 +34,7 @@ Where `machine.json` contains:
   },
   "specialists": [
     { "role": "proposer", "specialistId": "ai-proposer", "strategyFnName": "firstAvailable" },
-    { "role": "arbiter", "specialistId": "arbiter", "strategyFnName": "aheadByK", "threshold": 1 }
+    { "role": "arbiter", "specialistId": "arbiter", "strategyFnName": "firstProposal" }
   ]
 }
 ```
@@ -112,12 +112,13 @@ The returned session will have:
 
 1. Creates a session in `machine.initialState`
 2. If `machine.specialists` is provided, registers those specialists
-3. Otherwise, registers a built-in deterministic proposer (picks first transition)
-4. Runs the proposal solicitation:
+3. If no proposers are registered, registers a default proposer (`firstAvailable` strategy)
+4. If no arbiter is registered, registers a default arbiter (`firstProposal` strategy)
+5. Runs the proposal solicitation:
    - Solicits proposals from all enabled proposers, checks consensus after each
    - If no consensus: returns session (exhausted, waiting for human)
    - If consensus: executes the winning transition
-5. Returns the session (completed or waiting for human)
+6. Returns the session (completed or waiting for human)
 
 ## Error Cases
 

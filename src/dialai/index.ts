@@ -80,10 +80,12 @@ export {
   submitArbitration,
   executeTransition,
   getProposalsForRound,
+  // Threshold
+  getEffectiveThreshold,
 } from "./api.js";
 
 // Re-export engine
-export { tick, runSession, getEffectiveThreshold, selectChampion } from "./engine.js";
+export { tick, runSession, selectChampion } from "./engine.js";
 
 // Re-export strategies
 export {

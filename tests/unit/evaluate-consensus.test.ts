@@ -199,6 +199,6 @@ describe("DIAL_115–DIAL_127: Evaluate Consensus", () => {
 
     await evaluateConsensus(session.sessionId);
 
-    expect(capturedThreshold).toBe(1);
+    expect(capturedThreshold).toBeUndefined();
   });
 });

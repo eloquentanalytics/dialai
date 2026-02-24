@@ -230,7 +230,7 @@ export interface ArbiterContext {
   /** All previous transitions */
   history: TransitionRecord[];
   /** Configured threshold for this arbiter */
-  threshold: number;
+  threshold?: number;
   /** Session-level metadata */
   metaJson?: Record<string, unknown>;
 }

@@ -18,7 +18,6 @@ import {
   getArbiter,
   getEnabledProposers,
   getEnabledProposersForState,
-  getArbiterForState,
   enableSpecialist,
   submitProposal,
   submitArbitration,
@@ -35,25 +34,6 @@ import type {
 
 /** Default champion threshold */
 const CHAMPION_THRESHOLD = 0.8;
-
-/**
- * Gets the effective consensus threshold for a session's current state.
- * Priority: state > machine > arbiter > 0.5
- */
-export async function getEffectiveThreshold(session: Session): Promise<number> {
-  const stateDef = session.machine.states[session.currentState];
-  if (stateDef?.consensusThreshold !== undefined) {
-    return stateDef.consensusThreshold;
-  }
-  if (session.machine.consensusThreshold !== undefined) {
-    return session.machine.consensusThreshold;
-  }
-  const arbiter = await getArbiterForState(session);
-  if (arbiter?.threshold !== undefined) {
-    return arbiter.threshold;
-  }
-  return 0.5;
-}
 
 /**
  * Selects a champion proposer — the highest-alignment proposer above threshold.

@@ -45,12 +45,12 @@ The margin is a normalized value between 0 and 1, representing how dominant the 
 #### Step 3: Check Threshold
 
 ```
-consensus when: threshold < 1 AND margin >= threshold
+consensus when: margin >= threshold
 ```
 
-The **threshold** is a float (default 0.5). Higher thresholds require a more dominant lead. Setting threshold = 1 disables auto-approval entirely (human-only mode).
+The **threshold** is a float (0–1). Higher thresholds require a more dominant lead. Setting threshold = 1 requires unanimity — all proposals must agree on the same transition.
 
-**Special case — single proposal**: When only one proposal exists and `threshold < 1`, consensus is immediate (no competing proposals needed).
+**Special case — single proposal**: When only one proposal exists, consensus is immediate (no competing proposals means margin = 1.0).
 
 ### Algorithm
 
@@ -61,8 +61,8 @@ function aheadByK(ctx) -> ConsensusResult:
     if len(ctx.proposals) == 0:
         return { consensusReached: false, reasoning: "No proposals" }
 
-    # Single proposal: auto-approve when threshold < 1
-    if len(ctx.proposals) == 1 and threshold < 1:
+    # Single proposal: auto-approve (no competing proposals)
+    if len(ctx.proposals) == 1 and threshold <= 1:
         return {
             consensusReached: true,
             winningProposalId: ctx.proposals[0].proposalId,
@@ -100,7 +100,7 @@ function aheadByK(ctx) -> ConsensusResult:
     runnerUpScore = sorted[1].score if len(sorted) > 1 else 0
     margin = (leaderScore - runnerUpScore) / totalAlignment
 
-    if threshold < 1 and margin >= threshold:
+    if margin >= threshold:
         return {
             consensusReached: true,
             winningProposalId: sorted[0].bestProposalId,
@@ -165,7 +165,7 @@ margin = (1.57 - 0.31) / 1.88 = 0.67
 |-----------|----------|-----------|
 | Specialist A | propose "approve" | 0.92 |
 
-Single proposal with threshold < 1. **Auto-approved immediately.**
+Single proposal — no competing proposals. **Auto-approved immediately.**
 
 ## `firstProposal`
 
@@ -212,7 +212,7 @@ With `aheadByK`, progressive collapse happens naturally:
 2. **Calibration**: Alignment scores grow as human decisions accumulate. Multiple proposals per round start arriving. If well-aligned specialists agree, the margin grows and consensus becomes possible.
 3. **Autonomous consensus**: Highly-aligned specialists consistently agree on transitions. The alignment-weighted margin exceeds the threshold quickly, and the system acts without human intervention.
 4. **Pruning**: Redundant and underperforming specialists are disabled. Fewer proposals per round, but the remaining specialists have high alignment. Cost drops.
-5. **Champion**: One specialist handles the task solo. With threshold < 1, a single proposal is auto-approved immediately.
+5. **Champion**: One specialist handles the task solo. A single proposal is auto-approved immediately (no competing proposals).
 6. **Collapsed**: A fine-tuned, cheap model replaces the original specialist. Same accuracy, fraction of the cost.
 
 The strategy never changes — the same `aheadByK` algorithm handles every stage. What changes is **how many specialists propose**, **how aligned they are**, and **how much they agree**.

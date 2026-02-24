@@ -151,7 +151,8 @@ describe("DIAL_171–DIAL_178: Arbiter Strategies", () => {
       transitionName: "approve",
     });
 
-    // Threshold omitted (undefined) should default to 1 = human-only mode
+    // Threshold omitted (undefined) defaults to 1 in aheadByK.
+    // With threshold=1, a single proposal is still auto-approved (threshold <= 1).
     const ctx: ArbiterContext = {
       sessionId: "s1",
       roundId: "r1",
@@ -161,12 +162,12 @@ describe("DIAL_171–DIAL_178: Arbiter Strategies", () => {
       proposals: [proposal],
       alignmentScores: { spec1: 0.9 },
       history: [],
-      threshold: undefined as unknown as number,
+      threshold: undefined,
     };
 
     const result = await aheadByK(ctx);
 
-    // threshold=1 disables auto-approval (human-only mode)
-    expect(result.consensusReached).toBe(false);
+    // Single proposal is auto-approved even at threshold=1 (threshold <= 1)
+    expect(result.consensusReached).toBe(true);
   });
 });

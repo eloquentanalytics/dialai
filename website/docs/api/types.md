@@ -212,7 +212,7 @@ interface ArbiterContext {
   alignmentScores?: Record<string, number>;  // Alignment scores by specialistId
   humanGoldExamples?: HumanGoldExample[];    // Human gold examples (for mostSimilar)
   history: TransitionRecord[];  // All previous transitions
-  threshold: number;            // Configured threshold for this arbiter
+  threshold?: number;           // Configured threshold for this arbiter
   metaJson?: Record<string, unknown>;  // Session-level metadata
 }
 ```
@@ -245,7 +245,7 @@ const arbiterStrategy = async (ctx: ArbiterContext) => {
   const sorted = [...groups.entries()].sort((a, b) => b[1].score - a[1].score);
   const margin = (sorted[0][1].score - (sorted[1]?.[1].score ?? 0)) / totalAlign;
 
-  if (ctx.threshold < 1 && margin >= ctx.threshold) {
+  if (margin >= ctx.threshold) {
     return {
       consensusReached: true,
       winningProposalId: sorted[0][1].bestId,

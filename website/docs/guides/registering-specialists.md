@@ -40,7 +40,7 @@ registerArbiter({
   specialistId: "consensus-arbiter",
   machineName: "my-task",
   strategyFnName: "aheadByK",
-  threshold: 2,
+  threshold: 0.5,
 });
 ```
 
@@ -165,11 +165,11 @@ registerArbiter({
   specialistId: "consensus-arbiter",
   machineName: "document-review",
   strategyFnName: "aheadByK",
-  threshold: 2,
+  threshold: 0.5,
 });
 ```
 
-Built-in strategies are stored in `src/strategies/` and loaded by name at runtime. The `threshold` parameter is passed to the strategy and its meaning varies by strategy type.
+Built-in strategies are stored in `src/dialai/strategies.ts` and loaded by name at runtime. The `threshold` parameter is passed to the strategy and its meaning varies by strategy type.
 
 See [Default Strategies](#default-strategies) below for the complete list and documentation.
 
@@ -239,7 +239,7 @@ registerProposer({
 
 ## Human Specialists
 
-Human specialists are registered with `isHuman: true`. Their proposals count like any other proposal during consensus evaluation. The key difference is that only human specialists can *force* a transition when consensus isn't reached. Human proposals always win consensus -- that is the override mechanism.
+Human specialists are registered with `isHuman: true`. Their proposals count like any other proposal during consensus evaluation. The key difference is that only human specialists can *force* a transition when consensus isn't reached. Human specialists have alignment = 1.0, giving their proposals maximum weight in consensus evaluation. Additionally, human specialists can force transitions directly via `submitArbitration` with an explicit `transitionName`, bypassing consensus entirely.
 
 Human specialists can have strategy functions that encode human preferences, or proposals can be submitted directly:
 
@@ -291,7 +291,7 @@ await submitArbitration({
 
 ## Default Strategies
 
-DIAL provides built-in strategies for all specialist roles. These are referenced by name via `strategyFnName` and stored in `src/strategies/`.
+DIAL provides built-in strategies for all specialist roles. These are referenced by name via `strategyFnName` and stored in `src/dialai/strategies.ts`.
 
 ### Proposer Strategies
 
@@ -366,8 +366,8 @@ Common combinations of proposer and arbiter strategies:
 | Use Case | Proposer | Arbiter |
 |----------|----------|---------|
 | **Testing/Dev** | `firstAvailable` | `firstProposal` |
-| **Production** | (LLM) | `aheadByK` (threshold=2) |
-| **High-stakes** | (LLM) | `aheadByK` (threshold=3+) |
+| **Production** | (LLM) | `aheadByK` (threshold=0.5) |
+| **High-stakes** | (LLM) | `aheadByK` (threshold=0.8+) |
 
 ### Implementing Custom Strategies
 

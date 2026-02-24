@@ -54,14 +54,14 @@ Every proposal is an endorsement of a transition. The arbiter counts proposals p
 
 The arbiter groups proposals by **transition** (not individual proposal). Two proposers that chose the same transition are supporting the same outcome — their endorsements count together.
 
-Consensus is reached when the leading transition is ahead of the runner-up by k proposals:
+Consensus is reached when the alignment-weighted margin exceeds the threshold:
 
 ```
 margin = (leaderScore − runnerUpScore) / totalAlignment
-consensus when: threshold < 1 AND margin >= threshold
+consensus when: margin >= threshold
 ```
 
-The **consensus threshold** (a float, default 0.5) controls how much alignment-weighted agreement is required. A lower threshold allows faster consensus; a threshold of 1.0 disables auto-approval entirely (human-only mode).
+The **consensus threshold** (a float, 0–1) controls how much alignment-weighted agreement is required. A lower threshold allows faster consensus; a threshold of 1.0 requires unanimity — all proposals must agree on the same transition.
 
 [Learn more about Arbitration →](./arbitration.md)
 

@@ -25,7 +25,7 @@ Define an arbiter in your machine JSON file:
   },
   "specialists": [
     { "role": "proposer", "specialistId": "ai-proposer", "strategyFnName": "firstAvailable" },
-    { "role": "arbiter", "specialistId": "consensus-arbiter", "strategyFnName": "aheadByK", "threshold": 1 }
+    { "role": "arbiter", "specialistId": "consensus-arbiter", "strategyFnName": "aheadByK", "threshold": 0.5 }
   ]
 }
 ```
@@ -46,7 +46,7 @@ Session ID:    a1b2c3d4-5678-90ab-cdef-1234567890ab
 
 Round 1 from pending
   Proposer ai-proposer proposed: approve → approved
-  Arbiter consensus-arbiter: consensus reached (1 proposal, threshold met)
+  Arbiter consensus-arbiter: consensus reached (single proposal, no competing proposals)
   Executed: approve → approved
 
 Session complete: approved
@@ -57,7 +57,7 @@ Session complete: approved
 1. The session started in the `pending` state
 2. The proposer submitted a proposal to transition via `approve`
 3. The arbiter evaluated consensus using the `aheadByK` strategy
-4. With only one proposal and threshold of 1, consensus was reached
+4. With only a single proposal and no competing proposals, `aheadByK` auto-approves (threshold <= 1.0)
 5. The transition executed, moving to `approved`
 
 ## Programmatic Usage
@@ -70,15 +70,16 @@ const arbiter = await registerArbiter({
   specialistId: "consensus-arbiter",
   machineName: "document-review",
   strategyFnName: "aheadByK",
-  threshold: 2,  // Require 2-proposal lead for consensus
+  threshold: 0.5,  // Require 0.5 alignment-weighted margin for consensus
 });
 
-// Using a custom strategy function
+// Using a custom strategy function (count-based, distinct from the built-in aheadByK)
 const customArbiter = await registerArbiter({
   specialistId: "custom-arbiter",
   machineName: "document-review",
   strategyFn: async (ctx) => {
-    // Count endorsements per transition and require the leader to be ahead by k
+    // Custom count-based strategy: counts raw proposals per transition
+    // (ignores alignment scores, unlike the built-in aheadByK which uses alignment-weighted margin)
     const counts: Record<string, number> = {};
     for (const p of ctx.proposals) {
       counts[p.transitionName] = (counts[p.transitionName] || 0) + 1;
@@ -107,21 +108,21 @@ Arbiters support two built-in consensus strategies via `strategyFnName`:
 
 | Strategy | Description | Threshold Usage |
 |----------|-------------|-----------------|
-| `aheadByK` | Consensus when leading transition is ahead by K proposals | `threshold` = minimum proposal lead required |
+| `aheadByK` | Consensus when alignment-weighted margin exceeds threshold | `threshold` = minimum margin required (float 0-1) |
 | `firstProposal` | Accepts the first valid proposal immediately | Not used |
 
-Each proposal counts as one endorsement of a transition. Human proposals always win consensus immediately, regardless of strategy.
+Each proposal is weighted by the proposer's alignment score. Human proposals carry alignment = 1.0 (the highest weight) but still go through the normal consensus algorithm. To override consensus entirely, use `submitArbitration` with an explicit `transitionName`.
 
 ### aheadByK
 
-The default strategy. Counts proposals per transition and declares consensus when one transition is ahead by at least `threshold` proposals. Human proposals always win consensus immediately.
+The default strategy. Groups proposals by transition and scores each group by sum of proposer alignment scores. Computes an alignment-weighted margin between the leader and runner-up. Declares consensus when the margin exceeds the threshold. A single proposal with no competing proposals is auto-approved when threshold <= 1.0. If all alignment scores are 0 (cold start), no consensus is reached and human input is required.
 
 ```typescript
 await registerArbiter({
   specialistId: "proposal-arbiter",
   machineName: "my-task",
   strategyFnName: "aheadByK",
-  threshold: 2,  // Need 2-proposal lead
+  threshold: 0.5,  // Need 0.5 alignment-weighted margin
 });
 ```
 

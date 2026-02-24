@@ -33,17 +33,17 @@ Consensus is evaluated as follows:
 1. **Group** proposals by `transitionName`
 2. **Score** each group: `groupScore = sum(alignmentScore for each proposer in group)`
 3. **Compute margin**: `margin = (leaderScore - runnerUpScore) / totalAlignment`
-4. **Consensus** when `threshold < 1` and `margin >= threshold`
+4. **Consensus** when `margin >= threshold`
 
 Special cases:
-- **Single proposal** with `threshold < 1`: auto-approved (no competing proposals needed)
-- **Threshold = 1**: disables all auto-approval — human must always decide
+- **Single proposal**: auto-approved (no competing proposals means margin = 1.0)
+- **Threshold = 1**: requires unanimity — all proposals must agree on the same transition
 - **Cold start** (`totalAlignment = 0`): always blocks for human input — alignment data is required for consensus
 
-The threshold is a float (default 0.5), not an integer:
-- **threshold = 0.5** (default): A moderate alignment-weighted lead is sufficient
+The threshold is a float (0–1), not an integer:
+- **threshold = 0.5**: A moderate alignment-weighted lead is sufficient
 - **threshold = 0.7**: Requires a stronger margin — more confidence needed
-- **threshold = 1.0**: Human-only mode — no auto-approval possible
+- **threshold = 1.0**: Unanimity required — all proposals must agree
 
 ### Worked Example
 
@@ -122,14 +122,14 @@ As human decisions accumulate and alignment scores grow, the margin calculation 
 
 ## Configuring the Consensus Threshold
 
-The threshold is a float between 0 and 1, resolved with this priority: **state > machine > arbiter > 0.5**.
+The threshold is a float between 0 and 1, resolved with this priority: **state > machine > arbiter**.
 
 | Setting | Behavior | Use When |
 |---------|----------|----------|
 | **0.3** | Low bar — modest alignment-weighted lead is enough | Low-stakes, high-throughput decisions |
-| **0.5** (default) | Moderate lead required | Standard decisions |
+| **0.5** | Moderate lead required | Standard decisions |
 | **0.7** | Strong lead required | Important decisions needing high confidence |
-| **1.0** | Human-only — no auto-approval | Highest-stakes decisions, audit requirements |
+| **1.0** | Unanimity required — all proposals must agree | Highest-stakes decisions, audit requirements |
 
 The threshold can be set at the **machine level** (applies to all states) or **per-state** (overrides the default for specific decision points).
 

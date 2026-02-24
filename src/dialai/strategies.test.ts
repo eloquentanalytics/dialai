@@ -147,7 +147,7 @@ describe("Arbiter Strategies", () => {
       expect(result.winningProposalId).toBe("prop-a");
     });
 
-    it("returns no consensus for single proposal with threshold = 1 (human-only mode)", async () => {
+    it("returns consensus for single proposal with threshold = 1 (unanimity)", async () => {
       const propA = makeProposal({ proposalId: "prop-a" });
 
       const ctx: ArbiterContext = {
@@ -163,7 +163,9 @@ describe("Arbiter Strategies", () => {
 
       const result = await aheadByK(ctx);
 
-      expect(result.consensusReached).toBe(false);
+      // Single proposal is auto-approved at threshold=1 (threshold <= 1)
+      expect(result.consensusReached).toBe(true);
+      expect(result.winningProposalId).toBe("prop-a");
     });
 
     it("returns no consensus for single proposal with threshold > 1 and no alignment", async () => {

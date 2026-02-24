@@ -8,7 +8,7 @@ When a session is not in its goal state, the **arbiter** drives a decision cycle
 
 ## Asynchronous by Design
 
-The decision cycle is **asynchronous**: the arbiter solicits proposals from specialists at a steady pace, but contributions arrive on their own schedule. A webhook-based proposer might respond in milliseconds; a human might take hours. The arbiter doesn't wait for stragglers — it re-evaluates the **proposal count** after every arriving contribution and declares consensus the moment the ahead-by-k threshold is met.
+The decision cycle is **asynchronous**: the arbiter solicits proposals from specialists at a steady pace, but contributions arrive on their own schedule. A webhook-based proposer might respond in milliseconds; a human might take hours. The arbiter doesn't wait for stragglers — it re-evaluates the **alignment-weighted margin** after every arriving contribution and declares consensus the moment the margin exceeds the threshold.
 
 This design accommodates:
 - **Heterogeneous response times**: Fast AI models respond in seconds; humans may take hours or days
@@ -51,17 +51,13 @@ If the arbiter has solicited all enabled proposers and consensus still hasn't be
 
 ## Consensus Evaluation
 
-The arbiter counts proposals per transition. Each proposal is one endorsement. The first transition to be ahead of all other transitions by k proposals wins consensus.
-
-```
-count(transition) = number of proposals for that transition
-```
+The arbiter groups proposals by transition. Each proposal is an endorsement weighted by the proposer's alignment score.
 
 Consensus is reached when the alignment-weighted margin exceeds the threshold:
 
 ```
 margin = (leaderScore − runnerUpScore) / totalAlignment
-consensus when: threshold < 1 AND margin >= threshold
+consensus when: margin >= threshold
 ```
 
 Where the **consensus threshold** is a float (default 0.5), resolved by priority: state > machine > arbiter > 0.5.

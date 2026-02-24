@@ -74,9 +74,9 @@ Each state has a **consensus threshold** (the ahead-by-k parameter) that control
 | Value | Behavior |
 |-------|----------|
 | **0.3** | Low bar — a modest alignment-weighted lead is enough |
-| **0.5** (default) | Moderate lead required — standard decisions |
+| **0.5** | Moderate lead required — standard decisions |
 | **0.7** | Strong lead required — important decisions needing high confidence |
-| **1.0** | Human-only — no auto-approval, human must always decide |
+| **1.0** | Unanimity required — all proposals must agree |
 
 You can set different thresholds for different states. A high-stakes "approve deployment" state might use `consensusThreshold: 1.0`, while a routine "categorize ticket" state might use `consensusThreshold: 0.3`.
 
