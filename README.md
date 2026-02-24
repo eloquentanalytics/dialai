@@ -4,15 +4,20 @@
   <p><strong>Dynamic Integration between AI and Labor</strong></p>
   <p>A coordination framework for AI and human specialists making<br>decisions together within state machines.</p>
   <br>
+
+  [![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+  [![npm version](https://img.shields.io/npm/v/dialai.svg)](https://www.npmjs.com/package/dialai)
+  [![CI](https://github.com/eloquentanalytics/dialai/actions/workflows/ci.yml/badge.svg)](https://github.com/eloquentanalytics/dialai/actions/workflows/ci.yml)
+
   <a href="https://eloquentanalytics.github.io/dialai/"><strong>Documentation</strong></a> · <a href="https://eloquentanalytics.github.io/dialai/docs/getting-started/installation"><strong>Get Started</strong></a> · <a href="https://github.com/eloquentanalytics/dialai/issues"><strong>Issues</strong></a>
   <br><br>
 </div>
 
 ## Overview
 
-DialAI provides a framework for answering a fundamental question: *Given any task modeled as a state machine, how do you know — in dollars, time, and quality — exactly what it would cost to turn that task over to a minimally competent AI decision-maker?*
+DIAL provides a framework for answering a fundamental question: *Given any task modeled as a state machine, how do you know — in dollars, time, and quality — exactly what it would cost to turn that task over to a minimally competent AI decision-maker?*
 
-DialAI starts from a deliberately pessimistic assumption: **AI has no role.** The default assumption is that the task is too difficult for AI and only humans can navigate it. DialAI then provides the mechanism to prove otherwise, one decision at a time.
+DIAL starts from a deliberately pessimistic assumption: **AI has no role.** The default is that the task is too difficult for AI and only humans can navigate it. DIAL then provides the mechanism to prove otherwise, one decision at a time.
 
 ## Key Principles
 
@@ -20,11 +25,13 @@ DialAI starts from a deliberately pessimistic assumption: **AI has no role.** Th
 - **Progressive Collapse**: Over repeated decision cycles, measuring how well AI predicts human choices causes the multi-agent deliberation structure to progressively collapse into deterministic execution.
 - **Empirical Trust**: Trust is earned through demonstrated alignment with human decisions, not assumed.
 
-## Quick Start
+## Install
 
 ```bash
 npm install dialai
 ```
+
+## Quick Start
 
 ```typescript
 import { createSession, registerSpecialist } from "dialai";
@@ -32,7 +39,7 @@ import { createSession, registerSpecialist } from "dialai";
 // Create a session with a state machine
 const session = createSession({
   machineName: "my-task",
-  initialState: "idle"
+  initialState: "idle",
 });
 
 // Register an AI specialist
@@ -40,9 +47,17 @@ await registerSpecialist({
   specialistId: "specialist.my-task.proposer.gpt-4",
   machineName: "my-task",
   specialistRole: "proposer",
-  modelId: "gpt-4"
+  modelId: "gpt-4",
 });
 ```
+
+## Packages
+
+| Package | Description |
+|---|---|
+| `dialai` | Core library — engine, types, in-memory store, CLI, MCP server |
+| `dialai/store-postgres` | PostgreSQL store implementation (Kysely) |
+| `dialai/migrations` | Database migration runner for PostgreSQL |
 
 ## Documentation
 
@@ -51,39 +66,18 @@ Full documentation is available at [https://eloquentanalytics.github.io/dialai/]
 ## Development
 
 ```bash
-# Install dependencies
-npm install
-
-# Run tests
-npm test
-
-# Build
-npm run build
-
-# Type check
-npm run typecheck
-
-# Lint
-npm run lint
+npm install          # Install dependencies
+npm test             # Run tests
+npm run build        # Build
+npm run typecheck    # Type check
+npm run lint         # Lint
+npm run ci           # Full CI pipeline
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow and guidelines.
 
 ## License
 
-DialAI is licensed under the Business Source License 1.1 (BUSL-1.1). This license allows free use for development, testing, evaluation, and internal use, but restricts commercial use, particularly by cloud providers offering DialAI as a hosted or managed service.
-
-**Key restrictions:**
-- You may not use DialAI to provide a service to third parties
-- You may not offer DialAI as a hosted or managed service
-- You may not use DialAI in a production environment to provide services to third parties
-
-**Permitted uses:**
-- Development, testing, and evaluation
-- Internal use within your organization
-- Contributing to the project
-
-**Change Date:** January 1, 2029  
-**Change License:** Apache License 2.0
-
-On the Change Date, DialAI will automatically convert to the Apache License 2.0, making it fully open source. This approach protects the project from cloud provider exploitation while ensuring eventual open source availability.
-
-See [LICENSE](LICENSE) for full terms.
+[MIT](LICENSE)

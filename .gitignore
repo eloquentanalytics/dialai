@@ -36,17 +36,11 @@ pnpm-debug.log*
 *.tmp
 *.temp
 
-# Screenshots and test artifacts
-/*.png
+# Playwright
 .playwright-mcp/
 **/test-results/
-
-# Apps (developed on separate branches)
-apps/
 
 # Website build
 website/build/
 website/.docusaurus/
-
-# Generated PDFs
 website/*.pdf
