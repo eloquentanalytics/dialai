@@ -57,7 +57,7 @@ Session complete: approved
 1. The session started in the `pending` state
 2. The proposer submitted a proposal to transition via `approve`
 3. The arbiter evaluated consensus using the `alignmentMargin` strategy
-4. With only a single proposal and no competing proposals, `alignmentMargin` auto-approves (threshold <= 1.0)
+4. With only a single proposal and no competing proposals, `alignmentMargin` auto-approves (threshold ≤ 1.0)
 5. The transition executed, moving to `approved`
 
 ## Programmatic Usage
@@ -115,7 +115,7 @@ Each proposal is weighted by the proposer's alignment score. Human proposals car
 
 ### alignmentMargin
 
-The default strategy. Groups proposals by transition and scores each group by sum of proposer alignment scores. Computes an alignment-weighted margin between the leader and runner-up. Declares consensus when the margin exceeds the threshold. A single proposal with no competing proposals is auto-approved when threshold <= 1.0. If all alignment scores are 0 (cold start), no consensus is reached and human input is required.
+The default strategy. Groups proposals by transition and scores each group by sum of proposer alignment scores. Computes an alignment-weighted margin between the leader and runner-up. Declares consensus when the margin exceeds the threshold. A single proposal with no competing proposals is auto-approved when threshold ≤ 1.0. If all alignment scores are 0 (cold start), no consensus is reached and human input is required.
 
 ```typescript
 await registerArbiter({
