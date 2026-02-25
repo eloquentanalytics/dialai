@@ -142,17 +142,16 @@ cat > review.json << 'EOF'
   "machineName": "code-review",
   "initialState": "pending",
   "goalState": "approved",
+  "specialists": [
+    { "specialistId": "ai-reviewer", "role": "proposer", "strategyFnName": "firstAvailable" },
+    { "specialistId": "review-arbiter", "role": "arbiter", "strategyFnName": "alignmentMargin" }
+  ],
   "states": {
     "pending": {
       "prompt": "Review the code. Approve or request changes?",
       "transitions": {
         "approve": "approved",
         "request_changes": "needs_work"
-      },
-      "proposers": {
-        "ai-reviewer": {
-          "modelId": "openai/gpt-4o-mini"
-        }
       }
     },
     "needs_work": {
@@ -179,25 +178,28 @@ The CLI accepts JSON files conforming to the `MachineDefinition` type:
   "machineName": "string (required)",
   "initialState": "string (required)",
   "goalState": "string (required)",
+  "consensusThreshold": "number (optional)",
+  "specialists": [
+    {
+      "specialistId": "string (required)",
+      "role": "proposer | arbiter (required)",
+      "strategyFnName": "string (built-in strategy name)",
+      "strategyWebhookUrl": "string (webhook URL)",
+      "modelId": "string (LLM model ID)",
+      "contextWebhookUrl": "string (context webhook URL)",
+      "webhookTokenName": "string (env var name)",
+      "isHuman": "boolean",
+      "threshold": "number"
+    }
+  ],
   "states": {
     "<state-name>": {
       "prompt": "string (optional)",
       "transitions": {
         "<transition-name>": "<target-state>"
       },
-      "proposers": {
-        "<specialist-id>": {
-          "strategyFn": "string (JS function)",
-          "modelId": "string",
-          "contextFn": "string (JS function)",
-          "strategyWebhookUrl": "string",
-          "contextWebhookUrl": "string",
-          "webhookTokenName": "string"
-        }
-      },
-      "arbiter": {
-        "alignmentMargin": "number (default: 0.5)"
-      }
+      "consensusThreshold": "number (optional, overrides machine level)",
+      "specialists": ["(optional per-state specialist overrides, same format as above)"]
     }
   }
 }
@@ -209,12 +211,11 @@ The CLI:
 
 1. Loads the machine definition from the JSON file
 2. Creates a session in the initial state
-3. Registers a built-in deterministic proposer (picks the first available transition)
-4. Loops until the session reaches the goal state:
-   - Solicits proposals from all registered proposers
-   - Evaluates consensus (alignment margin)
-   - Executes the winning transition
-5. Prints the result and exits
+3. Registers machine-level and per-state specialists from the machine definition
+4. Registers a default proposer (`firstAvailable`) if no proposers are specified
+5. Registers a default arbiter (`firstProposal`) if no arbiter is specified
+6. Loops `tick()` until the session reaches the goal state or needs human intervention
+7. Prints the result and exits
 
 ## Error Handling
 

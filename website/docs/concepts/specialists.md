@@ -24,7 +24,7 @@ Multiple proposers may propose the same transition with different reasoning (the
 
 ### The Arbiter
 
-The arbiter is a **fully deterministic, built-in component** — never an AI model or a human. It groups proposals by transition and applies an alignment-weighted margin to determine consensus:
+The arbiter defaults to a **deterministic, built-in component**. Custom arbiter strategies can be registered, but the built-in strategies (`alignmentMargin`, `firstProposal`) are deterministic and auditable. It groups proposals by transition and applies an alignment-weighted margin to determine consensus:
 
 1. **Solicits proposals** from all enabled proposers
 2. **Validates proposals** — rejects invalid transitions

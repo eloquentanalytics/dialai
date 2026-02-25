@@ -105,7 +105,8 @@ The orchestrator waits up to 55 seconds for the webhook to respond.
   { "transitionName": "approve", "toState": "approved", "reasoning": "Meets criteria" }
   ```
 
-- **If the webhook does not respond within 55 seconds**, or responds with `202 Accepted`, the orchestrator moves on. The webhook is then responsible for calling the DIAL API (`submitProposal`) at its own leisure.
+- **If the webhook does not respond within 55 seconds**, the request throws an error.
+- **If the webhook responds with `202 Accepted`**, an error is thrown (async webhook processing is not yet supported).
 
 **Required parameters:** `strategyWebhookUrl`, `webhookTokenName`
 **Forbidden parameters:** `strategyFn`, `contextFn`, `contextWebhookUrl`, `modelId`
@@ -145,13 +146,13 @@ registerProposer({
 });
 ```
 
-The webhook response should contain a `content` or `markdown` field with the context string:
+The webhook response should contain a `context` field with the context string:
 
 ```json
-{ "content": "Document contents:\n..." }
+{ "context": "Document contents:\n..." }
 ```
 
-The orchestrator waits up to 55 seconds for the response. If the webhook does not respond in time, the orchestrator calls the LLM with no additional context.
+The orchestrator waits up to 55 seconds for the response. If the webhook does not respond in time, the request throws an error.
 
 **Required parameters:** `contextWebhookUrl`, `webhookTokenName`, `modelId`
 **Forbidden parameters:** `strategyFn`, `strategyWebhookUrl`, `contextFn`, `strategyFnName`
@@ -310,7 +311,7 @@ function firstAvailable(ctx: ProposerContext) -> Proposal:
     return {
         transitionName: name,
         toState: ctx.transitions[name],
-        reasoning: "First available transition"
+        reasoning: "Choosing first available transition: " + name
     }
 ```
 
@@ -323,7 +324,7 @@ function lastAvailable(ctx: ProposerContext) -> Proposal:
     return {
         transitionName: name,
         toState: ctx.transitions[name],
-        reasoning: "Last available transition"
+        reasoning: "Choosing last available transition: " + name
     }
 ```
 
@@ -336,7 +337,7 @@ function random(ctx: ProposerContext) -> Proposal:
     return {
         transitionName: name,
         toState: ctx.transitions[name],
-        reasoning: "Randomly selected transition"
+        reasoning: "Randomly selected transition: " + name
     }
 ```
 
@@ -344,7 +345,7 @@ function random(ctx: ProposerContext) -> Proposal:
 
 | Strategy | Description | Key Parameter |
 |----------|-------------|---------------|
-| `alignmentMargin` | **Default.** Alignment-weighted margin; consensus when margin exceeds threshold | `threshold` (float, default: 0.5) |
+| `alignmentMargin` | **Default.** Alignment-weighted margin; consensus when margin exceeds threshold | `threshold` (float, default: 1) |
 | `firstProposal` | Immediately selects the first proposal received | -- |
 
 #### `alignmentMargin` *(Default)*

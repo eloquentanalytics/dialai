@@ -100,7 +100,9 @@ Walk through the complete decision cycle step by step:
 ```typescript
 import {
   createSession,
+  getSession,
   registerProposer,
+  registerArbiter,
   submitProposal,
   evaluateConsensus,
   executeTransition,
@@ -109,7 +111,7 @@ import {
 import type { MachineDefinition } from "dialai";
 
 // Reset state
-clear();
+await clear();
 
 const machine: MachineDefinition = {
   machineName: "review",
@@ -154,6 +156,12 @@ await registerProposer({
   }),
 });
 
+await registerArbiter({
+  specialistId: "review-arbiter",
+  machineName: "review",
+  strategyFnName: "alignmentMargin",
+});
+
 // Step 3: Submit proposals (invoke strategies)
 const p1 = await submitProposal({ sessionId: session.sessionId, specialistId: "optimist" });
 const p2 = await submitProposal({ sessionId: session.sessionId, specialistId: "pessimist" });
@@ -176,8 +184,10 @@ if (result.consensusReached && result.winningProposalId) {
   );
 }
 
-console.log("Final state:", session.currentState); // "approved"
-console.log("History:", session.history);
+// Fetch the updated session (the original variable is stale after transition)
+const updated = await getSession(session.sessionId);
+console.log("Final state:", updated.currentState); // "approved"
+console.log("History:", updated.history);
 ```
 
 ## Custom Proposer Strategies
@@ -369,8 +379,8 @@ import { clear, createSession, runSession } from "dialai";
 import { describe, it, beforeEach, expect } from "vitest";
 
 describe("MyMachine", () => {
-  beforeEach(() => {
-    clear(); // Reset all state between tests
+  beforeEach(async () => {
+    await clear(); // Reset all state between tests
   });
 
   it("reaches goal state", async () => {
@@ -389,7 +399,7 @@ describe("MyMachine", () => {
 
 ```typescript
 it("takes approve transition when proposer prefers it", async () => {
-  clear();
+  await clear();
 
   await registerProposer({
     specialistId: "always-approve",

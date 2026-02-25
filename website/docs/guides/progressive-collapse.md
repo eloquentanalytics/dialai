@@ -109,7 +109,7 @@ Patterns are emerging. GPT-4o-mini and Claude-3.5-sonnet almost always propose w
 
 As specialists improve through exemplar-driven learning, they agree more often. When all three proposers choose the same transition, consensus is immediate from proposals alone.
 
-**Round 21 begins.** The arbiter solicits all enabled proposers. All three propose "approve." Their alignment scores (e.g., 0.85, 0.72, 0.31) all flow into one group. With no runner-up, the margin is 1.0 — well above the default threshold of 0.5. Consensus declared from proposals alone. No human needed.
+**Round 21 begins.** The arbiter solicits all enabled proposers. All three propose "approve." Their alignment scores (e.g., 0.85, 0.72, 0.31) all flow into one group. With no runner-up, the margin is 1.0 — meeting the default threshold of 1.0. Consensus declared from proposals alone. No human needed.
 
 **But what about rounds where they disagree?** Say two propose "approve" (alignment 0.85 + 0.72 = 1.57) and one proposes "reject" (alignment 0.31). totalAlignment = 1.88. margin = (1.57 - 0.31) / 1.88 = 0.67. With threshold=0.5: 0.67 >= 0.5. Consensus on "approve."
 

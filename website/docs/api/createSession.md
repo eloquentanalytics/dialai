@@ -2,7 +2,7 @@
 sidebar_position: 3
 ---
 
-# `createSession(machine: MachineDefinition): Promise<Session>`
+# `createSession(machine: MachineDefinition, metaJson?: Record<string, unknown>): Promise<Session>`
 
 Creates a new session instance from a machine definition. Generates a UUID, sets `currentState` to `machine.initialState`, and stores the session.
 
@@ -60,6 +60,7 @@ Session created:
 | Param | Type | Required | Description |
 |-------|------|----------|-------------|
 | `machine` | `MachineDefinition` | Yes | The machine definition to instantiate |
+| `metaJson` | `Record<string, unknown>` | No | Arbitrary session-level metadata (e.g., puzzle configuration) |
 
 See [MachineDefinition](./types.md#machinedefinition) for the complete type definition.
 
@@ -73,6 +74,7 @@ Returns a `Session` object containing:
 - `machine`: The full machine definition
 - `history`: Empty array (no transitions yet)
 - `createdAt`: Timestamp of creation
+- `metaJson`: Session-level metadata (if provided)
 
 See [Session](./types.md#session) for the complete type definition.
 

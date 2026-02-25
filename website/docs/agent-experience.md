@@ -136,8 +136,10 @@ Run DIAL as an HTTP server that accepts requests from remote clients:
 # Start server
 DIALAI_PORT=3000 DIALAI_API_TOKEN=secret npx dialai --mcp
 
-# Client makes HTTP requests
-curl -H "Authorization: Bearer secret" http://server:3000/tools/dialai_create_session
+# Client makes JSON-RPC requests
+curl -X POST -H "Authorization: Bearer secret" -H "Content-Type: application/json" \
+  http://server:3000 \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"create_session","arguments":{"machine":{...}}}}'
 ```
 
 **When to use**: Centralized deployments, multiple agents sharing state, production environments with load balancing.
@@ -261,10 +263,10 @@ Each change like this is a **branch**. The branch contains a series of commits f
 
 ### Versioning
 
-The current version is tracked in `VERSION.md` at the repository root. The format is a single line containing the semantic version number. The merge commit that closes a spec change branch increments the version:
+The current version is tracked in the `version` field of `package.json` at the repository root. The merge commit that closes a spec change branch increments the version:
 
 - **Patch**: bug fixes, example corrections, doc clarifications that do not change behavior
 - **Minor**: new functions, new parameters, new fields on existing types
 - **Major**: removed functions, changed return types, changed parameter semantics
 
-The version in `VERSION.md` is the version. There is no `package.json` version to keep in sync, no release script to run. An agent reading `VERSION.md` knows what version of the spec the codebase implements.
+An agent reading `package.json` knows what version of the spec the codebase implements.

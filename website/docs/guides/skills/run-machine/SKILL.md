@@ -1,7 +1,7 @@
 ---
 name: dial-run-machine
 description: Run a DIAL state machine from the CLI. Use when executing a machine definition JSON file.
-argument-hint: "<machine.json> [--verbose] [--human]"
+argument-hint: "<machine.json>"
 ---
 
 # Run a DIAL State Machine
@@ -11,31 +11,14 @@ Execute a state machine definition and run it to completion.
 ## Command
 
 ```bash
-npx dialai <path-to-machine.json> [options]
+npx dialai <path-to-machine.json>
 ```
-
-## Options
-
-| Flag | Description |
-|------|-------------|
-| `--verbose` | Show each step of the decision cycle |
-| `--human` | Enable human input prompts |
 
 ## Examples
 
 **Basic execution**:
 ```bash
 npx dialai examples/code-review.json
-```
-
-**With verbose output**:
-```bash
-npx dialai examples/code-review.json --verbose
-```
-
-**With human interaction**:
-```bash
-npx dialai examples/approval-workflow.json --human
 ```
 
 ## Expected Output
@@ -54,12 +37,6 @@ Session ID:     a1b2c3d4-...
 2. Registers all specialists defined in the machine
 3. Runs decision cycles (Propose, Arbitrate, Execute)
 4. Terminates when `goalState` is reached
-
-## Verbose Output Shows
-
-- Each proposal submitted by proposers
-- Consensus evaluation results
-- Transition execution details
 
 ## Common Issues
 

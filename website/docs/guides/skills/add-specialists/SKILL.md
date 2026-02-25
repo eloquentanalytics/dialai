@@ -7,64 +7,81 @@ description: Add AI or human specialists to a DIAL machine. Use when configuring
 
 Configure AI and human participants in a decision process.
 
-## Specialist Types
+## Built-in Proposer Strategies
 
-| Strategy | Description |
-|----------|-------------|
-| `llm` | AI specialist using a language model |
-| `human` | Human specialist with CLI prompts |
-| `deterministic` | Always takes the same action |
+| Strategy Name | Description |
+|---------------|-------------|
+| `firstAvailable` | Always picks the first available transition |
+| `lastAvailable` | Always picks the last available transition |
+| `random` | Randomly selects a transition |
 
-## AI Proposer
+## Built-in Arbiter Strategies
 
-```json
-{
-  "id": "ai-proposer",
-  "strategy": "llm",
-  "config": {
-    "model": "claude-sonnet-4-20250514",
-    "systemPrompt": "You are a code review specialist. Propose transitions based on code quality."
-  }
-}
-```
+| Strategy Name | Description |
+|---------------|-------------|
+| `alignmentMargin` | Alignment-weighted margin consensus (default threshold: 1) |
+| `firstProposal` | Accepts the first proposal submitted |
 
-### Config Options
-
-| Field | Required | Description |
-|-------|----------|-------------|
-| `model` | Yes | Model identifier (e.g., `claude-sonnet-4-20250514`) |
-| `systemPrompt` | No | Custom instructions for the specialist |
-| `temperature` | No | Sampling temperature (default: 0.7) |
-
-## Human Specialist
+## Machine-Level Specialists (JSON)
 
 ```json
 {
-  "id": "human-reviewer",
-  "strategy": "human"
+  "machineName": "code-review",
+  "initialState": "pending",
+  "goalState": "approved",
+  "specialists": [
+    {
+      "specialistId": "ai-proposer",
+      "role": "proposer",
+      "strategyFnName": "firstAvailable"
+    },
+    {
+      "specialistId": "review-arbiter",
+      "role": "arbiter",
+      "strategyFnName": "alignmentMargin",
+      "threshold": 0.5
+    }
+  ],
+  "states": { ... }
 }
 ```
 
-Requires `--human` flag when running:
-```bash
-npx dialai machine.json --human
+## Programmatic Registration
+
+```typescript
+import { registerProposer, registerArbiter } from "dialai";
+
+// AI proposer with built-in strategy
+await registerProposer({
+  specialistId: "ai-proposer",
+  machineName: "code-review",
+  strategyFnName: "firstAvailable",
+});
+
+// Human specialist (can force arbitration)
+await registerProposer({
+  specialistId: "human-reviewer",
+  machineName: "code-review",
+  isHuman: true,
+  strategyFnName: "firstAvailable",
+});
+
+// LLM-based proposer with context function
+await registerProposer({
+  specialistId: "llm-proposer",
+  machineName: "code-review",
+  modelId: "openai/gpt-4o-mini",
+  contextFn: async (ctx) => `Review this: state=${ctx.currentState}`,
+});
+
+// Arbiter with alignment margin
+await registerArbiter({
+  specialistId: "consensus-arbiter",
+  machineName: "code-review",
+  strategyFnName: "alignmentMargin",
+  threshold: 0.5,
+});
 ```
-
-## Deterministic Specialist
-
-Always proposes a specific action:
-
-```json
-{
-  "id": "always-approve",
-  "strategy": "deterministic",
-  "config": {
-    "action": "approve"
-  }
-}
-```
-
-Useful for testing or default behaviors.
 
 ## Patterns
 
@@ -72,35 +89,36 @@ Useful for testing or default behaviors.
 
 AI proposes, human has final say:
 
-```json
-{
-  "specialists": {
-    "proposers": [
-      { "id": "ai", "strategy": "llm", "config": {"model": "claude-sonnet-4-20250514"} },
-      { "id": "human", "strategy": "human" }
-    ]
-  }
-}
+```typescript
+await registerProposer({
+  specialistId: "ai",
+  machineName: "review",
+  strategyFnName: "firstAvailable",
+});
+
+await registerProposer({
+  specialistId: "human",
+  machineName: "review",
+  isHuman: true,
+  strategyFnName: "firstAvailable",
+});
 ```
 
-Human proposals always win. AI specialists must use strategy invocation.
+Human proposals always win via `submitArbitration` with an explicit `transitionName`.
 
 ### AI Consensus
 
 Multiple AI proposers with alignment margin:
 
-```json
-{
-  "specialists": {
-    "proposers": [
-      { "id": "ai-proposer-1", "strategy": "llm", "config": {"model": "claude-sonnet-4-20250514"} },
-      { "id": "ai-proposer-2", "strategy": "llm", "config": {"model": "claude-sonnet-4-20250514"} },
-      { "id": "ai-proposer-3", "strategy": "llm", "config": {"model": "claude-sonnet-4-20250514"} }
-    ]
-  },
-  "arbiter": {
-    "strategy": "alignment margin",
-    "k": 2
-  }
-}
+```typescript
+await registerProposer({ specialistId: "ai-1", machineName: "review", strategyFnName: "firstAvailable" });
+await registerProposer({ specialistId: "ai-2", machineName: "review", strategyFnName: "random" });
+await registerProposer({ specialistId: "ai-3", machineName: "review", strategyFnName: "lastAvailable" });
+
+await registerArbiter({
+  specialistId: "arbiter",
+  machineName: "review",
+  strategyFnName: "alignmentMargin",
+  threshold: 0.5,
+});
 ```

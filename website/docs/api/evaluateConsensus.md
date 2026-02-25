@@ -34,7 +34,7 @@ console.log(result);
 {
   consensusReached: true,
   winningProposalId: "abc123-...",
-  reasoning: "Proposal ahead by 1 (threshold: 1)"
+  reasoning: "Single proposal with no competing proposals"
 }
 ```
 
@@ -44,14 +44,24 @@ Or if no consensus:
 {
   consensusReached: false,
   winningProposalId: undefined,
-  reasoning: "Lead of 0 below threshold 1"
+  reasoning: "Alignment-weighted margin 0.25 below threshold 1"
+}
+```
+
+Or on cold start (no alignment data yet):
+
+```typescript
+{
+  consensusReached: false,
+  winningProposalId: undefined,
+  reasoning: "Cold start: no alignment data available, human input required"
 }
 ```
 
 ## What Happened
 
 1. The function gathered all proposals for the current round
-2. The registered arbiter's strategy counted proposals per transition
+2. The registered arbiter's strategy evaluated alignment-weighted consensus
 3. The result indicates whether consensus was reached, without modifying any state
 
 ## Programmatic Usage

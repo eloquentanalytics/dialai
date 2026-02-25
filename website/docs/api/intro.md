@@ -111,12 +111,15 @@ const proposer = await registerProposer({
 registerProposer(opts: {
   specialistId: string;
   machineName: string;
-  strategyFn?: (ctx: ProposerContext) => Promise<ProposalResult>;
+  isHuman?: boolean;
+  strategyFn?: (ctx: ProposerContext) => Promise<ProposerStrategyResult>;
+  strategyFnName?: string;
   strategyWebhookUrl?: string;
   contextFn?: (ctx: ProposerContext) => Promise<string>;
   contextWebhookUrl?: string;
   modelId?: string;
   webhookTokenName?: string;
+  threshold?: number;
 }): Promise<Proposer>
 ```
 
@@ -148,7 +151,7 @@ const arbiter = await registerArbiter({
   specialistId: "consensus-arbiter",
   machineName: "my-task",
   strategyFnName: "alignmentMargin",
-  threshold: 2,
+  threshold: 0.5,
 });
 ```
 
@@ -183,7 +186,8 @@ interface ArbiterContext {
   alignmentScores?: Record<string, number>;
   humanGoldExamples?: HumanGoldExample[];
   history: TransitionRecord[];
-  threshold: number;
+  threshold?: number;
+  metaJson?: Record<string, unknown>;
 }
 ```
 
@@ -418,25 +422,27 @@ runSession(machine: MachineDefinition): Promise<Session>
 
 ## Store
 
-The in-memory store is exported for testing and advanced use:
+The store is accessed through exported functions:
 
 ```typescript
-import { sessions, specialists, proposals, clear } from "dialai";
+import { getStore, setStore, clear } from "dialai";
 
-// Inspect current state
-console.log(sessions.size);
-console.log([...proposals.values()]);
+// Access the current store (default: in-memory)
+const store = getStore();
 
 // Reset all state (useful for tests)
-clear();
+await clear();
+
+// Use a custom store (e.g., PostgreSQL)
+import { createPostgresStore } from "dialai/store-postgres";
+setStore(createPostgresStore(pool));
 ```
 
 | Export | Type | Description |
 |--------|------|-------------|
-| `sessions` | `Map<string, Session>` | All sessions by ID |
-| `specialists` | `Map<string, Specialist>` | All registered specialists |
-| `proposals` | `Map<string, Proposal>` | All proposals by ID |
-| `clear` | `() => void` | Clears all maps |
+| `getStore` | `() => Store` | Returns the current store instance |
+| `setStore` | `(store: Store) => void` | Replaces the store implementation |
+| `clear` | `() => Promise<void>` | Clears all data in the current store |
 
 ## Orchestration
 

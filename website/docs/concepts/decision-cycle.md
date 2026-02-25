@@ -6,9 +6,9 @@ sidebar_position: 4
 
 When a session is not in its goal state, the **arbiter** drives a decision cycle that orchestrates specialists to find consensus on the next transition.
 
-## Asynchronous by Design
+## Tick-Based Execution
 
-The decision cycle is **asynchronous**: the arbiter solicits proposals from specialists at a steady pace, but contributions arrive on their own schedule. A webhook-based proposer might respond in milliseconds; a human might take hours. The arbiter doesn't wait for stragglers — it re-evaluates the **alignment-weighted margin** after every arriving contribution and declares consensus the moment the margin exceeds the threshold.
+The decision cycle is driven by a **tick loop**: each call to `tick()` performs one atomic step per session. In each tick, the engine either solicits one proposer or evaluates consensus after all proposers have submitted. This design accommodates heterogeneous response times while keeping the execution model simple and deterministic.
 
 This design accommodates:
 - **Heterogeneous response times**: Fast AI models respond in seconds; humans may take hours or days
@@ -60,7 +60,7 @@ margin = (leaderScore − runnerUpScore) / totalAlignment
 consensus when: margin >= threshold
 ```
 
-Where the **consensus threshold** is a float (default 0.5), resolved by priority: state > machine > arbiter > 0.5.
+Where the **consensus threshold** is resolved by priority: state > machine > arbiter. If none is configured, the `alignmentMargin` strategy defaults to 1 (unanimity required).
 
 See [Arbitration](./arbitration.md) for the full algorithm, including proposal clustering and self-healing.
 

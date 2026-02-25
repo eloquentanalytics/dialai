@@ -17,12 +17,6 @@ npm install dialai
 # Run a state machine
 npx dialai machine.json
 
-# Run with human interaction enabled
-npx dialai machine.json --human
-
-# Run with verbose output
-npx dialai machine.json --verbose
-
 # Run as MCP server
 npx dialai --mcp
 ```

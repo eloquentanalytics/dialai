@@ -114,10 +114,11 @@ The returned session will have:
 2. If `machine.specialists` is provided, registers those specialists
 3. If no proposers are registered, registers a default proposer (`firstAvailable` strategy)
 4. If no arbiter is registered, registers a default arbiter (`firstProposal` strategy)
-5. Runs the proposal solicitation:
-   - Solicits proposals from all enabled proposers, checks consensus after each
-   - If no consensus: returns session (exhausted, waiting for human)
-   - If consensus: executes the winning transition
+5. Loops `tick()`, where each tick performs one atomic step per session:
+   - Solicits one proposer per tick (status: `solicited`)
+   - After all proposers submitted, evaluates consensus
+   - If consensus: executes the winning transition (status: `advanced`)
+   - If no consensus: stops (status: `needs_human`, waiting for human)
 6. Returns the session (completed or waiting for human)
 
 ## Error Cases

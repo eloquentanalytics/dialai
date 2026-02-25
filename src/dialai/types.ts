@@ -112,7 +112,7 @@ export interface Proposer {
   role: "proposer";
   specialistId: string;
   machineName: string;
-  /** If true, can force arbitration decisions */
+  /** If true, this specialist is operated by a human */
   isHuman?: boolean;
   /** Whether this specialist is enabled (default true) */
   enabled?: boolean;
@@ -536,7 +536,7 @@ export interface RegisterProposerOptions {
   specialistId: string;
   /** Required: which machine to participate in */
   machineName: string;
-  /** If true, can force arbitration decisions */
+  /** If true, this specialist is operated by a human */
   isHuman?: boolean;
 
   // Execution mode (exactly one required):

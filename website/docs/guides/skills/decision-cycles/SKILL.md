@@ -37,7 +37,7 @@ Each registered proposer submits a transition proposal.
 
 The arbiter evaluates consensus using alignment margin.
 
-**How it works**: Proposals are endorsements. The arbiter counts endorsements and applies the alignment margin threshold to determine consensus. Human proposals always win.
+**How it works**: The arbiter computes an alignment-weighted margin across proposals. Each proposal is weighted by its specialist's alignment score. The margin must meet the threshold for consensus. Human proposals always win via `submitArbitration`.
 
 **Human primacy**: When proposals don't produce consensus, only a human specialist can force a decision via `submitArbitration`.
 
@@ -66,24 +66,14 @@ Verbose output shows:
 
 ## No Consensus
 
-If proposals don't produce consensus:
-- The cycle repeats
-- New proposals are solicited
-- Different proposals may emerge
-
-Configure max cycles to prevent infinite loops:
-```json
-{
-  "arbiter": {
-    "strategy": "alignment margin",
-    "maxCycles": 5
-  }
-}
-```
+If proposals don't produce consensus, the engine reports `needs_human` status:
+- The session pauses and waits for human input
+- A human specialist can force a decision via `submitArbitration` with an explicit `transitionName`
+- Once a human decision is made, the cycle continues on the next tick
 
 ## Session Completion
 
 The session ends when:
 - Current state equals `goalState` (success)
-- Max cycles exceeded (failure)
+- No consensus and no human intervention (waiting)
 - No valid transitions available (stuck)

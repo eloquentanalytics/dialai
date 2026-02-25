@@ -160,7 +160,7 @@ Human disagreement between reviewers is resolved by human mechanisms (escalation
 
 Human primacy in DIAL means that **human activity is the reference for evaluating AI specialists**. When measuring how well an AI specialist performs, the question is: how closely does it match what humans would decide?
 
-When humans participate, their decisions are recorded as exemplars. AI specialists are evaluated on how well their choices align with human decisions over time. The alignment score — a simple fraction of matching choices — is the quantitative expression of this relationship.
+When humans participate, their decisions are recorded as exemplars. AI specialists are evaluated on how well their choices align with human decisions over time. The alignment score — the Wilson score lower bound of matching choices over total comparisons — is the quantitative expression of this relationship.
 
 ## Common Objections
 

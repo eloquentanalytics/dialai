@@ -17,11 +17,23 @@ npm install dialai
 
 ```typescript
 import { runSession } from 'dialai';
-import machineDefinition from './machine.json';
+import type { MachineDefinition } from 'dialai';
 
-const session = await runSession(machineDefinition);
+const machine: MachineDefinition = {
+  machineName: "simple-task",
+  initialState: "pending",
+  goalState: "done",
+  states: {
+    pending: {
+      prompt: "Should we complete this task?",
+      transitions: { complete: "done" },
+    },
+    done: {},
+  },
+};
 
-console.log('Final state:', session.currentState);
+const session = await runSession(machine);
+console.log('Final state:', session.currentState); // "done"
 ```
 
 ## Core Functions
@@ -30,55 +42,66 @@ console.log('Final state:', session.currentState);
 |----------|---------|
 | `createSession` | Start a new decision process |
 | `getSession` | Check session state |
-| `getSessions` | List all active sessions |
-| `registerProposer` | Add a proposer to a session |
-| `submitProposal` | Submit a transition proposal (with roundId) |
+| `getSessions` | List all sessions |
+| `registerProposer` | Register a proposer specialist |
+| `registerArbiter` | Register an arbiter specialist |
+| `submitProposal` | Submit a transition proposal |
 | `submitArbitration` | Evaluate consensus and execute transition |
+| `evaluateConsensus` | Check consensus (read-only) |
 | `executeTransition` | Apply a transition directly |
+| `runSession` | Run a machine to its goal state |
 
 ## Full Example
 
 ```typescript
 import {
   createSession,
+  getSession,
   registerProposer,
+  registerArbiter,
   submitProposal,
   submitArbitration,
-  getSession
 } from 'dialai';
+import type { MachineDefinition } from 'dialai';
 
-async function runMachine(machineDefinition: MachineDefinition) {
+async function runMachine(machine: MachineDefinition) {
   // 1. Create a session
-  const session = await createSession(machineDefinition);
+  const session = await createSession(machine);
   console.log('Session created:', session.sessionId);
-  console.log('Round ID:', session.currentRoundId);
 
   // 2. Register specialists
-  await registerProposer(session.sessionId, 'ai-proposer', {
-    strategy: 'llm',
-    config: { model: 'claude-sonnet-4-20250514' }
+  await registerProposer({
+    specialistId: "ai-proposer",
+    machineName: machine.machineName,
+    strategyFnName: "firstAvailable",
+  });
+
+  await registerArbiter({
+    specialistId: "arbiter",
+    machineName: machine.machineName,
+    strategyFnName: "alignmentMargin",
   });
 
   // 3. Run decision cycles until goal
   let current = await getSession(session.sessionId);
 
-  while (current.status === 'active') {
-    // Submit proposals (strategy invocation - omit transitionName)
-    const proposal = await submitProposal(
-      current.sessionId,
-      'ai-proposer',
-      current.currentRoundId
-    );
-    console.log('Proposal:', proposal);
+  while (current.currentState !== current.machine.goalState) {
+    // Submit proposal (strategy invocation - omit transitionName)
+    await submitProposal({
+      sessionId: current.sessionId,
+      specialistId: "ai-proposer",
+    });
 
     // Submit arbitration - evaluates and executes if consensus
-    const result = await submitArbitration(
-      current.sessionId,
-      current.currentRoundId
-    );
+    const result = await submitArbitration({
+      sessionId: current.sessionId,
+    });
 
     if (result.executed) {
       console.log('Transitioned to:', result.toState);
+    } else {
+      console.log('No consensus:', result.guardReason);
+      break; // Needs human input
     }
 
     current = await getSession(session.sessionId);
@@ -96,15 +119,16 @@ import { getSession } from 'dialai';
 const session = await getSession(sessionId);
 
 // Session structure
-{
-  id: string;
-  machineId: string;
-  currentState: string;
-  status: 'active' | 'completed' | 'failed';
-  history: TransitionRecord[];
-  createdAt: string;
-  updatedAt: string;
-}
+// {
+//   sessionId: string;
+//   machineName: string;
+//   currentState: string;
+//   currentRoundId: string;
+//   machine: MachineDefinition;
+//   history: TransitionRecord[];
+//   createdAt: Date;
+//   metaJson?: Record<string, unknown>;
+// }
 ```
 
 ## Accessing History
@@ -124,38 +148,31 @@ for (const record of session.history) {
 ```typescript
 import { registerProposer } from 'dialai';
 
-// Custom strategy function
-const customStrategy = async (context) => {
-  const { currentState, availableTransitions, history } = context;
-
-  // Your logic here
-  const action = decideAction(availableTransitions);
-
-  return {
-    action: action.name,
-    target: action.target,
-    reasoning: 'Custom reasoning...'
-  };
-};
-
-await registerProposer(sessionId, 'custom-proposer', {
-  strategy: 'custom',
-  config: { handler: customStrategy }
+await registerProposer({
+  specialistId: "custom-proposer",
+  machineName: "my-task",
+  strategyFn: async (ctx) => {
+    // ctx has: sessionId, currentState, prompt, transitions, history, metaJson
+    const transitionName = Object.keys(ctx.transitions)[0];
+    return {
+      transitionName,
+      toState: ctx.transitions[transitionName],
+      reasoning: "Custom reasoning...",
+    };
+  },
 });
 ```
 
 ## Error Handling
 
 ```typescript
-import { createSession, DIALError } from 'dialai';
+import { createSession } from 'dialai';
 
 try {
   const session = await createSession(machineDefinition);
 } catch (error) {
-  if (error instanceof DIALError) {
-    console.error('DIAL error:', error.code, error.message);
-  } else {
-    throw error;
+  if (error instanceof Error) {
+    console.error('Error:', error.message);
   }
 }
 ```
@@ -168,6 +185,9 @@ import type {
   Session,
   Proposal,
   TransitionRecord,
-  ArbitrationResult
+  ArbitrationResult,
+  ConsensusResult,
+  ProposerContext,
+  ArbiterContext,
 } from 'dialai';
 ```

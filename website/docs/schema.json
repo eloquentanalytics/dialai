@@ -55,6 +55,13 @@
         "consensusThreshold": {
           "type": "number",
           "description": "Consensus threshold override for this state (alignment margin)"
+        },
+        "specialists": {
+          "type": "array",
+          "description": "Per-state specialist declarations (overrides machine-level when present)",
+          "items": {
+            "$ref": "#/$defs/specialistDefinition"
+          }
         }
       }
     },
@@ -78,7 +85,15 @@
         },
         "isHuman": {
           "type": "boolean",
-          "description": "If true, can force arbitration decisions"
+          "description": "If true, this specialist is operated by a human"
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether this specialist is enabled (default true)"
+        },
+        "strategyFn": {
+          "type": "string",
+          "description": "Inline strategy function (for programmatic use)"
         },
         "strategyFnName": {
           "type": "string",

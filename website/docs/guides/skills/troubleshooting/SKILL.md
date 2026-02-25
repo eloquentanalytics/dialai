@@ -28,7 +28,7 @@ echo $ANTHROPIC_API_KEY
 
 **Causes**:
 - Malformed JSON syntax
-- Missing required fields (`id`, `goalState`, `states`)
+- Missing required fields (`machineName`, `initialState`, `goalState`, `states`)
 - State references non-existent target
 
 **Fix**:
@@ -44,18 +44,17 @@ cat machine.json | jq '.machine.states | keys'
 
 **Error**: `No proposers registered for session`
 
-**Cause**: Machine definition has empty `specialists.proposers` array.
+**Cause**: No proposers registered for the machine.
 
-**Fix**: Add at least one proposer:
+**Fix**: Add at least one proposer to the machine definition:
 ```json
 {
-  "specialists": {
-    "proposers": [
-      { "id": "default", "strategy": "llm", "config": { "model": "claude-sonnet-4-20250514" } }
-    ]
-  }
+  "specialists": [
+    { "specialistId": "default", "role": "proposer", "strategyFnName": "firstAvailable" }
+  ]
 }
 ```
+Or use `runSession` which registers a default proposer automatically.
 
 ### Transition Not Available
 
@@ -77,7 +76,7 @@ cat machine.json | jq '.machine.states.draft.transitions | keys'
 - Alignment margin threshold not met
 
 **Fix**:
-- Lower the k value
+- Lower the consensus threshold (e.g., `consensusThreshold: 0.5` on the machine)
 - Add more proposers to increase endorsement count
 - Check proposer prompts for clarity
 
@@ -146,11 +145,9 @@ Replace LLM specialists with deterministic ones for predictable behavior:
 
 ```json
 {
-  "specialists": {
-    "proposers": [
-      { "id": "test", "strategy": "deterministic", "config": { "action": "approve" } }
-    ]
-  }
+  "specialists": [
+    { "specialistId": "test", "role": "proposer", "strategyFnName": "firstAvailable" }
+  ]
 }
 ```
 
@@ -180,7 +177,6 @@ cat machine.json | jq '.machine.states | to_entries | .[] | "\(.key) -> \(.value
 
 **Fixes**:
 - Use cheaper models for routine decisions
-- Add `maxCycles` limit
 - Tune consensus threshold
 
 ## Getting Help

@@ -2,81 +2,60 @@
   max-width: 100%;
 }
 
-.header {
-  margin-bottom: 3rem;
-}
-
-.header h1 {
+/* Header styling */
+.constitution > h1:first-child {
   margin-bottom: 1.5rem;
 }
 
-.intro {
+.constitution > p:first-of-type,
+.constitution > p:nth-of-type(2) {
   font-size: 1.1rem;
   line-height: 1.7;
   color: var(--ifm-color-content-secondary);
   margin-bottom: 1rem;
 }
 
-.section {
-  margin-bottom: 3rem;
-}
-
-.section h2 {
+/* Section headings */
+.constitution h2 {
   margin-top: 2.5rem;
   margin-bottom: 1.5rem;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid rgba(148, 163, 184, 0.15);
 }
 
-.section h3 {
+.constitution h3 {
   margin-top: 2rem;
   margin-bottom: 1rem;
   font-size: 1.3rem;
 }
 
-.section p {
+/* Paragraphs */
+.constitution p {
   line-height: 1.8;
   margin-bottom: 1rem;
 }
 
-.priorityList {
-  margin: 1.5rem 0;
-  padding-left: 2rem;
-}
-
-.priorityList li {
-  margin-bottom: 0.75rem;
-  line-height: 1.7;
-}
-
-.constraintsList {
-  margin: 1.5rem 0;
-  padding-left: 2rem;
-}
-
-.constraintsList li {
-  margin-bottom: 1rem;
-  line-height: 1.7;
-}
-
-.section ol,
-.section ul {
+/* Lists */
+.constitution ol,
+.constitution ul {
   margin: 1.5rem 0;
   padding-left: 2rem;
   line-height: 1.8;
 }
 
-.section ol li,
-.section ul li {
+.constitution ol li,
+.constitution ul li {
   margin-bottom: 0.75rem;
+  line-height: 1.7;
 }
 
-.section strong {
+/* Strong and emphasis */
+.constitution strong {
   color: var(--ifm-color-primary);
   font-weight: 600;
 }
 
-.section em {
+.constitution em {
   font-style: italic;
   color: var(--ifm-color-content-secondary);
 }

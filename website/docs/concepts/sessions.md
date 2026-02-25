@@ -65,7 +65,7 @@ Each state can have:
 
 - **prompt**: A description of the decision to be made. This is given to all specialists and guides their proposals.
 - **transitions**: A map of transition names to target states. If omitted, the state is terminal.
-- **consensusThreshold**: The consensus threshold for this state (float, 0–1). Controls the alignment-weighted margin required for auto-approval. Higher = more deliberation required. If omitted, resolved by priority: machine > arbiter > 0.5.
+- **consensusThreshold**: The consensus threshold for this state (float, 0–1). Controls the alignment-weighted margin required for auto-approval. Higher = more deliberation required. If omitted, resolved by priority: state > machine > arbiter. If none configured, the `alignmentMargin` strategy defaults to 1 (unanimity).
 
 ### The Alignment Margin Threshold
 

@@ -335,6 +335,7 @@ Options for `registerProposer()`.
 interface RegisterProposerOptions {
   specialistId: string;    // Required: unique identifier
   machineName: string;     // Required: which machine to participate in
+  isHuman?: boolean;       // If true, can force arbitration decisions
 
   // Execution mode (exactly one required):
   strategyFn?: (ctx: ProposerContext) => Promise<{

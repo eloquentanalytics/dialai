@@ -50,7 +50,7 @@ consensus when: margin >= threshold
 
 The **threshold** is a float (0–1). Higher thresholds require a more dominant lead. Setting threshold = 1 requires unanimity — all proposals must agree on the same transition.
 
-**Special case — single proposal**: When only one proposal exists, consensus is immediate (no competing proposals means margin = 1.0).
+**Special case — single proposal**: When only one proposal exists and the threshold is ≤ 1.0, consensus is immediate (no competing proposals means margin = 1.0). If the threshold exceeds 1.0, even a single proposal must go through normal evaluation.
 
 ### Algorithm
 

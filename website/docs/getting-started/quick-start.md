@@ -64,7 +64,7 @@ const machine: MachineDefinition = {
 
 ## Step 2: Run It
 
-The quickest way to run a machine is with `runSession`, which registers a built-in proposer that picks the first available transition:
+The quickest way to run a machine is with `runSession`, which registers a built-in proposer (`firstAvailable`) and a built-in arbiter (`firstProposal`) to drive the machine to its goal state:
 
 ```typescript
 import { runSession } from "dialai";
@@ -76,13 +76,16 @@ console.log(session.currentState); // "done"
 
 That's it. One cycle, done.
 
-## Step 3: Add a Human Specialist
+## Step 3: Walk the Decision Cycle Manually
 
-The real point of DIAL is that humans can participate. Let's walk through the full API to see how a human submits a proposal.
+Let's register specialists, submit proposals, and run arbitration step by step.
 
 ```typescript
 import {
   createSession,
+  getSession,
+  registerProposer,
+  registerArbiter,
   submitProposal,
   submitArbitration,
 } from "dialai";
@@ -91,6 +94,25 @@ import {
 const session = await createSession(machine);
 console.log(session.currentState);   // "pending"
 console.log(session.currentRoundId); // "e5f6g7h8-..."
+
+// Register two proposers and an arbiter
+await registerProposer({
+  specialistId: "ai-specialist",
+  machineName: "simple-task",
+  strategyFnName: "firstAvailable",
+});
+
+await registerProposer({
+  specialistId: "contrarian-ai",
+  machineName: "simple-task",
+  strategyFnName: "firstAvailable",
+});
+
+await registerArbiter({
+  specialistId: "consensus-arbiter",
+  machineName: "simple-task",
+  strategyFnName: "alignmentMargin",
+});
 
 // Two AI specialists each submit a proposal
 const proposalA = await submitProposal({
@@ -115,8 +137,10 @@ const result = await submitArbitration({ sessionId: session.sessionId, roundId: 
 console.log(result.executed);    // true (both proposers agreed)
 console.log(result.toState);     // "done"
 
-console.log(session.currentState); // "done"
-console.log(session.history);      // [{ transitionName: "complete", reasoning: "...", ... }]
+// Fetch the updated session (the original variable is stale after transition)
+const updated = await getSession(session.sessionId);
+console.log(updated.currentState); // "done"
+console.log(updated.history);      // [{ transitionName: "complete", reasoning: "...", ... }]
 ```
 
 **Human primacy** means that when AI cannot reach consensus, a human can force a decision by calling `submitArbitration` with an explicit transition. A human proposal always wins.
@@ -131,11 +155,11 @@ npx dialai examples/simple-machine.json
 
 Output:
 ```
-Machine:        simple-task
-Initial state:  pending
-Goal state:     done
-Final state:    done
-Session ID:     a1b2c3d4-...
+Machine:       simple-task
+Initial state: pending
+Goal state:    done
+Final state:   done
+Session ID:    a1b2c3d4-...
 ```
 
 ## What's Happening Under the Hood

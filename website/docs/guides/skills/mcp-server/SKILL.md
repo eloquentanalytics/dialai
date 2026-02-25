@@ -42,12 +42,18 @@ Once connected, Claude has access to these tools:
 
 | Tool | Description |
 |------|-------------|
-| `dialai_create_session` | Start a new decision process from a machine definition |
-| `dialai_get_session` | Get current state and history of a session |
-| `dialai_get_sessions` | List all active sessions |
-| `dialai_submit_proposal` | Submit a transition proposal |
-| `dialai_evaluate_consensus` | Check if consensus has been reached |
-| `dialai_execute_transition` | Apply the winning proposal |
+| `create_session` | Start a new decision process from a machine definition |
+| `get_session` | Get current state and history of a session |
+| `get_sessions` | List all sessions |
+| `register_proposer` | Register a proposer specialist for a machine |
+| `register_arbiter` | Register an arbiter specialist for a machine |
+| `submit_proposal` | Submit a transition proposal |
+| `evaluate_consensus` | Check if consensus has been reached (read-only) |
+| `submit_arbitration` | Evaluate consensus and optionally execute the winning transition |
+| `execute_transition` | Apply a transition directly |
+| `run_session` | Run a machine to completion |
+| `get_collapse_metrics` | Get progressive collapse metrics |
+| `get_decision_log` | Get decision log records |
 
 ## Example Conversation
 
@@ -55,31 +61,35 @@ Once connected, Claude has access to these tools:
 
 **Claude** (using tools):
 ```
-1. dialai_create_session({ machine: "code-review", context: { pr: 123 } })
-2. dialai_submit_proposal({ sessionId: "...", action: "approve", reasoning: "Tests pass, code is clean" })
-3. dialai_evaluate_consensus({ sessionId: "..." })
-4. dialai_execute_transition({ sessionId: "...", action: "approve" })
+1. create_session({ machine: { machineName: "code-review", ... } })
+2. register_proposer({ specialistId: "ai-reviewer", machineName: "code-review", strategyFnName: "firstAvailable" })
+3. register_arbiter({ specialistId: "arbiter", machineName: "code-review", strategyFnName: "alignmentMargin" })
+4. submit_proposal({ sessionId: "...", specialistId: "ai-reviewer" })
+5. submit_arbitration({ sessionId: "..." })
 ```
 
 ## Tool Schemas
 
-### dialai_create_session
+### create_session
 
 ```json
 {
-  "machine": "machine-id or inline definition",
-  "context": { "optional": "metadata" }
+  "machine": {
+    "machineName": "code-review",
+    "initialState": "pending",
+    "goalState": "approved",
+    "states": { ... }
+  }
 }
 ```
 
-### dialai_submit_proposal
+### submit_proposal
 
 ```json
 {
   "sessionId": "session-uuid",
   "specialistId": "proposer-id",
-  "action": "transition-name",
-  "target": "target-state",
+  "transitionName": "approve",
   "reasoning": "Why this transition"
 }
 ```
@@ -87,11 +97,8 @@ Once connected, Claude has access to these tools:
 ## Server Options
 
 ```bash
-# Default port (stdio)
+# Stdio transport (default for MCP)
 npx dialai --mcp
-
-# Custom transport
-npx dialai --mcp --transport sse --port 3000
 ```
 
 ## Debugging

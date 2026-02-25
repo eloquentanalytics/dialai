@@ -118,13 +118,13 @@ Document how to build self-correcting agents using DIAL, where a specialist eval
 
 ### Streaming Responses for Long Operations
 
-**Status**: Partially implemented (SSE transport exists)
+**Status**: Not implemented
 
 Expose streaming for operations that may take time, such as consensus evaluation with many specialists.
 
-**Current state**: SSE transport exists for HTTP but not all operations stream progress.
+**Current state**: No SSE or streaming transport is implemented yet. The HTTP server uses JSON-RPC over POST.
 
-**Gap**: Long-running operations should emit progress events.
+**Gap**: Long-running operations should emit progress events via SSE or similar streaming transport.
 
 ## Medium Value, High Complexity
 
@@ -172,9 +172,9 @@ Allow agents to write code that composes DIAL tools rather than calling each too
 
 Include the DIAL version in API responses so agents know what spec they're working with.
 
-**Current state**: Version is in VERSION.md but not in API responses.
+**Current state**: Version is in `package.json` but not in API responses.
 
-**Gap**: Agents must read a separate file to know the version.
+**Gap**: Agents must read `package.json` to know the version.
 
 ### Health Check Endpoint
 
