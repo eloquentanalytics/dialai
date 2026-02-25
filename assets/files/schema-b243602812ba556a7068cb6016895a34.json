@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dialai.dev/schema.json",
+  "title": "DIAL Machine Definition",
+  "description": "Schema for DIAL state machine definitions",
+  "type": "object",
+  "required": ["machineName", "initialState", "goalState", "states"],
+  "properties": {
+    "machineName": {
+      "type": "string",
+      "description": "Unique identifier for the machine type"
+    },
+    "initialState": {
+      "type": "string",
+      "description": "The state where sessions start"
+    },
+    "goalState": {
+      "type": "string",
+      "description": "The rest state where the session is headed; when reached, no action is needed until something moves it elsewhere"
+    },
+    "states": {
+      "type": "object",
+      "description": "Record of state names to their configuration",
+      "additionalProperties": {
+        "$ref": "#/$defs/stateConfig"
+      }
+    },
+    "specialists": {
+      "type": "array",
+      "description": "Optional specialists to register when running this machine",
+      "items": {
+        "$ref": "#/$defs/specialistDefinition"
+      }
+    },
+    "consensusThreshold": {
+      "type": "number",
+      "description": "Default consensus threshold for the machine (alignment margin)"
+    }
+  },
+  "$defs": {
+    "stateConfig": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "Decision prompt for this state. If omitted, a generic default is used."
+        },
+        "transitions": {
+          "type": "object",
+          "description": "Map of transition names to target state names",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "consensusThreshold": {
+          "type": "number",
+          "description": "Consensus threshold override for this state (alignment margin)"
+        },
+        "specialists": {
+          "type": "array",
+          "description": "Per-state specialist declarations (overrides machine-level when present)",
+          "items": {
+            "$ref": "#/$defs/specialistDefinition"
+          }
+        }
+      }
+    },
+    "specialistDefinition": {
+      "type": "object",
+      "description": "Configuration for a specialist",
+      "required": ["specialistId", "role"],
+      "properties": {
+        "specialistId": {
+          "type": "string",
+          "description": "Unique identifier for the specialist"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["proposer", "arbiter"],
+          "description": "Role of the specialist"
+        },
+        "machineName": {
+          "type": "string",
+          "description": "Machine to participate in (defaults to the containing machine)"
+        },
+        "isHuman": {
+          "type": "boolean",
+          "description": "If true, this specialist is operated by a human"
+        },
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether this specialist is enabled (default true)"
+        },
+        "strategyFn": {
+          "type": "string",
+          "description": "Inline strategy function (for programmatic use)"
+        },
+        "strategyFnName": {
+          "type": "string",
+          "description": "Built-in strategy name"
+        },
+        "strategyWebhookUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "Webhook URL for strategy execution"
+        },
+        "contextFn": {
+          "type": "string",
+          "description": "Context function for LLM-based strategies"
+        },
+        "contextWebhookUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "Webhook URL for context generation"
+        },
+        "modelId": {
+          "type": "string",
+          "description": "LLM model identifier"
+        },
+        "webhookTokenName": {
+          "type": "string",
+          "description": "Environment variable name containing the webhook auth token"
+        },
+        "threshold": {
+          "type": "number",
+          "description": "Strategy-specific threshold"
+        }
+      }
+    }
+  }
+}
