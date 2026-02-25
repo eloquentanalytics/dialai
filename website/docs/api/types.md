@@ -592,6 +592,45 @@ interface CollapseMetrics {
 }
 ```
 
+### SpecialistMetrics
+
+Per-specialist performance metrics, used in `CollapseMetrics`.
+
+```typescript
+interface SpecialistMetrics {
+  specialistId: string;       // The specialist
+  alignment: number;          // Current alignment score
+  totalProposals: number;     // Total proposals submitted
+  winningProposals: number;   // Proposals that won consensus
+  winRate: number;            // winningProposals / totalProposals
+}
+```
+
+### Signal / SignalLevel
+
+Actionable signals from progressive collapse monitoring, used in `CollapseMetrics`.
+
+```typescript
+type SignalLevel = "info" | "warning" | "action";
+
+interface Signal {
+  level: SignalLevel;   // Severity level
+  code: string;         // Machine-readable signal code (e.g., "COLD_START", "LOW_ALIGNMENT")
+  message: string;      // Human-readable description
+}
+```
+
+**Signal codes:**
+
+| Code | Level | Meaning |
+|------|-------|---------|
+| `COLD_START` | action | No alignment data — human must decide all |
+| `SINGLE_SPECIALIST` | warning | Only 1 proposer registered — add more for redundancy |
+| `LOW_ALIGNMENT` | warning | Best specialist alignment is below 0.5 |
+| `THIN_MARGIN` | warning | Recent AI decisions had margins close to threshold |
+| `FULL_COLLAPSE` | info | Last 10 decisions were all AI-driven |
+| `ALIGNMENT_PLATEAU` | info | Alignment scores unchanged over last 10 decisions |
+
 ### TickResult / TickStatus
 
 Types for tick-based orchestration.

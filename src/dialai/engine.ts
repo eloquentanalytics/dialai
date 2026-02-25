@@ -74,8 +74,59 @@ async function selfHeal(machineName: string): Promise<void> {
 }
 
 /**
+ * Try to advance via consensus. Returns a TickResult if advanced, null otherwise.
+ */
+async function tryAdvance(
+  session: Session,
+  championId: string | undefined,
+  stateParam: string | undefined
+): Promise<TickResult | null> {
+  const { machineName } = session;
+
+  const roundProposals = await getProposalsForRound(
+    session.sessionId,
+    session.currentRoundId
+  );
+  if (roundProposals.length === 0) return null;
+
+  const consensus = await evaluateConsensus(session.sessionId);
+  if (!consensus.consensusReached) return null;
+
+  const previousState = session.currentState;
+  const result = await submitArbitration({
+    sessionId: session.sessionId,
+    roundId: session.currentRoundId,
+  });
+
+  if (!result.executed) return null;
+
+  // Trip line: if champion degraded, self-heal
+  if (championId) {
+    const currentScore = await getAlignmentScore(championId, machineName, stateParam);
+    if (currentScore < CHAMPION_THRESHOLD) {
+      await selfHeal(machineName);
+    }
+  }
+
+  const updatedSession = await getSession(session.sessionId);
+  return {
+    sessionId: session.sessionId,
+    machineName,
+    status: "advanced",
+    currentState: updatedSession.currentState,
+    previousState,
+    transitionName: result.transitionName,
+    reasoning: result.reasoning,
+  };
+}
+
+/**
  * Process one tick for a single session.
  * Returns a TickResult, or null if the session is terminal.
+ *
+ * Early resolution: after each proposal submission, consensus is re-evaluated.
+ * If consensus is reached before all proposers have submitted, the transition
+ * executes immediately without waiting for remaining proposers.
  */
 async function tickOneSession(session: Session): Promise<TickResult | null> {
   const { machineName } = session;
@@ -84,13 +135,6 @@ async function tickOneSession(session: Session): Promise<TickResult | null> {
   if (session.currentState === session.machine.goalState) {
     return null;
   }
-
-  // Check what's already been submitted this round
-  const roundProposals = await getProposalsForRound(
-    session.sessionId,
-    session.currentRoundId
-  );
-  const submitted = new Set(roundProposals.map((p) => p.specialistId));
 
   // Get enabled proposers (state-aware), champion-first ordering
   const enabledProposers = await getEnabledProposersForState(session);
@@ -105,6 +149,22 @@ async function tickOneSession(session: Session): Promise<TickResult | null> {
       ]
     : enabledProposers;
 
+  // Check what's already been submitted this round
+  const roundProposals = await getProposalsForRound(
+    session.sessionId,
+    session.currentRoundId
+  );
+  const submitted = new Set(roundProposals.map((p) => p.specialistId));
+  const numEnabled = enabledProposers.length;
+
+  // Check existing proposals for early resolution (e.g., human submitted externally)
+  // Only evaluate when multiple proposals exist or all proposers have submitted,
+  // to avoid single-proposal auto-approve when more proposers are expected.
+  if (submitted.size >= numEnabled || roundProposals.length > 1) {
+    const earlyAdvance = await tryAdvance(session, championId, stateParam);
+    if (earlyAdvance) return earlyAdvance;
+  }
+
   // Find the next proposer that hasn't submitted yet
   for (const proposer of ordered) {
     if (!submitted.has(proposer.specialistId)) {
@@ -113,6 +173,21 @@ async function tickOneSession(session: Session): Promise<TickResult | null> {
         specialistId: proposer.specialistId,
         roundId: session.currentRoundId,
       });
+
+      // Re-evaluate consensus after this proposal (early resolution).
+      // Check when: all proposers have now submitted, or there are multiple
+      // proposals (enabling early resolution before all proposers respond).
+      const postProposals = await getProposalsForRound(
+        session.sessionId,
+        session.currentRoundId
+      );
+      const postSubmitted = new Set(postProposals.map((p) => p.specialistId));
+
+      if (postSubmitted.size >= numEnabled || postProposals.length > 1) {
+        const postSolicitAdvance = await tryAdvance(session, championId, stateParam);
+        if (postSolicitAdvance) return postSolicitAdvance;
+      }
+
       return {
         sessionId: session.sessionId,
         machineName,
@@ -123,39 +198,7 @@ async function tickOneSession(session: Session): Promise<TickResult | null> {
     }
   }
 
-  // All proposals are in → evaluate consensus
-  const consensus = await evaluateConsensus(session.sessionId);
-
-  if (consensus.consensusReached) {
-    const previousState = session.currentState;
-    const result = await submitArbitration({
-      sessionId: session.sessionId,
-      roundId: session.currentRoundId,
-    });
-
-    if (result.executed) {
-      // Trip line: if champion degraded, self-heal
-      if (championId) {
-        const currentScore = await getAlignmentScore(championId, machineName, stateParam);
-        if (currentScore < CHAMPION_THRESHOLD) {
-          await selfHeal(machineName);
-        }
-      }
-
-      const updatedSession = await getSession(session.sessionId);
-      return {
-        sessionId: session.sessionId,
-        machineName,
-        status: "advanced",
-        currentState: updatedSession.currentState,
-        previousState,
-        transitionName: result.transitionName,
-        reasoning: result.reasoning,
-      };
-    }
-  }
-
-  // No consensus → needs human
+  // All proposals are in, no consensus → needs human
   return {
     sessionId: session.sessionId,
     machineName,

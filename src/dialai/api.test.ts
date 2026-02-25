@@ -163,7 +163,7 @@ describe("Specialist Registration", () => {
           specialistId: "test-proposer",
           machineName: "test-machine",
         })
-      ).rejects.toThrow("No execution mode specified");
+      ).rejects.toThrow("Specialist must specify one of:");
     });
   });
 

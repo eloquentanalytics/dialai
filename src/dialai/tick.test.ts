@@ -62,7 +62,7 @@ describe("tick", () => {
       strategyFnName: "firstProposal",
     });
 
-    // First tick: solicits p1
+    // First tick: solicits p1 (1 of 2 proposers, no consensus check yet)
     const r1 = await tick();
     expect(r1).toHaveLength(1);
     expect(r1[0].status).toBe("solicited");
@@ -77,11 +77,11 @@ describe("tick", () => {
     expect(proposals).toHaveLength(1);
     expect(proposals[0].specialistId).toBe("p1");
 
-    // Second tick: solicits p2
+    // Second tick: solicits p2, all proposals in → early resolution → advances
     const r2 = await tick();
     expect(r2).toHaveLength(1);
-    expect(r2[0].status).toBe("solicited");
-    expect(r2[0].specialistId).toBe("p2");
+    expect(r2[0].status).toBe("advanced");
+    expect(r2[0].currentState).toBe("done");
   });
 
   it("evaluates consensus after all proposers submit", async () => {
@@ -97,16 +97,12 @@ describe("tick", () => {
       strategyFnName: "firstProposal",
     });
 
-    // Tick 1: solicit
+    // Single proposer: solicit → all in → early resolution → advance in one tick
     const r1 = await tick();
-    expect(r1[0].status).toBe("solicited");
-
-    // Tick 2: all proposals in → consensus → advance
-    const r2 = await tick();
-    expect(r2[0].status).toBe("advanced");
-    expect(r2[0].previousState).toBe("pending");
-    expect(r2[0].currentState).toBe("done");
-    expect(r2[0].transitionName).toBe("complete");
+    expect(r1[0].status).toBe("advanced");
+    expect(r1[0].previousState).toBe("pending");
+    expect(r1[0].currentState).toBe("done");
+    expect(r1[0].transitionName).toBe("complete");
   });
 
   it("advances on consensus and sets TickResult fields", async () => {
@@ -122,8 +118,8 @@ describe("tick", () => {
       strategyFnName: "firstProposal",
     });
 
-    await tick(); // solicit
-    const results = await tick(); // advance
+    // Single proposer: solicit + advance in one tick
+    const results = await tick();
 
     const r = results[0];
     expect(r.sessionId).toBe(session.sessionId);
@@ -249,25 +245,20 @@ describe("tick", () => {
       strategyFnName: "firstProposal",
     });
 
-    // Tick 1: both sessions get solicited
+    // Tick 1: single proposer per machine → both advance in one tick
     const r1 = await tick();
     expect(r1).toHaveLength(2);
 
     const resultA = r1.find((r) => r.sessionId === sA.sessionId);
     const resultB = r1.find((r) => r.sessionId === sB.sessionId);
-    expect(resultA?.status).toBe("solicited");
+    expect(resultA?.status).toBe("advanced");
     expect(resultA?.machineName).toBe("machine-a");
-    expect(resultB?.status).toBe("solicited");
+    expect(resultB?.status).toBe("advanced");
     expect(resultB?.machineName).toBe("machine-b");
 
-    // Tick 2: both advance
+    // Tick 2: both terminal → empty
     const r2 = await tick();
-    expect(r2).toHaveLength(2);
-    expect(r2.every((r) => r.status === "advanced")).toBe(true);
-
-    // Tick 3: both terminal → empty
-    const r3 = await tick();
-    expect(r3).toHaveLength(0);
+    expect(r2).toHaveLength(0);
   });
 
   it("progresses a multi-step machine through ticks", async () => {
@@ -283,29 +274,21 @@ describe("tick", () => {
       strategyFnName: "firstProposal",
     });
 
-    // Step 1: a → b
-    const r1 = await tick(); // solicit
-    expect(r1[0].status).toBe("solicited");
-    expect(r1[0].currentState).toBe("a");
-
-    const r2 = await tick(); // advance
-    expect(r2[0].status).toBe("advanced");
-    expect(r2[0].previousState).toBe("a");
-    expect(r2[0].currentState).toBe("b");
+    // Step 1: a → b (single proposer: solicit + advance in one tick)
+    const r1 = await tick();
+    expect(r1[0].status).toBe("advanced");
+    expect(r1[0].previousState).toBe("a");
+    expect(r1[0].currentState).toBe("b");
 
     // Step 2: b → c
-    const r3 = await tick(); // solicit
-    expect(r3[0].status).toBe("solicited");
-    expect(r3[0].currentState).toBe("b");
-
-    const r4 = await tick(); // advance
-    expect(r4[0].status).toBe("advanced");
-    expect(r4[0].previousState).toBe("b");
-    expect(r4[0].currentState).toBe("c");
+    const r2 = await tick();
+    expect(r2[0].status).toBe("advanced");
+    expect(r2[0].previousState).toBe("b");
+    expect(r2[0].currentState).toBe("c");
 
     // Terminal
-    const r5 = await tick();
-    expect(r5).toHaveLength(0);
+    const r3 = await tick();
+    expect(r3).toHaveLength(0);
   });
 
   it("returns empty array when no sessions exist", async () => {
@@ -365,22 +348,20 @@ describe("tick", () => {
       strategyFnName: "firstProposal",
     });
 
-    // Tick 1: A solicits pA, B solicits pB1
+    // Tick 1: A advances (single proposer → early resolution), B solicits pB1
     const r1 = await tick();
     expect(r1).toHaveLength(2);
 
-    // Tick 2: A advances (all proposals in), B solicits pB2
-    const r2 = await tick();
-    const a2 = r2.find((r) => r.sessionId === sA.sessionId);
-    const b2 = r2.find((r) => r.sessionId === sB.sessionId);
-    expect(a2?.status).toBe("advanced");
-    expect(b2?.status).toBe("solicited");
-    expect(b2?.specialistId).toBe("pB2");
+    const a1 = r1.find((r) => r.sessionId === sA.sessionId);
+    const b1 = r1.find((r) => r.sessionId === sB.sessionId);
+    expect(a1?.status).toBe("advanced");
+    expect(b1?.status).toBe("solicited");
+    expect(b1?.specialistId).toBe("pB1");
 
-    // Tick 3: A is terminal (omitted), B advances
-    const r3 = await tick();
-    expect(r3).toHaveLength(1);
-    expect(r3[0].sessionId).toBe(sB.sessionId);
-    expect(r3[0].status).toBe("advanced");
+    // Tick 2: A is terminal (omitted), B solicits pB2 → all in → advances
+    const r2 = await tick();
+    expect(r2).toHaveLength(1);
+    expect(r2[0].sessionId).toBe(sB.sessionId);
+    expect(r2[0].status).toBe("advanced");
   });
 });

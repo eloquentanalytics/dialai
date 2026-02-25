@@ -132,13 +132,16 @@ See [Registering Specialists](/docs/guides/registering-specialists) for executio
 const humanReviewer = await registerProposer({
   specialistId: "human-reviewer",
   machineName: "my-task",
-  isHuman: true,  // Enables forced arbitration
+  isHuman: true,              // Enables forced arbitration
+  strategyFnName: "firstAvailable",  // Execution mode still required
 });
 ```
 
 Human specialists are identified by `isHuman: true`, which grants:
 - Human proposals always win consensus
 - Ability to force transitions via `submitArbitration`
+
+An execution mode is still required at registration. Use `strategyFnName` as a fallback, or provide a `strategyFn` encoding human preferences. When submitting proposals directly with `transitionName`, the strategy is bypassed.
 
 ### registerArbiter
 
@@ -161,7 +164,7 @@ const arbiter = await registerArbiter({
 registerArbiter(opts: {
   specialistId: string;
   machineName: string;
-  strategyFn?: (ctx: ArbiterContext) => Promise<ConsensusResult>;
+  strategyFn?: (ctx: ArbiterContext) => Promise<ArbiterStrategyResult>;
   strategyFnName?: string;   // "alignmentMargin"
   strategyWebhookUrl?: string;
   webhookTokenName?: string;

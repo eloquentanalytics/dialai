@@ -475,3 +475,114 @@ Text said "When only one proposal exists, consensus is immediate" without noting
 | `website/docs/guides/skills/run-machine/SKILL.md` | Removed `--verbose` and `--human` flags |
 | `src/dialai/types.ts` | `isHuman` comment updated (2 occurrences) |
 | `website/docs/concepts/consensus-strategies.md` | Single proposal threshold caveat |
+
+---
+
+## Round 3 — Source code and remaining docs fixes
+
+### 43. Engine lacked early resolution (consensus re-evaluation after each proposal)
+
+**Files:** `src/dialai/engine.ts`, `src/dialai/tick.test.ts`
+
+The documentation (`decision-cycle.md`, `concepts/arbitration.md`) described the engine re-evaluating consensus "after each arriving contribution," but the actual `tickOneSession` function only checked consensus in a separate tick after all proposers had submitted. This meant a single-proposer machine required 2 ticks (solicit → advance) instead of 1.
+
+**Fix:** Extracted a `tryAdvance()` helper that checks proposals, evaluates consensus, and executes the transition. Modified `tickOneSession` to:
+1. Check existing proposals for early resolution before soliciting (handles externally submitted proposals like human overrides)
+2. Re-evaluate consensus immediately after each proposal submission
+
+Guard condition prevents premature single-proposal auto-approve when more proposers are expected: consensus is only checked when `postSubmitted.size >= numEnabled || postProposals.length > 1`.
+
+Updated `tick.test.ts` to reflect the new behavior: single-proposer machines now advance in 1 tick, multi-proposer machines advance on the tick that collects the final proposal.
+
+---
+
+### 44. Validation error messages were generic instead of specific
+
+**File:** `src/dialai/api.ts`
+
+The `validateExecutionMode` and `validateArbiterExecutionMode` functions produced generic messages ("No execution mode specified", "Multiple execution modes specified") that didn't help users understand what was wrong. The documentation (`registering-specialists.md`) described specific error messages for each forbidden combination.
+
+**Fix:** Replaced generic validation with specific checks for forbidden combinations and missing companion parameters:
+- `strategyFn + strategyFnName` → "Provide either strategyFn (custom function) or strategyFnName (built-in strategy), not both."
+- `strategyFn + modelId` → "modelId is only used with contextFn or contextWebhookUrl..."
+- `strategyFnName + modelId` → same
+- `strategyFn + contextFn` → "Provide either strategyFn (you handle everything) or contextFn + modelId..."
+- `contextFn` without `modelId` → "contextFn provides context for an LLM...You must also specify modelId."
+- `contextWebhookUrl` without `modelId` → similar
+- `strategyWebhookUrl` without `webhookTokenName` → "Webhook URLs require webhookTokenName for authentication."
+- `contextWebhookUrl` without `webhookTokenName` → same
+- No execution mode → "Specialist must specify one of: strategyFn, strategyFnName, strategyWebhookUrl, contextFn + modelId, or contextWebhookUrl + modelId."
+
+Same pattern applied to arbiter validation.
+
+---
+
+### 45. `api/intro.md` human specialist example missing required execution mode
+
+**File:** `website/docs/api/intro.md`
+
+The human specialist registration example omitted the required execution mode parameter, which would throw at runtime since validation requires exactly one execution mode even for human specialists.
+
+**Before:**
+```typescript
+const humanReviewer = await registerProposer({
+  specialistId: "human-reviewer",
+  machineName: "my-task",
+  isHuman: true,
+});
+```
+
+**After:**
+```typescript
+const humanReviewer = await registerProposer({
+  specialistId: "human-reviewer",
+  machineName: "my-task",
+  isHuman: true,
+  strategyFnName: "firstAvailable",
+});
+```
+
+---
+
+### 46. `api/intro.md` arbiter `strategyFn` return type was `ConsensusResult`
+
+**File:** `website/docs/api/intro.md`
+
+The `registerArbiter` example showed the custom strategy function returning `ConsensusResult`. The actual expected return type is `ArbiterStrategyResult` (`types.ts:140-144`).
+
+**Fix:** Changed `Promise<ConsensusResult>` to `Promise<ArbiterStrategyResult>`.
+
+---
+
+### 47. `api/types.md` missing `SpecialistMetrics`, `Signal`, and `SignalLevel` types
+
+**File:** `website/docs/api/types.md`
+
+The `CollapseMetrics` type referenced `specialists: Record<string, SpecialistMetrics>` and `signals: Signal[]`, but neither `SpecialistMetrics`, `Signal`, nor `SignalLevel` were defined in the types documentation.
+
+**Fix:** Added all three type definitions with field descriptions. Added signal codes table: `COLD_START`, `SINGLE_SPECIALIST`, `LOW_ALIGNMENT`, `THIN_MARGIN`, `FULL_COLLAPSE`, `ALIGNMENT_PLATEAU`.
+
+---
+
+### 48. Test expectations updated for new validation messages and early resolution
+
+**Files:** `src/dialai/api.test.ts`, `tests/unit/register-proposer.test.ts`
+
+Tests that asserted on old generic error messages were updated to match the new specific messages:
+- `api.test.ts`: "No execution mode specified" → "Specialist must specify one of:"
+- `register-proposer.test.ts` DIAL_032: "Multiple execution modes" → "Provide either strategyFn (custom function) or strategyFnName (built-in strategy), not both."
+- `register-proposer.test.ts` DIAL_033: "No execution mode" → "Specialist must specify one of:"
+
+---
+
+## Additional Files Changed (Round 3)
+
+| File | Changes |
+|------|---------|
+| `src/dialai/engine.ts` | Added `tryAdvance()` helper, early resolution with guards |
+| `src/dialai/tick.test.ts` | Updated expectations for early resolution behavior |
+| `src/dialai/api.ts` | Specific validation error messages for forbidden combos |
+| `src/dialai/api.test.ts` | Updated error message expectation |
+| `tests/unit/register-proposer.test.ts` | Updated DIAL_032/033 error message expectations |
+| `website/docs/api/intro.md` | Human specialist example, arbiter return type |
+| `website/docs/api/types.md` | Added SpecialistMetrics, Signal, SignalLevel types |

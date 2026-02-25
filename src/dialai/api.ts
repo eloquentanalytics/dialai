@@ -129,54 +129,131 @@ export async function getSessions(): Promise<Session[]> {
 
 /**
  * Validates that exactly one execution mode is specified for a proposer.
+ * Checks forbidden parameter combinations and required companion parameters.
  */
 function validateExecutionMode(
   opts: RegisterProposerOptions
 ): void {
+  const hasStrategyFn = opts.strategyFn !== undefined;
+  const hasStrategyFnName = opts.strategyFnName !== undefined;
+  const hasStrategyWebhookUrl = opts.strategyWebhookUrl !== undefined;
+  const hasContextFn = opts.contextFn !== undefined;
+  const hasContextWebhookUrl = opts.contextWebhookUrl !== undefined;
+  const hasModelId = opts.modelId !== undefined;
+  const hasWebhookTokenName = opts.webhookTokenName !== undefined;
+
+  // Check forbidden combinations (specific errors before generic ones)
+  if (hasStrategyFn && hasStrategyFnName) {
+    throw new Error(
+      "Provide either strategyFn (custom function) or strategyFnName (built-in strategy), not both."
+    );
+  }
+
+  if (hasStrategyFn && hasModelId) {
+    throw new Error(
+      "modelId is only used with contextFn or contextWebhookUrl. A strategyFn returns proposals directly and does not need a model."
+    );
+  }
+
+  if (hasStrategyFnName && hasModelId) {
+    throw new Error(
+      "modelId is only used with contextFn or contextWebhookUrl. A strategyFnName references a built-in strategy and does not need a model."
+    );
+  }
+
+  if (hasStrategyFn && hasContextFn) {
+    throw new Error(
+      "Provide either strategyFn (you handle everything) or contextFn + modelId (orchestrator calls the LLM), not both."
+    );
+  }
+
+  if (hasContextFn && !hasModelId) {
+    throw new Error(
+      "contextFn provides context for an LLM to generate proposals. You must also specify modelId."
+    );
+  }
+
+  if (hasContextWebhookUrl && !hasModelId) {
+    throw new Error(
+      "contextWebhookUrl provides context for an LLM to generate proposals. You must also specify modelId."
+    );
+  }
+
+  if (hasStrategyWebhookUrl && !hasWebhookTokenName) {
+    throw new Error(
+      "Webhook URLs require webhookTokenName for authentication."
+    );
+  }
+
+  if (hasContextWebhookUrl && !hasWebhookTokenName) {
+    throw new Error(
+      "Webhook URLs require webhookTokenName for authentication."
+    );
+  }
+
+  // Count valid execution modes
   const modes: boolean[] = [
-    opts.strategyFn !== undefined,
-    opts.strategyFnName !== undefined,
-    opts.strategyWebhookUrl !== undefined,
-    opts.contextFn !== undefined && opts.modelId !== undefined,
-    opts.contextWebhookUrl !== undefined && opts.modelId !== undefined,
+    hasStrategyFn,
+    hasStrategyFnName,
+    hasStrategyWebhookUrl,
+    hasContextFn && hasModelId,
+    hasContextWebhookUrl && hasModelId,
   ];
 
   const numModes = modes.filter(Boolean).length;
 
   if (numModes === 0) {
     throw new Error(
-      `No execution mode specified for proposer. Must provide one of: strategyFn, strategyFnName, strategyWebhookUrl, contextFn+modelId, or contextWebhookUrl+modelId`
+      "Specialist must specify one of: strategyFn, strategyFnName, strategyWebhookUrl, contextFn + modelId, or contextWebhookUrl + modelId."
     );
   }
 
   if (numModes > 1) {
     throw new Error(
-      `Multiple execution modes specified for proposer. Must provide exactly one.`
+      "Multiple execution modes specified for proposer. Must provide exactly one."
     );
   }
 }
 
 /**
  * Validates that exactly one execution mode is specified for arbiter.
+ * Arbiters cannot use LLM-based modes.
  */
 function validateArbiterExecutionMode(opts: RegisterArbiterOptions): void {
+  const hasStrategyFn = opts.strategyFn !== undefined;
+  const hasStrategyFnName = opts.strategyFnName !== undefined;
+  const hasStrategyWebhookUrl = opts.strategyWebhookUrl !== undefined;
+  const hasWebhookTokenName = opts.webhookTokenName !== undefined;
+
+  if (hasStrategyFn && hasStrategyFnName) {
+    throw new Error(
+      "Provide either strategyFn (custom function) or strategyFnName (built-in strategy), not both."
+    );
+  }
+
+  if (hasStrategyWebhookUrl && !hasWebhookTokenName) {
+    throw new Error(
+      "Webhook URLs require webhookTokenName for authentication."
+    );
+  }
+
   const modes: boolean[] = [
-    opts.strategyFn !== undefined,
-    opts.strategyFnName !== undefined,
-    opts.strategyWebhookUrl !== undefined,
+    hasStrategyFn,
+    hasStrategyFnName,
+    hasStrategyWebhookUrl,
   ];
 
   const numModes = modes.filter(Boolean).length;
 
   if (numModes === 0) {
     throw new Error(
-      `No execution mode specified for arbiter. Must provide one of: strategyFn, strategyFnName, or strategyWebhookUrl`
+      "Specialist must specify one of: strategyFn, strategyFnName, or strategyWebhookUrl."
     );
   }
 
   if (numModes > 1) {
     throw new Error(
-      `Multiple execution modes specified for arbiter. Must provide exactly one.`
+      "Multiple execution modes specified for arbiter. Must provide exactly one."
     );
   }
 }

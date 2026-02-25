@@ -97,7 +97,7 @@ describe("DIAL_026–DIAL_037: Specialist Registration — Proposers", () => {
         strategyFnName: "firstAvailable",
         strategyFn: async () => ({ transitionName: "go", toState: "b", reasoning: "" }),
       })
-    ).rejects.toThrow("Multiple execution modes");
+    ).rejects.toThrow("Provide either strategyFn (custom function) or strategyFnName (built-in strategy), not both.");
   });
 
   test("DIAL_033: rejects no execution mode", async () => {
@@ -106,7 +106,7 @@ describe("DIAL_026–DIAL_037: Specialist Registration — Proposers", () => {
         specialistId: "p1",
         machineName: "test",
       })
-    ).rejects.toThrow("No execution mode");
+    ).rejects.toThrow("Specialist must specify one of:");
   });
 
   test("DIAL_034: rejects unknown strategyFnName", async () => {
