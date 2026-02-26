@@ -24,7 +24,8 @@
     "dialai-mcp": "./dist/dialai/mcp.js"
   },
   "files": [
-    "dist"
+    "dist",
+    ".claude"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
