@@ -2568,13 +2568,14 @@ interface HumanGoldExample {
 
 ### ProposerStrategyResult
 
-Result from a proposer strategy function. The optional metric fields are merged into the resulting `Proposal` when the strategy is invoked via `submitProposal`. Metrics passed via `SubmitProposalOptions` take precedence over strategy-returned values.
+Result from a proposer strategy function. The optional metric and metadata fields are merged into the resulting `Proposal` when the strategy is invoked via `submitProposal`. Values passed via `SubmitProposalOptions` take precedence over strategy-returned values.
 
 ```typescript
 interface ProposerStrategyResult {
   transitionName: string;
   toState: string;
   reasoning: string;
+  metaJson?: Record<string, unknown>; // Structured metadata (e.g., tool arguments)
   costUSD?: number;          // Cost in USD to generate this result
   latencyMsec?: number;      // Time in milliseconds to generate
   numInputTokens?: number;   // Input tokens used
