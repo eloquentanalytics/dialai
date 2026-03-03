@@ -482,6 +482,59 @@ export interface SpecialistMetrics {
   winRate: number;
 }
 
+// ============================================================================
+// LLM Audit Log Types
+// ============================================================================
+
+/**
+ * Context passed to callLlm for audit correlation.
+ */
+export interface LlmAuditContext {
+  sessionId?: string;
+  specialistId?: string;
+  machineName?: string;
+}
+
+/**
+ * A single append-only audit entry for an LLM API call.
+ */
+export interface LlmAuditEntry {
+  /** UUID for this entry */
+  auditEntryId: string;
+  /** Session that triggered the LLM call, if known */
+  sessionId: string | null;
+  /** Specialist that triggered the LLM call, if known */
+  specialistId: string | null;
+  /** Machine name, if known */
+  machineName: string | null;
+  /** When the call was made */
+  timestamp: Date;
+  /** The LLM endpoint URL */
+  requestUrl: string;
+  /** HTTP request headers (Authorization value redacted) */
+  requestHeaders: Record<string, string>;
+  /** The full HTTP request body sent to the LLM endpoint */
+  requestBody: Record<string, unknown>;
+  /** HTTP status code returned, or null if network error */
+  responseStatus: number | null;
+  /** The full raw response body as a string */
+  responseBody: string | null;
+  /** Duration in milliseconds */
+  durationMs: number;
+  /** Error message if the call failed */
+  error: string | null;
+}
+
+/**
+ * Filter options for querying LLM audit entries.
+ */
+export interface LlmAuditFilter {
+  sessionId?: string;
+  specialistId?: string;
+  machineName?: string;
+  limit?: number;
+}
+
 export type SignalLevel = "info" | "warning" | "action";
 
 /**

@@ -16,6 +16,8 @@ import type {
   AlignmentRecord,
   Exemplar,
   DecisionRecord,
+  LlmAuditEntry,
+  LlmAuditFilter,
 } from "./types.js";
 
 // ============================================================================
@@ -85,12 +87,28 @@ interface ProposalTable {
   createdAt: Date;
 }
 
+interface LlmAuditLogTable {
+  auditEntryId: string;
+  sessionId: string | null;
+  specialistId: string | null;
+  machineName: string | null;
+  timestamp: Date;
+  requestUrl: string;
+  requestHeaders: unknown;
+  requestBody: unknown;
+  responseStatus: number | null;
+  responseBody: string | null;
+  durationMs: number;
+  error: string | null;
+}
+
 interface Database {
   Machine: MachineTable;
   Session: SessionTable;
   Specialist: SpecialistTable;
   Round: RoundTable;
   Proposal: ProposalTable;
+  LlmAuditLog: LlmAuditLogTable;
 }
 
 // ============================================================================
@@ -563,10 +581,67 @@ export function createPostgresStore(databaseUrl: string): Store {
       }));
     },
 
+    // LLM Audit Log (append-only)
+    async appendLlmAuditEntry(entry: LlmAuditEntry): Promise<void> {
+      await db
+        .insertInto("LlmAuditLog")
+        .values({
+          auditEntryId: entry.auditEntryId,
+          sessionId: entry.sessionId,
+          specialistId: entry.specialistId,
+          machineName: entry.machineName,
+          timestamp: entry.timestamp,
+          requestUrl: entry.requestUrl,
+          requestHeaders: JSON.stringify(entry.requestHeaders) as unknown,
+          requestBody: JSON.stringify(entry.requestBody) as unknown,
+          responseStatus: entry.responseStatus,
+          responseBody: entry.responseBody,
+          durationMs: entry.durationMs,
+          error: entry.error,
+        })
+        .execute();
+    },
+
+    async getLlmAuditEntries(filters?: LlmAuditFilter): Promise<LlmAuditEntry[]> {
+      let query = db
+        .selectFrom("LlmAuditLog")
+        .selectAll()
+        .orderBy("timestamp", "asc");
+
+      if (filters?.sessionId !== undefined) {
+        query = query.where("sessionId", "=", filters.sessionId);
+      }
+      if (filters?.specialistId !== undefined) {
+        query = query.where("specialistId", "=", filters.specialistId);
+      }
+      if (filters?.machineName !== undefined) {
+        query = query.where("machineName", "=", filters.machineName);
+      }
+      if (filters?.limit !== undefined) {
+        query = query.limit(filters.limit);
+      }
+
+      const rows = await query.execute();
+      return rows.map((row) => ({
+        auditEntryId: row.auditEntryId,
+        sessionId: row.sessionId,
+        specialistId: row.specialistId,
+        machineName: row.machineName,
+        timestamp: new Date(row.timestamp),
+        requestUrl: row.requestUrl,
+        requestHeaders: row.requestHeaders as Record<string, string>,
+        requestBody: row.requestBody as Record<string, unknown>,
+        responseStatus: row.responseStatus,
+        responseBody: row.responseBody,
+        durationMs: row.durationMs,
+        error: row.error,
+      }));
+    },
+
     // Lifecycle
     async clear(): Promise<void> {
       // Clear in dependency order
-      await sql`TRUNCATE "Proposal", "Round", "Session", "Specialist", "Machine", "Audit" CASCADE`.execute(db);
+      await sql`TRUNCATE "Proposal", "Round", "Session", "Specialist", "Machine", "Audit", "LlmAuditLog" CASCADE`.execute(db);
       sessionRuntimeState.clear();
       alignmentCache.clear();
       exemplarCache.clear();

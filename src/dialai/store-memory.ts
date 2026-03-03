@@ -14,6 +14,8 @@ import type {
   AlignmentRecord,
   Exemplar,
   DecisionRecord,
+  LlmAuditEntry,
+  LlmAuditFilter,
 } from "./types.js";
 
 export function createMemoryStore(): Store {
@@ -23,6 +25,7 @@ export function createMemoryStore(): Store {
   const _alignmentRecords = new Map<string, AlignmentRecord>();
   const _exemplars = new Map<string, Exemplar>();
   const _decisionLog = new Map<string, DecisionRecord>();
+  const _llmAuditLog: LlmAuditEntry[] = [];
 
   return {
     // Sessions
@@ -117,6 +120,27 @@ export function createMemoryStore(): Store {
       return all;
     },
 
+    // LLM Audit Log (append-only)
+    async appendLlmAuditEntry(entry: LlmAuditEntry) {
+      _llmAuditLog.push(entry);
+    },
+    async getLlmAuditEntries(filters?: LlmAuditFilter) {
+      let result = [..._llmAuditLog];
+      if (filters?.sessionId !== undefined) {
+        result = result.filter((e) => e.sessionId === filters.sessionId);
+      }
+      if (filters?.specialistId !== undefined) {
+        result = result.filter((e) => e.specialistId === filters.specialistId);
+      }
+      if (filters?.machineName !== undefined) {
+        result = result.filter((e) => e.machineName === filters.machineName);
+      }
+      if (filters?.limit !== undefined) {
+        result = result.slice(0, filters.limit);
+      }
+      return result;
+    },
+
     // Lifecycle
     async clear() {
       _sessions.clear();
@@ -125,6 +149,7 @@ export function createMemoryStore(): Store {
       _alignmentRecords.clear();
       _exemplars.clear();
       _decisionLog.clear();
+      _llmAuditLog.length = 0;
     },
     async close() {
       // No-op for in-memory store

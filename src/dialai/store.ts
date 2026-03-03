@@ -14,6 +14,8 @@ import type {
   AlignmentRecord,
   Exemplar,
   DecisionRecord,
+  LlmAuditEntry,
+  LlmAuditFilter,
 } from "./types.js";
 import { createMemoryStore } from "./store-memory.js";
 
@@ -51,6 +53,10 @@ export interface Store {
   // Decision Log
   setDecisionRecord(record: DecisionRecord): Promise<void>;
   getDecisionRecordsByMachine(machineName: string, limit?: number): Promise<DecisionRecord[]>;
+
+  // LLM Audit Log (append-only)
+  appendLlmAuditEntry(entry: LlmAuditEntry): Promise<void>;
+  getLlmAuditEntries(filters?: LlmAuditFilter): Promise<LlmAuditEntry[]>;
 
   // Lifecycle
   clear(): Promise<void>;

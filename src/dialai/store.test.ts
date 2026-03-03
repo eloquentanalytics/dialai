@@ -16,6 +16,7 @@ import type {
   Exemplar,
   DecisionRecord,
   MachineDefinition,
+  LlmAuditEntry,
 } from "./types.js";
 
 function uuid(): string {
@@ -396,14 +397,125 @@ function runStoreTests(
     });
 
     // ====================================================================
+    // LLM Audit Log
+    // ====================================================================
+
+    function makeLlmAuditEntry(overrides?: Partial<LlmAuditEntry>): LlmAuditEntry {
+      return {
+        auditEntryId: uuid(),
+        sessionId: null,
+        specialistId: null,
+        machineName: null,
+        timestamp: new Date(),
+        requestUrl: "https://api.example.com/v1/chat/completions",
+        requestHeaders: { "Content-Type": "application/json", "Authorization": "[REDACTED]" },
+        requestBody: { model: "test-model", messages: [{ role: "user", content: "hello" }] },
+        responseStatus: 200,
+        responseBody: '{"choices":[{"message":{"content":"hi"}}]}',
+        durationMs: 150,
+        error: null,
+        ...overrides,
+      };
+    }
+
+    test("appendLlmAuditEntry + getLlmAuditEntries round-trip", async () => {
+      const entry = makeLlmAuditEntry({ sessionId: uuid(), specialistId: "spec-1", machineName: "test-machine" });
+      await store.appendLlmAuditEntry(entry);
+      const entries = await store.getLlmAuditEntries();
+      expect(entries).toHaveLength(1);
+      expect(entries[0].auditEntryId).toBe(entry.auditEntryId);
+      expect(entries[0].requestUrl).toBe("https://api.example.com/v1/chat/completions");
+      expect(entries[0].requestBody).toEqual(entry.requestBody);
+      expect(entries[0].responseBody).toBe(entry.responseBody);
+      expect(entries[0].durationMs).toBe(150);
+      expect(entries[0].error).toBeNull();
+    });
+
+    test("getLlmAuditEntries returns entries in order", async () => {
+      const e1 = makeLlmAuditEntry({ timestamp: new Date("2024-01-01T00:00:00Z") });
+      const e2 = makeLlmAuditEntry({ timestamp: new Date("2024-01-02T00:00:00Z") });
+      const e3 = makeLlmAuditEntry({ timestamp: new Date("2024-01-03T00:00:00Z") });
+      await store.appendLlmAuditEntry(e1);
+      await store.appendLlmAuditEntry(e2);
+      await store.appendLlmAuditEntry(e3);
+      const entries = await store.getLlmAuditEntries();
+      expect(entries).toHaveLength(3);
+    });
+
+    test("getLlmAuditEntries filters by sessionId", async () => {
+      const sid = uuid();
+      await store.appendLlmAuditEntry(makeLlmAuditEntry({ sessionId: sid }));
+      await store.appendLlmAuditEntry(makeLlmAuditEntry({ sessionId: uuid() }));
+      await store.appendLlmAuditEntry(makeLlmAuditEntry({ sessionId: null }));
+
+      const filtered = await store.getLlmAuditEntries({ sessionId: sid });
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].sessionId).toBe(sid);
+    });
+
+    test("getLlmAuditEntries filters by specialistId", async () => {
+      await store.appendLlmAuditEntry(makeLlmAuditEntry({ specialistId: "spec-a" }));
+      await store.appendLlmAuditEntry(makeLlmAuditEntry({ specialistId: "spec-b" }));
+
+      const filtered = await store.getLlmAuditEntries({ specialistId: "spec-a" });
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].specialistId).toBe("spec-a");
+    });
+
+    test("getLlmAuditEntries filters by machineName", async () => {
+      await store.appendLlmAuditEntry(makeLlmAuditEntry({ machineName: "machine-1" }));
+      await store.appendLlmAuditEntry(makeLlmAuditEntry({ machineName: "machine-2" }));
+
+      const filtered = await store.getLlmAuditEntries({ machineName: "machine-1" });
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].machineName).toBe("machine-1");
+    });
+
+    test("getLlmAuditEntries respects limit", async () => {
+      for (let i = 0; i < 5; i++) {
+        await store.appendLlmAuditEntry(makeLlmAuditEntry());
+      }
+      const limited = await store.getLlmAuditEntries({ limit: 3 });
+      expect(limited).toHaveLength(3);
+    });
+
+    test("appendLlmAuditEntry stores error entries", async () => {
+      const entry = makeLlmAuditEntry({
+        responseStatus: 500,
+        responseBody: "Internal Server Error",
+        error: "LLM API error (500): Internal Server Error",
+      });
+      await store.appendLlmAuditEntry(entry);
+      const entries = await store.getLlmAuditEntries();
+      expect(entries).toHaveLength(1);
+      expect(entries[0].responseStatus).toBe(500);
+      expect(entries[0].error).toBe("LLM API error (500): Internal Server Error");
+    });
+
+    test("appendLlmAuditEntry stores network error entries", async () => {
+      const entry = makeLlmAuditEntry({
+        responseStatus: null,
+        responseBody: null,
+        error: "fetch failed: ECONNREFUSED",
+      });
+      await store.appendLlmAuditEntry(entry);
+      const entries = await store.getLlmAuditEntries();
+      expect(entries).toHaveLength(1);
+      expect(entries[0].responseStatus).toBeNull();
+      expect(entries[0].responseBody).toBeNull();
+      expect(entries[0].error).toBe("fetch failed: ECONNREFUSED");
+    });
+
+    // ====================================================================
     // Lifecycle
     // ====================================================================
 
-    test("clear removes all data", async () => {
+    test("clear removes all data including LLM audit entries", async () => {
       const sessionId = uuid();
       await store.setSession(makeSession({ sessionId }));
       await store.setSpecialist({ role: "proposer", specialistId: "p1", machineName: "m1", strategyFnName: "firstAvailable" });
       await store.setAlignmentRecord("key", makeAlignmentRecord());
+      await store.appendLlmAuditEntry(makeLlmAuditEntry());
 
       await store.clear();
 
@@ -411,6 +523,7 @@ function runStoreTests(
       expect(await store.getSpecialist("p1")).toBeUndefined();
       expect(await store.getAlignmentRecord("key")).toBeUndefined();
       expect(await store.getAllSessions()).toEqual([]);
+      expect(await store.getLlmAuditEntries()).toEqual([]);
     });
   });
 }

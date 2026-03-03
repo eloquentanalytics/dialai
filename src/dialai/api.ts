@@ -582,7 +582,11 @@ async function invokeProposerStrategy(
 
   if (proposer.contextFn && proposer.modelId) {
     const { executeProposerLlm } = await import("./llm.js");
-    return executeProposerLlm(proposer.contextFn, proposer.modelId, ctx);
+    return executeProposerLlm(proposer.contextFn, proposer.modelId, ctx, {
+      sessionId: ctx.sessionId,
+      specialistId: proposer.specialistId,
+      machineName: proposer.machineName,
+    });
   }
 
   if (proposer.contextWebhookUrl && proposer.modelId) {
@@ -592,7 +596,12 @@ async function invokeProposerStrategy(
       proposer.modelId,
       ctx,
       proposer.machineName,
-      proposer.webhookTokenName
+      proposer.webhookTokenName,
+      {
+        sessionId: ctx.sessionId,
+        specialistId: proposer.specialistId,
+        machineName: proposer.machineName,
+      }
     );
   }
 

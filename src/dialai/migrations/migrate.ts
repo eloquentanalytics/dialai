@@ -10,6 +10,7 @@
 
 import pg from "pg";
 import { sql as migration001 } from "./001-initial-schema.js";
+import { sql as migration002 } from "./002-llm-audit-log.js";
 
 interface Migration {
   name: string;
@@ -18,6 +19,7 @@ interface Migration {
 
 const migrations: Migration[] = [
   { name: "001-initial-schema", sql: migration001 },
+  { name: "002-llm-audit-log", sql: migration002 },
 ];
 
 async function ensureMigrationsTable(client: pg.Client): Promise<void> {

@@ -9,7 +9,10 @@
 import type {
   ProposerContext,
   ProposerStrategyResult,
+  LlmAuditContext,
 } from "./types.js";
+import { getStore } from "./store.js";
+import { randomUUID } from "node:crypto";
 
 /** Webhook timeout in milliseconds */
 const WEBHOOK_TIMEOUT_MS = 55_000;
@@ -96,16 +99,19 @@ function getLlmApiToken(): string {
 
 /**
  * Calls an OpenAI-compatible LLM endpoint.
+ * Writes an audit entry to the store for every call (success or failure).
  *
  * @param modelId - The model ID to use
  * @param systemMessage - System prompt
  * @param userMessage - User prompt with context
+ * @param auditContext - Optional context for audit correlation
  * @returns The raw text response from the model
  */
 export async function callLlm(
   modelId: string,
   systemMessage: string,
-  userMessage: string
+  userMessage: string,
+  auditContext?: LlmAuditContext
 ): Promise<{ content: string; usage?: { prompt_tokens?: number; completion_tokens?: number } }> {
   const baseUrl = getLlmBaseUrl();
   const apiToken = getLlmApiToken();
@@ -114,40 +120,94 @@ export async function callLlm(
     throw new Error("No LLM API token configured. Set OPENROUTER_API_TOKEN environment variable.");
   }
 
-  const response = await fetch(`${baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiToken}`,
-    },
-    body: JSON.stringify({
-      model: modelId,
-      messages: [
-        { role: "system", content: systemMessage },
-        { role: "user", content: userMessage },
-      ],
-      temperature: 0,
-    }),
-  });
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`LLM API error (${response.status}): ${text}`);
-  }
-
-  const data = (await response.json()) as {
-    choices: Array<{ message: { content: string } }>;
-    usage?: { prompt_tokens?: number; completion_tokens?: number };
+  const requestUrl = `${baseUrl}/chat/completions`;
+  const requestHeaders: Record<string, string> = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${apiToken}`,
+  };
+  const requestBody = {
+    model: modelId,
+    messages: [
+      { role: "system", content: systemMessage },
+      { role: "user", content: userMessage },
+    ],
+    temperature: 0,
   };
 
-  if (!data.choices || data.choices.length === 0) {
-    throw new Error("LLM returned no choices");
-  }
+  const startTime = Date.now();
+  let responseStatus: number | null = null;
+  let responseBody: string | null = null;
+  let error: string | null = null;
 
-  return {
-    content: data.choices[0].message.content,
-    usage: data.usage,
-  };
+  try {
+    const response = await fetch(requestUrl, {
+      method: "POST",
+      headers: requestHeaders,
+      body: JSON.stringify(requestBody),
+    });
+
+    responseStatus = response.status;
+    responseBody = await response.text();
+
+    if (!response.ok) {
+      error = `LLM API error (${response.status}): ${responseBody}`;
+      throw new Error(error);
+    }
+
+    let data: {
+      choices: Array<{ message: { content: string } }>;
+      usage?: { prompt_tokens?: number; completion_tokens?: number };
+    };
+
+    try {
+      data = JSON.parse(responseBody) as typeof data;
+    } catch {
+      error = `Failed to parse LLM response as JSON: ${responseBody}`;
+      throw new Error(error);
+    }
+
+    if (!data.choices || data.choices.length === 0) {
+      error = "LLM returned no choices";
+      throw new Error(error);
+    }
+
+    return {
+      content: data.choices[0].message.content,
+      usage: data.usage,
+    };
+  } catch (e) {
+    if (!error) {
+      error = e instanceof Error ? e.message : String(e);
+    }
+    throw e;
+  } finally {
+    const durationMs = Date.now() - startTime;
+
+    // Redact Authorization header for audit
+    const redactedHeaders: Record<string, string> = { ...requestHeaders };
+    if ("Authorization" in redactedHeaders) {
+      redactedHeaders["Authorization"] = "[REDACTED]";
+    }
+
+    try {
+      await getStore().appendLlmAuditEntry({
+        auditEntryId: randomUUID(),
+        sessionId: auditContext?.sessionId ?? null,
+        specialistId: auditContext?.specialistId ?? null,
+        machineName: auditContext?.machineName ?? null,
+        timestamp: new Date(),
+        requestUrl,
+        requestHeaders: redactedHeaders,
+        requestBody,
+        responseStatus,
+        responseBody,
+        durationMs,
+        error,
+      });
+    } catch {
+      // Audit logging should not break LLM calls
+    }
+  }
 }
 
 /**
@@ -178,13 +238,14 @@ Choose exactly one transition from the available list.`;
 export async function executeProposerLlm(
   contextFn: (ctx: ProposerContext) => Promise<string>,
   modelId: string,
-  ctx: ProposerContext
+  ctx: ProposerContext,
+  auditContext?: LlmAuditContext
 ): Promise<ProposerStrategyResult> {
   const context = await contextFn(ctx);
   const systemMessage = "You are a decision-making specialist in a state machine. You must choose the best transition based on the context provided. Respond only with valid JSON.";
   const userMessage = assembleProposerPrompt(ctx, context);
 
-  const result = await callLlm(modelId, systemMessage, userMessage);
+  const result = await callLlm(modelId, systemMessage, userMessage, auditContext);
 
   try {
     const parsed = JSON.parse(result.content) as ProposerStrategyResult;
@@ -206,7 +267,8 @@ export async function executeContextWebhookProposer(
   modelId: string,
   ctx: ProposerContext,
   machineName: string,
-  webhookTokenName?: string
+  webhookTokenName?: string,
+  auditContext?: LlmAuditContext
 ): Promise<ProposerStrategyResult> {
   const contextResult = await executeWebhook<{ context: string }>(
     contextWebhookUrl,
@@ -216,5 +278,5 @@ export async function executeContextWebhookProposer(
   );
 
   const contextFn = async () => contextResult.context;
-  return executeProposerLlm(contextFn, modelId, ctx);
+  return executeProposerLlm(contextFn, modelId, ctx, auditContext);
 }

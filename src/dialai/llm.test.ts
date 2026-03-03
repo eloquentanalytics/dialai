@@ -130,13 +130,14 @@ describe("LLM Module", () => {
       const { callLlm } = await import("./llm.js");
 
       const originalFetch = globalThis.fetch;
+      const responseBody = JSON.stringify({
+        choices: [{ message: { content: "test response" } }],
+        usage: { prompt_tokens: 10, completion_tokens: 5 },
+      });
       const mockFetch = vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
-        json: async () => ({
-          choices: [{ message: { content: "test response" } }],
-          usage: { prompt_tokens: 10, completion_tokens: 5 },
-        }),
+        text: async () => responseBody,
       });
       globalThis.fetch = mockFetch as unknown as typeof fetch;
 
