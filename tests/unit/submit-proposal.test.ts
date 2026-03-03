@@ -291,4 +291,67 @@ describe("DIAL_056–DIAL_071: Proposal Submission", () => {
     expect(proposal.numInputTokens).toBeUndefined();
     expect(proposal.numOutputTokens).toBeUndefined();
   });
+
+  test("strategy-returned metaJson flows to proposal", async () => {
+    const session = await createSession(twoOptionMachine());
+    await registerProposer({
+      specialistId: "p-meta",
+      machineName: "proposal-test",
+      strategyFn: async (): Promise<ProposerStrategyResult> => ({
+        transitionName: "approve",
+        toState: "approved",
+        reasoning: "with meta",
+        metaJson: { key: "from-strategy" },
+      }),
+    });
+
+    const proposal = await submitProposal({
+      sessionId: session.sessionId,
+      specialistId: "p-meta",
+    });
+
+    expect(proposal.metaJson).toEqual({ key: "from-strategy" });
+  });
+
+  test("caller-provided metaJson takes precedence over strategy metaJson", async () => {
+    const session = await createSession(twoOptionMachine());
+    await registerProposer({
+      specialistId: "p-meta-override",
+      machineName: "proposal-test",
+      strategyFn: async (): Promise<ProposerStrategyResult> => ({
+        transitionName: "approve",
+        toState: "approved",
+        reasoning: "with meta",
+        metaJson: { key: "from-strategy" },
+      }),
+    });
+
+    const proposal = await submitProposal({
+      sessionId: session.sessionId,
+      specialistId: "p-meta-override",
+      metaJson: { key: "from-caller" },
+    });
+
+    expect(proposal.metaJson).toEqual({ key: "from-caller" });
+  });
+
+  test("no metaJson from either source", async () => {
+    const session = await createSession(twoOptionMachine());
+    await registerProposer({
+      specialistId: "p-no-meta",
+      machineName: "proposal-test",
+      strategyFn: async (): Promise<ProposerStrategyResult> => ({
+        transitionName: "approve",
+        toState: "approved",
+        reasoning: "no meta",
+      }),
+    });
+
+    const proposal = await submitProposal({
+      sessionId: session.sessionId,
+      specialistId: "p-no-meta",
+    });
+
+    expect(proposal.metaJson).toBeUndefined();
+  });
 });

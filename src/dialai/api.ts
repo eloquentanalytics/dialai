@@ -639,18 +639,17 @@ async function invokeArbiterStrategy(
 export async function submitProposal(
   opts: SubmitProposalOptions
 ): Promise<Proposal> {
-  const {
-    sessionId,
-    specialistId,
-    roundId,
-    transitionName,
-    reasoning,
-    metaJson,
-    costUSD,
-    latencyMsec,
-    numInputTokens,
-    numOutputTokens,
-  } = opts;
+  const { sessionId, specialistId, roundId } = opts;
+
+  let transitionName = opts.transitionName;
+  let toState: string | undefined;
+  let reasoning = opts.reasoning;
+  let metaJson = opts.metaJson;
+  let costUSD = opts.costUSD;
+  let latencyMsec = opts.latencyMsec;
+  let numInputTokens = opts.numInputTokens;
+  let numOutputTokens = opts.numOutputTokens;
+
   const session = await getSession(sessionId);
   const specialist = await getStore().getSpecialist(specialistId);
 
@@ -666,34 +665,27 @@ export async function submitProposal(
   const effectiveRoundId = roundId ?? session.currentRoundId;
   const isHuman = proposer.isHuman ?? false;
 
-  let finalTransitionName = transitionName;
-  let finalToState: string | undefined;
-  let finalReasoning = reasoning;
-  let finalCostUSD = costUSD;
-  let finalLatencyMsec = latencyMsec;
-  let finalNumInputTokens = numInputTokens;
-  let finalNumOutputTokens = numOutputTokens;
-
   // If transitionName not provided, invoke strategy
-  if (!finalTransitionName) {
+  if (!transitionName) {
     const ctx = buildProposerContext(session);
     const result = await invokeProposerStrategy(proposer, ctx);
-    finalTransitionName = result.transitionName;
-    finalToState = result.toState;
-    finalReasoning = finalReasoning ?? result.reasoning;
-    finalCostUSD = finalCostUSD ?? result.costUSD;
-    finalLatencyMsec = finalLatencyMsec ?? result.latencyMsec;
-    finalNumInputTokens = finalNumInputTokens ?? result.numInputTokens;
-    finalNumOutputTokens = finalNumOutputTokens ?? result.numOutputTokens;
+    transitionName = result.transitionName;
+    toState = result.toState;
+    reasoning = reasoning ?? result.reasoning;
+    metaJson = metaJson ?? result.metaJson;
+    costUSD = costUSD ?? result.costUSD;
+    latencyMsec = latencyMsec ?? result.latencyMsec;
+    numInputTokens = numInputTokens ?? result.numInputTokens;
+    numOutputTokens = numOutputTokens ?? result.numOutputTokens;
   } else {
     // Validate the transition
     const currentStateDef = session.machine.states[session.currentState];
-    if (!currentStateDef?.transitions?.[finalTransitionName]) {
+    if (!currentStateDef?.transitions?.[transitionName]) {
       throw new Error(
-        `Invalid transition "${finalTransitionName}" from state "${session.currentState}"`
+        `Invalid transition "${transitionName}" from state "${session.currentState}"`
       );
     }
-    finalToState = currentStateDef.transitions[finalTransitionName];
+    toState = currentStateDef.transitions[transitionName];
   }
 
   const proposal: Proposal = {
@@ -702,14 +694,14 @@ export async function submitProposal(
     roundId: effectiveRoundId,
     specialistId,
     isHuman,
-    transitionName: finalTransitionName,
-    toState: finalToState,
-    reasoning: finalReasoning ?? "",
+    transitionName,
+    toState,
+    reasoning: reasoning ?? "",
     metaJson,
-    costUSD: finalCostUSD,
-    latencyMsec: finalLatencyMsec,
-    numInputTokens: finalNumInputTokens,
-    numOutputTokens: finalNumOutputTokens,
+    costUSD,
+    latencyMsec,
+    numInputTokens,
+    numOutputTokens,
     createdAt: new Date(),
   };
 

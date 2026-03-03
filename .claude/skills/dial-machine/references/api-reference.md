@@ -121,6 +121,7 @@ interface ProposerStrategyResult {
   transitionName: string;
   toState: string;
   reasoning: string;
+  metaJson?: Record<string, unknown>; // Structured metadata (e.g., tool arguments)
   costUSD?: number;          // Cost in USD to generate this result
   latencyMsec?: number;      // Time in milliseconds to generate
   numInputTokens?: number;   // Input tokens used
@@ -128,7 +129,7 @@ interface ProposerStrategyResult {
 }
 ```
 
-When returned from a strategy function, these optional metrics are merged into the resulting `Proposal`. Metrics passed via `SubmitProposalOptions` take precedence over strategy-returned values.
+When returned from a strategy function, these optional metric and metadata fields are merged into the resulting `Proposal`. Values passed via `SubmitProposalOptions` take precedence over strategy-returned values.
 
 ### `ArbiterStrategyResult`
 

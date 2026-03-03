@@ -141,6 +141,8 @@ export interface ProposerStrategyResult {
   transitionName: string;
   toState: string;
   reasoning: string;
+  /** Structured metadata from the strategy (e.g., tool arguments) */
+  metaJson?: Record<string, unknown>;
   /** Cost in USD to generate this result */
   costUSD?: number;
   /** Time in milliseconds to generate */
