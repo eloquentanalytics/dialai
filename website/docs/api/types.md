@@ -338,11 +338,7 @@ interface RegisterProposerOptions {
   isHuman?: boolean;       // If true, can force arbitration decisions
 
   // Execution mode (exactly one required):
-  strategyFn?: (ctx: ProposerContext) => Promise<{
-    transitionName: string;
-    toState: string;
-    reasoning: string;
-  }>;
+  strategyFn?: (ctx: ProposerContext) => Promise<ProposerStrategyResult>;
   strategyWebhookUrl?: string;
   strategyFnName?: string;  // Built-in: "firstAvailable", "lastAvailable", "random"
 
@@ -452,13 +448,17 @@ interface HumanGoldExample {
 
 ### ProposerStrategyResult
 
-Result from a proposer strategy function.
+Result from a proposer strategy function. The optional metric fields are merged into the resulting `Proposal` when the strategy is invoked via `submitProposal`. Metrics passed via `SubmitProposalOptions` take precedence over strategy-returned values.
 
 ```typescript
 interface ProposerStrategyResult {
   transitionName: string;
   toState: string;
   reasoning: string;
+  costUSD?: number;          // Cost in USD to generate this result
+  latencyMsec?: number;      // Time in milliseconds to generate
+  numInputTokens?: number;   // Input tokens used
+  numOutputTokens?: number;  // Output tokens used
 }
 ```
 

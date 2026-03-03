@@ -245,14 +245,23 @@ export async function executeProposerLlm(
   const systemMessage = "You are a decision-making specialist in a state machine. You must choose the best transition based on the context provided. Respond only with valid JSON.";
   const userMessage = assembleProposerPrompt(ctx, context);
 
+  const startTime = Date.now();
   const result = await callLlm(modelId, systemMessage, userMessage, auditContext);
+  const latencyMsec = Date.now() - startTime;
 
   try {
-    const parsed = JSON.parse(result.content) as ProposerStrategyResult;
+    const parsed = JSON.parse(result.content) as { transitionName: string; toState: string; reasoning: string };
     if (!parsed.transitionName || !parsed.toState) {
       throw new Error("Missing required fields in LLM response");
     }
-    return parsed;
+    return {
+      transitionName: parsed.transitionName,
+      toState: parsed.toState,
+      reasoning: parsed.reasoning,
+      latencyMsec,
+      numInputTokens: result.usage?.prompt_tokens,
+      numOutputTokens: result.usage?.completion_tokens,
+    };
   } catch (e) {
     throw new Error(`Failed to parse LLM proposer response: ${result.content}`);
   }

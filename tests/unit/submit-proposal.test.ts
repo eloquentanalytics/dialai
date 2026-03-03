@@ -6,7 +6,10 @@ import {
   registerArbiter,
   submitProposal,
 } from "../../src/dialai/index.js";
-import type { MachineDefinition } from "../../src/dialai/types.js";
+import type {
+  MachineDefinition,
+  ProposerStrategyResult,
+} from "../../src/dialai/types.js";
 
 function twoOptionMachine(): MachineDefinition {
   return {
@@ -205,5 +208,87 @@ describe("DIAL_056–DIAL_071: Proposal Submission", () => {
         transitionName: "nonexistent",
       })
     ).rejects.toThrow('Invalid transition "nonexistent"');
+  });
+
+  test("strategy metrics flow to proposal", async () => {
+    const session = await createSession(twoOptionMachine());
+    await registerProposer({
+      specialistId: "p-metrics",
+      machineName: "proposal-test",
+      strategyFn: async (): Promise<ProposerStrategyResult> => ({
+        transitionName: "approve",
+        toState: "approved",
+        reasoning: "auto",
+        latencyMsec: 200,
+        numInputTokens: 500,
+        numOutputTokens: 100,
+        costUSD: 0.01,
+      }),
+    });
+
+    const proposal = await submitProposal({
+      sessionId: session.sessionId,
+      specialistId: "p-metrics",
+    });
+
+    expect(proposal.latencyMsec).toBe(200);
+    expect(proposal.numInputTokens).toBe(500);
+    expect(proposal.numOutputTokens).toBe(100);
+    expect(proposal.costUSD).toBe(0.01);
+  });
+
+  test("opts override strategy metrics", async () => {
+    const session = await createSession(twoOptionMachine());
+    await registerProposer({
+      specialistId: "p-override",
+      machineName: "proposal-test",
+      strategyFn: async (): Promise<ProposerStrategyResult> => ({
+        transitionName: "approve",
+        toState: "approved",
+        reasoning: "auto",
+        latencyMsec: 200,
+        numInputTokens: 500,
+        numOutputTokens: 100,
+        costUSD: 0.01,
+      }),
+    });
+
+    const proposal = await submitProposal({
+      sessionId: session.sessionId,
+      specialistId: "p-override",
+      costUSD: 0.05,
+      latencyMsec: 999,
+    });
+
+    // opts values win
+    expect(proposal.costUSD).toBe(0.05);
+    expect(proposal.latencyMsec).toBe(999);
+    // strategy values fill gaps
+    expect(proposal.numInputTokens).toBe(500);
+    expect(proposal.numOutputTokens).toBe(100);
+  });
+
+  test("backward compat — no metrics from strategy", async () => {
+    const session = await createSession(twoOptionMachine());
+    await registerProposer({
+      specialistId: "p-nomet",
+      machineName: "proposal-test",
+      strategyFn: async (): Promise<ProposerStrategyResult> => ({
+        transitionName: "approve",
+        toState: "approved",
+        reasoning: "no metrics",
+      }),
+    });
+
+    const proposal = await submitProposal({
+      sessionId: session.sessionId,
+      specialistId: "p-nomet",
+    });
+
+    expect(proposal.transitionName).toBe("approve");
+    expect(proposal.costUSD).toBeUndefined();
+    expect(proposal.latencyMsec).toBeUndefined();
+    expect(proposal.numInputTokens).toBeUndefined();
+    expect(proposal.numOutputTokens).toBeUndefined();
   });
 });

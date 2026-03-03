@@ -121,8 +121,14 @@ interface ProposerStrategyResult {
   transitionName: string;
   toState: string;
   reasoning: string;
+  costUSD?: number;          // Cost in USD to generate this result
+  latencyMsec?: number;      // Time in milliseconds to generate
+  numInputTokens?: number;   // Input tokens used
+  numOutputTokens?: number;  // Output tokens used
 }
 ```
+
+When returned from a strategy function, these optional metrics are merged into the resulting `Proposal`. Metrics passed via `SubmitProposalOptions` take precedence over strategy-returned values.
 
 ### `ArbiterStrategyResult`
 

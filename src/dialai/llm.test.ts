@@ -161,4 +161,57 @@ describe("LLM Module", () => {
       }
     });
   });
+
+  describe("executeProposerLlm", () => {
+    it("returns metrics from LLM call", async () => {
+      const { executeProposerLlm } = await import("./llm.js");
+
+      const originalFetch = globalThis.fetch;
+      const responseBody = JSON.stringify({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                transitionName: "approve",
+                toState: "approved",
+                reasoning: "looks good",
+              }),
+            },
+          },
+        ],
+        usage: { prompt_tokens: 100, completion_tokens: 50 },
+      });
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: async () => responseBody,
+      }) as unknown as typeof fetch;
+
+      process.env.OPENROUTER_API_TOKEN = "test-token";
+
+      try {
+        const result = await executeProposerLlm(
+          async () => "some context",
+          "test-model",
+          {
+            sessionId: "s1",
+            currentState: "pending",
+            prompt: "Decide",
+            transitions: { approve: "approved", reject: "rejected" },
+            history: [],
+          }
+        );
+
+        expect(result.transitionName).toBe("approve");
+        expect(result.toState).toBe("approved");
+        expect(result.reasoning).toBe("looks good");
+        expect(result.latencyMsec).toBeGreaterThanOrEqual(0);
+        expect(result.numInputTokens).toBe(100);
+        expect(result.numOutputTokens).toBe(50);
+      } finally {
+        globalThis.fetch = originalFetch;
+        delete process.env.OPENROUTER_API_TOKEN;
+      }
+    });
+  });
 });

@@ -141,6 +141,14 @@ export interface ProposerStrategyResult {
   transitionName: string;
   toState: string;
   reasoning: string;
+  /** Cost in USD to generate this result */
+  costUSD?: number;
+  /** Time in milliseconds to generate */
+  latencyMsec?: number;
+  /** Input tokens used */
+  numInputTokens?: number;
+  /** Output tokens used */
+  numOutputTokens?: number;
 }
 
 /**

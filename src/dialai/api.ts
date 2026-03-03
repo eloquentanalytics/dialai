@@ -26,6 +26,7 @@ import type {
   RegisterProposerOptions,
   RegisterArbiterOptions,
   ProposerContext,
+  ProposerStrategyResult,
   ArbiterContext,
   ConsensusResult,
   ArbitrationResult,
@@ -531,7 +532,7 @@ function buildArbiterContext(
  */
 export function resolveProposerStrategy(
   proposer: Proposer
-): ((ctx: ProposerContext) => Promise<{ transitionName: string; toState: string; reasoning: string }>) | null {
+): ((ctx: ProposerContext) => Promise<ProposerStrategyResult>) | null {
   if (proposer.strategyFn) return proposer.strategyFn;
 
   if (proposer.strategyFnName) {
@@ -566,7 +567,7 @@ export function resolveArbiterStrategy(
 async function invokeProposerStrategy(
   proposer: Proposer,
   ctx: ProposerContext
-): Promise<{ transitionName: string; toState: string; reasoning: string }> {
+): Promise<ProposerStrategyResult> {
   const localFn = resolveProposerStrategy(proposer);
   if (localFn) return localFn(ctx);
 
@@ -668,6 +669,10 @@ export async function submitProposal(
   let finalTransitionName = transitionName;
   let finalToState: string | undefined;
   let finalReasoning = reasoning;
+  let finalCostUSD = costUSD;
+  let finalLatencyMsec = latencyMsec;
+  let finalNumInputTokens = numInputTokens;
+  let finalNumOutputTokens = numOutputTokens;
 
   // If transitionName not provided, invoke strategy
   if (!finalTransitionName) {
@@ -676,6 +681,10 @@ export async function submitProposal(
     finalTransitionName = result.transitionName;
     finalToState = result.toState;
     finalReasoning = finalReasoning ?? result.reasoning;
+    finalCostUSD = finalCostUSD ?? result.costUSD;
+    finalLatencyMsec = finalLatencyMsec ?? result.latencyMsec;
+    finalNumInputTokens = finalNumInputTokens ?? result.numInputTokens;
+    finalNumOutputTokens = finalNumOutputTokens ?? result.numOutputTokens;
   } else {
     // Validate the transition
     const currentStateDef = session.machine.states[session.currentState];
@@ -697,10 +706,10 @@ export async function submitProposal(
     toState: finalToState,
     reasoning: finalReasoning ?? "",
     metaJson,
-    costUSD,
-    latencyMsec,
-    numInputTokens,
-    numOutputTokens,
+    costUSD: finalCostUSD,
+    latencyMsec: finalLatencyMsec,
+    numInputTokens: finalNumInputTokens,
+    numOutputTokens: finalNumOutputTokens,
     createdAt: new Date(),
   };
 
