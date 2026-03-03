@@ -33,6 +33,8 @@ A conventional changelog entry tells a human what changed. A DIAL changelog entr
 
 This is a deliberate choice. The primary consumer of DIAL's change history is an agent that needs to update its integration. The writing style reflects that.
 
+Release notes are published as [GitHub Releases](https://github.com/eloquentanalytics/dialai/releases). There is no `CHANGELOG.md` file in the repository.
+
 ## Reference Implementations
 
 DIAL ships reference implementations in TypeScript as CLI tools. The CLI accepts a machine definition as JSON and runs it to completion:

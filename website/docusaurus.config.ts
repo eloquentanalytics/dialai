@@ -134,6 +134,10 @@ const config: Config = {
               href: "https://github.com/eloquentanalytics/dialai",
             },
             {
+              label: "Releases",
+              href: "https://github.com/eloquentanalytics/dialai/releases",
+            },
+            {
               label: "Issues",
               href: "https://github.com/eloquentanalytics/dialai/issues",
             },

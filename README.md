@@ -9,7 +9,7 @@
   [![npm version](https://img.shields.io/npm/v/dialai.svg)](https://www.npmjs.com/package/dialai)
   [![CI](https://github.com/eloquentanalytics/dialai/actions/workflows/ci.yml/badge.svg)](https://github.com/eloquentanalytics/dialai/actions/workflows/ci.yml)
 
-  <a href="https://eloquentanalytics.github.io/dialai/"><strong>Documentation</strong></a> · <a href="https://eloquentanalytics.github.io/dialai/docs/getting-started/installation"><strong>Get Started</strong></a> · <a href="https://github.com/eloquentanalytics/dialai/issues"><strong>Issues</strong></a>
+  <a href="https://eloquentanalytics.github.io/dialai/"><strong>Documentation</strong></a> · <a href="https://eloquentanalytics.github.io/dialai/docs/getting-started/installation"><strong>Get Started</strong></a> · <a href="https://github.com/eloquentanalytics/dialai/releases"><strong>Releases</strong></a> · <a href="https://github.com/eloquentanalytics/dialai/issues"><strong>Issues</strong></a>
   <br><br>
 </div>
 
