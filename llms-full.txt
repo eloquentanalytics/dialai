@@ -36,6 +36,8 @@ A conventional changelog entry tells a human what changed. A DIAL changelog entr
 
 This is a deliberate choice. The primary consumer of DIAL's change history is an agent that needs to update its integration. The writing style reflects that.
 
+Release notes are published as [GitHub Releases](https://github.com/eloquentanalytics/dialai/releases). There is no `CHANGELOG.md` file in the repository.
+
 ## Reference Implementations
 
 DIAL ships reference implementations in TypeScript as CLI tools. The CLI accepts a machine definition as JSON and runs it to completion:
@@ -2456,11 +2458,7 @@ interface RegisterProposerOptions {
   isHuman?: boolean;       // If true, can force arbitration decisions
 
   // Execution mode (exactly one required):
-  strategyFn?: (ctx: ProposerContext) => Promise<{
-    transitionName: string;
-    toState: string;
-    reasoning: string;
-  }>;
+  strategyFn?: (ctx: ProposerContext) => Promise<ProposerStrategyResult>;
   strategyWebhookUrl?: string;
   strategyFnName?: string;  // Built-in: "firstAvailable", "lastAvailable", "random"
 
@@ -2570,13 +2568,17 @@ interface HumanGoldExample {
 
 ### ProposerStrategyResult
 
-Result from a proposer strategy function.
+Result from a proposer strategy function. The optional metric fields are merged into the resulting `Proposal` when the strategy is invoked via `submitProposal`. Metrics passed via `SubmitProposalOptions` take precedence over strategy-returned values.
 
 ```typescript
 interface ProposerStrategyResult {
   transitionName: string;
   toState: string;
   reasoning: string;
+  costUSD?: number;          // Cost in USD to generate this result
+  latencyMsec?: number;      // Time in milliseconds to generate
+  numInputTokens?: number;   // Input tokens used
+  numOutputTokens?: number;  // Output tokens used
 }
 ```
 
