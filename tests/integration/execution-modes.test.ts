@@ -98,7 +98,7 @@ describe("Integration: Specialist Execution Modes", () => {
     expect(ctx.sessionId).toBe(session.sessionId);
     expect(ctx.currentState).toBe("start");
     expect(ctx.prompt).toBe("Choose a path");
-    expect(ctx.transitions).toEqual({ go: "end" });
+    expect(ctx.transitions).toEqual({ go: { target: "end" } });
     expect(ctx.history).toEqual([]);
   });
 });

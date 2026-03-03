@@ -154,9 +154,9 @@ describe("DIAL_056–DIAL_071: Proposal Submission", () => {
     });
 
     // firstAvailable picks "approve" -> "approved"
-    expect(proposal.toState).toBe(
-      session.machine.states[session.currentState].transitions![proposal.transitionName]
-    );
+    const transitionDef = session.machine.states[session.currentState].transitions![proposal.transitionName];
+    const expectedToState = typeof transitionDef === "string" ? transitionDef : transitionDef.target;
+    expect(proposal.toState).toBe(expectedToState);
   });
 
   test("DIAL_068: rejects proposal for non-existent session", async () => {

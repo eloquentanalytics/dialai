@@ -38,7 +38,9 @@ describe("DIAL_001–DIAL_010: Session Management", () => {
     expect(session.currentRoundId).toBeDefined();
     expect(session.currentRoundId).toBeTypeOf("string");
     expect(session.history).toEqual([]);
-    expect(session.machine).toEqual(machine);
+    expect(session.machine.machineName).toBe(machine.machineName);
+    expect(session.machine.initialState).toBe(machine.initialState);
+    expect(session.machine.goalState).toBe(machine.goalState);
     expect(session.createdAt).toBeInstanceOf(Date);
   });
 

@@ -6,7 +6,7 @@
 
 import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import type { MachineDefinition } from "./types.js";
+import type { MachineDefinition, StateDefinition, TransitionDefinition } from "./types.js";
 
 /**
  * Generates a new UUID v4.
@@ -83,8 +83,9 @@ export function validateMachine(machine: unknown): asserts machine is MachineDef
     if (stateValue && typeof stateValue === "object") {
       const state = stateValue as Record<string, unknown>;
       if (state.transitions && typeof state.transitions === "object") {
-        const transitions = state.transitions as Record<string, string>;
-        for (const [transitionName, targetState] of Object.entries(transitions)) {
+        const transitions = state.transitions as Record<string, string | TransitionDefinition>;
+        for (const [transitionName, value] of Object.entries(transitions)) {
+          const targetState = typeof value === "string" ? value : value.target;
           if (!(targetState in states)) {
             throw new Error(
               `Invalid machine definition: transition "${transitionName}" in state "${stateName}" points to non-existent state "${targetState}"`
@@ -107,6 +108,30 @@ export function normalizeMachine(machine: MachineDefinition): MachineDefinition 
   const machineAny = machine as unknown as { defaultState?: string };
   if (!normalized.goalState && machineAny.defaultState) {
     normalized.goalState = machineAny.defaultState;
+  }
+
+  // Normalize transitions: string shorthand -> TransitionDefinition
+  if (normalized.states) {
+    const normalizedStates: Record<string, StateDefinition> = {};
+    for (const [stateName, stateDef] of Object.entries(normalized.states)) {
+      if (stateDef?.transitions) {
+        const normalizedTransitions: Record<string, TransitionDefinition> = {};
+        for (const [transName, value] of Object.entries(stateDef.transitions)) {
+          if (typeof value === "string") {
+            normalizedTransitions[transName] = { target: value };
+          } else {
+            normalizedTransitions[transName] = value;
+          }
+        }
+        normalizedStates[stateName] = {
+          ...stateDef,
+          transitions: normalizedTransitions,
+        };
+      } else {
+        normalizedStates[stateName] = stateDef;
+      }
+    }
+    normalized.states = normalizedStates;
   }
 
   return normalized;

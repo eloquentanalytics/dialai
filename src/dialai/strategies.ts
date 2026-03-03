@@ -26,7 +26,7 @@ export async function firstAvailable(
     throw new Error("No transitions available from current state");
   }
   const transitionName = transitionNames[0];
-  const toState = ctx.transitions[transitionName];
+  const toState = ctx.transitions[transitionName].target;
   return {
     transitionName,
     toState,
@@ -45,7 +45,7 @@ export async function lastAvailable(
     throw new Error("No transitions available from current state");
   }
   const transitionName = transitionNames[transitionNames.length - 1];
-  const toState = ctx.transitions[transitionName];
+  const toState = ctx.transitions[transitionName].target;
   return {
     transitionName,
     toState,
@@ -65,7 +65,7 @@ export async function randomProposer(
   }
   const index = Math.floor(Math.random() * transitionNames.length);
   const transitionName = transitionNames[index];
-  const toState = ctx.transitions[transitionName];
+  const toState = ctx.transitions[transitionName].target;
   return {
     transitionName,
     toState,

@@ -234,7 +234,7 @@ describe("E2E: Champion Mode", () => {
         champ_submit_count++;
         return {
           transitionName: "approve",
-          toState: ctx.transitions["approve"],
+          toState: ctx.transitions["approve"].target,
           reasoning: "Champion approves",
         };
       },
@@ -246,7 +246,7 @@ describe("E2E: Champion Mode", () => {
         backup_submit_count++;
         return {
           transitionName: "approve",
-          toState: ctx.transitions["approve"],
+          toState: ctx.transitions["approve"].target,
           reasoning: "Backup approves",
         };
       },

@@ -193,7 +193,7 @@ describe("E2E: Complex State Machine Topologies", () => {
       states,
     };
 
-    const capturedTransitions: Record<string, string>[] = [];
+    const capturedTransitions: Record<string, unknown>[] = [];
 
     await registerProposer({
       specialistId: "observer",
@@ -203,7 +203,7 @@ describe("E2E: Complex State Machine Topologies", () => {
         const first = Object.keys(ctx.transitions)[0];
         return {
           transitionName: first,
-          toState: ctx.transitions[first],
+          toState: ctx.transitions[first].target,
           reasoning: "picking first of many",
         };
       },
@@ -220,11 +220,12 @@ describe("E2E: Complex State Machine Topologies", () => {
       specialistId: "observer",
     });
 
-    // Verify the proposer saw all 12 transitions
+    // Verify the proposer saw all 12 transitions (now as TransitionDefinition objects)
     expect(capturedTransitions).toHaveLength(1);
     expect(Object.keys(capturedTransitions[0])).toHaveLength(12);
     for (let i = 0; i < 12; i++) {
-      expect(capturedTransitions[0][`path_${i}`]).toBe(`state_${i}`);
+      const td = capturedTransitions[0][`path_${i}`] as { target: string };
+      expect(td.target).toBe(`state_${i}`);
     }
   });
 
@@ -304,7 +305,7 @@ describe("E2E: Complex State Machine Topologies", () => {
         }
         return {
           transitionName: keys[0],
-          toState: ctx.transitions[keys[0]],
+          toState: ctx.transitions[keys[0]].target,
           reasoning: "moving forward",
         };
       },

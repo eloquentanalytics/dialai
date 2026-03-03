@@ -26,14 +26,24 @@ export interface MachineDefinition {
   consensusThreshold?: number;
 }
 
+/** A transition with optional tool-calling metadata. */
+export interface TransitionDefinition {
+  /** Target state this transition leads to */
+  target: string;
+  /** Description of what this transition/tool does (used as tool description in LLM calls) */
+  description?: string;
+  /** JSON Schema for the transition's parameters (used as tool parameters in LLM calls) */
+  parameters?: Record<string, unknown>;
+}
+
 /**
  * Definition of a single state in the machine.
  */
 export interface StateDefinition {
   /** Decision prompt for this state */
   prompt?: string;
-  /** Map of transition names to target states */
-  transitions?: Record<string, string>;
+  /** Map of transition names to target states (shorthand string or enriched TransitionDefinition) */
+  transitions?: Record<string, string | TransitionDefinition>;
   /** Consensus threshold override for this state (risk dial) */
   consensusThreshold?: number;
   /** Per-state specialist declarations (overrides machine-level when present) */
@@ -197,8 +207,8 @@ export interface ProposerContext {
   currentState: string;
   /** Decision prompt for this state */
   prompt: string;
-  /** Available transitions (name → target) */
-  transitions: Record<string, string>;
+  /** Normalized transitions — always TransitionDefinition after normalization */
+  transitions: Record<string, TransitionDefinition>;
   /** All previous transitions */
   history: TransitionRecord[];
   /** Session-level metadata */

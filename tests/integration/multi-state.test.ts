@@ -250,7 +250,7 @@ describe("Integration: Multi-State Machine Traversal", () => {
         const transitionName = Object.keys(ctx.transitions)[0];
         return {
           transitionName,
-          toState: ctx.transitions[transitionName],
+          toState: ctx.transitions[transitionName].target,
           reasoning: "Captured prompt",
         };
       },
@@ -290,7 +290,7 @@ describe("Integration: Multi-State Machine Traversal", () => {
   });
 
   it("DIAL_311: transitions available change per state", async () => {
-    const capturedTransitions: Record<string, string>[] = [];
+    const capturedTransitions: Record<string, unknown>[] = [];
 
     const machine: MachineDefinition = {
       machineName: "transition-change",
@@ -319,7 +319,7 @@ describe("Integration: Multi-State Machine Traversal", () => {
         const transitionName = Object.keys(ctx.transitions)[0];
         return {
           transitionName,
-          toState: ctx.transitions[transitionName],
+          toState: ctx.transitions[transitionName].target,
           reasoning: "Captured transitions",
         };
       },
@@ -355,9 +355,9 @@ describe("Integration: Multi-State Machine Traversal", () => {
     });
 
     expect(capturedTransitions).toHaveLength(2);
-    // State A has two transitions
-    expect(capturedTransitions[0]).toEqual({ to_b: "b", skip: "c" });
+    // State A has two transitions (normalized to TransitionDefinition objects)
+    expect(capturedTransitions[0]).toEqual({ to_b: { target: "b" }, skip: { target: "c" } });
     // State B has one transition
-    expect(capturedTransitions[1]).toEqual({ to_c: "c" });
+    expect(capturedTransitions[1]).toEqual({ to_c: { target: "c" } });
   });
 });

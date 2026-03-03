@@ -21,8 +21,8 @@ const baseProposerContext: ProposerContext = {
   currentState: "pending",
   prompt: "What should we do?",
   transitions: {
-    approve: "approved",
-    reject: "rejected",
+    approve: { target: "approved" },
+    reject: { target: "rejected" },
   },
   history: [],
 };

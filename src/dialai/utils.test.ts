@@ -4,6 +4,7 @@
 
 import { describe, it, expect } from "vitest";
 import { generateUUID, validateMachine, normalizeMachine } from "./utils.js";
+import type { MachineDefinition, TransitionDefinition } from "./types.js";
 
 describe("generateUUID", () => {
   it("generates a valid UUID", () => {
@@ -148,5 +149,117 @@ describe("normalizeMachine", () => {
     const normalized = normalizeMachine(machine);
 
     expect(normalized.goalState).toBe("c");
+  });
+
+  it("converts shorthand transitions to TransitionDefinition", () => {
+    const machine: MachineDefinition = {
+      machineName: "test",
+      initialState: "a",
+      goalState: "b",
+      states: {
+        a: { transitions: { close: "b" } },
+        b: {},
+      },
+    };
+
+    const normalized = normalizeMachine(machine);
+    const transitions = normalized.states.a.transitions!;
+    const closeTd = transitions["close"] as TransitionDefinition;
+
+    expect(closeTd).toEqual({ target: "b" });
+    expect(closeTd.description).toBeUndefined();
+    expect(closeTd.parameters).toBeUndefined();
+  });
+
+  it("preserves enriched transitions unchanged", () => {
+    const params = { type: "object", properties: { destination: { type: "string" } } };
+    const machine: MachineDefinition = {
+      machineName: "test",
+      initialState: "a",
+      goalState: "b",
+      states: {
+        a: {
+          transitions: {
+            uber_ride: { target: "b", description: "Book an Uber", parameters: params },
+          },
+        },
+        b: {},
+      },
+    };
+
+    const normalized = normalizeMachine(machine);
+    const td = normalized.states.a.transitions!["uber_ride"] as TransitionDefinition;
+
+    expect(td.target).toBe("b");
+    expect(td.description).toBe("Book an Uber");
+    expect(td.parameters).toEqual(params);
+  });
+
+  it("handles mixed shorthand and enriched in one state", () => {
+    const machine: MachineDefinition = {
+      machineName: "test",
+      initialState: "a",
+      goalState: "b",
+      states: {
+        a: {
+          transitions: {
+            close: "b",
+            uber_ride: { target: "b", description: "Book ride" },
+          },
+        },
+        b: {},
+      },
+    };
+
+    const normalized = normalizeMachine(machine);
+    const transitions = normalized.states.a.transitions!;
+
+    expect(transitions["close"]).toEqual({ target: "b" });
+    expect(transitions["uber_ride"]).toEqual({ target: "b", description: "Book ride" });
+  });
+
+  it("handles states with no transitions", () => {
+    const machine: MachineDefinition = {
+      machineName: "test",
+      initialState: "a",
+      goalState: "a",
+      states: {
+        a: {},
+      },
+    };
+
+    expect(() => normalizeMachine(machine)).not.toThrow();
+    const normalized = normalizeMachine(machine);
+    expect(normalized.states.a.transitions).toBeUndefined();
+  });
+});
+
+describe("validateMachine with enriched transitions", () => {
+  it("accepts enriched transition pointing to valid state", () => {
+    const machine = {
+      machineName: "test",
+      initialState: "a",
+      goalState: "b",
+      states: {
+        a: { transitions: { go: { target: "b" } } },
+        b: {},
+      },
+    };
+
+    expect(() => validateMachine(machine)).not.toThrow();
+  });
+
+  it("rejects enriched transition pointing to nonexistent state", () => {
+    const machine = {
+      machineName: "test",
+      initialState: "a",
+      goalState: "b",
+      states: {
+        a: { transitions: { go: { target: "nonexistent" } } },
+        b: {},
+      },
+    };
+
+    expect(() => validateMachine(machine)).toThrow("non-existent state");
   });
 });

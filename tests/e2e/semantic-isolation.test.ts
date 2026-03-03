@@ -53,7 +53,7 @@ describe("E2E: Semantic Isolation Verification", () => {
         const first = Object.keys(ctx.transitions)[0];
         return {
           transitionName: first,
-          toState: ctx.transitions[first],
+          toState: ctx.transitions[first].target,
           reasoning: "observing context",
         };
       },
@@ -99,7 +99,7 @@ describe("E2E: Semantic Isolation Verification", () => {
         const first = Object.keys(ctx.transitions)[0];
         return {
           transitionName: first,
-          toState: ctx.transitions[first],
+          toState: ctx.transitions[first].target,
           reasoning: "checking alignment isolation",
         };
       },
@@ -136,7 +136,7 @@ describe("E2E: Semantic Isolation Verification", () => {
         const first = Object.keys(ctx.transitions)[0];
         return {
           transitionName: first,
-          toState: ctx.transitions[first],
+          toState: ctx.transitions[first].target,
           reasoning: "building history",
         };
       },
@@ -174,7 +174,7 @@ describe("E2E: Semantic Isolation Verification", () => {
         const first = Object.keys(ctx.transitions)[0];
         return {
           transitionName: first,
-          toState: ctx.transitions[first],
+          toState: ctx.transitions[first].target,
           reasoning: "checking history fields",
         };
       },

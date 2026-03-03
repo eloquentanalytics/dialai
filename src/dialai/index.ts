@@ -9,6 +9,7 @@
 export type {
   MachineDefinition,
   StateDefinition,
+  TransitionDefinition,
   Session,
   TransitionRecord,
   Specialist,
@@ -127,9 +128,14 @@ export {
   executeWebhook,
   executeProposerWebhook,
   callLlm,
+  callLlmWithTools,
+  buildToolsFromTransitions,
+  parseModelId,
+  NoToolCallError,
   executeProposerLlm,
   executeContextWebhookProposer,
 } from "./llm.js";
+export type { ToolCallResult } from "./llm.js";
 
 // Re-export utilities
 export {

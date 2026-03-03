@@ -32,6 +32,7 @@ import type {
   ArbitrationResult,
   ArbitrationPath,
   TransitionRecord,
+  TransitionDefinition,
   DecisionRecord,
   SubmitProposalOptions,
   SubmitArbitrationOptions,
@@ -495,11 +496,19 @@ export async function getEffectiveThreshold(session: Session): Promise<number | 
  */
 function buildProposerContext(session: Session): ProposerContext {
   const currentStatedef = session.machine.states[session.currentState];
+  const rawTransitions = currentStatedef?.transitions ?? {};
+
+  // Normalize for context (should already be normalized, but be safe)
+  const transitions: Record<string, TransitionDefinition> = {};
+  for (const [name, value] of Object.entries(rawTransitions)) {
+    transitions[name] = typeof value === "string" ? { target: value } : value;
+  }
+
   return {
     sessionId: session.sessionId,
     currentState: session.currentState,
     prompt: currentStatedef?.prompt ?? "",
-    transitions: currentStatedef?.transitions ?? {},
+    transitions,
     history: [...session.history],
     metaJson: session.metaJson,
   };
@@ -685,7 +694,8 @@ export async function submitProposal(
         `Invalid transition "${transitionName}" from state "${session.currentState}"`
       );
     }
-    toState = currentStateDef.transitions[transitionName];
+    const transitionDef = currentStateDef.transitions[transitionName];
+    toState = typeof transitionDef === "string" ? transitionDef : transitionDef.target;
   }
 
   const proposal: Proposal = {
@@ -765,7 +775,7 @@ export function classifyArbitration(
   effectiveRoundId: string,
   isHuman: boolean,
   transitionName: string | undefined,
-  currentStateTransitions: Record<string, string> | undefined,
+  currentStateTransitions: Record<string, string | TransitionDefinition> | undefined,
   proposalCount: number,
   currentState: string
 ): ArbitrationPath {
@@ -783,10 +793,12 @@ export function classifyArbitration(
         reason: `Invalid transition "${transitionName}" from state "${currentState}"`,
       };
     }
+    const raw = currentStateTransitions[transitionName];
+    const toState = typeof raw === "string" ? raw : raw.target;
     return {
       type: "humanOverride",
       transitionName,
-      toState: currentStateTransitions[transitionName],
+      toState,
     };
   }
 
@@ -1068,7 +1080,8 @@ export async function executeTransition(
     );
   }
 
-  const expectedToState = currentStateDef.transitions[transitionName];
+  const transitionDef = currentStateDef.transitions[transitionName];
+  const expectedToState = typeof transitionDef === "string" ? transitionDef : transitionDef.target;
   if (toState !== expectedToState) {
     throw new Error(
       `State mismatch: transition "${transitionName}" should go to "${expectedToState}", not "${toState}"`

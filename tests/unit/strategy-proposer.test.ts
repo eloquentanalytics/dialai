@@ -12,7 +12,7 @@ function twoTransitionContext(): ProposerContext {
     sessionId: "test",
     currentState: "pending",
     prompt: "Test?",
-    transitions: { approve: "approved", reject: "rejected" },
+    transitions: { approve: { target: "approved" }, reject: { target: "rejected" } },
     history: [],
   };
 }
@@ -22,7 +22,7 @@ function singleTransitionContext(): ProposerContext {
     sessionId: "test",
     currentState: "pending",
     prompt: "Test?",
-    transitions: { go: "done" },
+    transitions: { go: { target: "done" } },
     history: [],
   };
 }
@@ -65,7 +65,7 @@ describe("DIAL_143–DIAL_150: Proposer Strategies", () => {
     for (let i = 0; i < 100; i++) {
       const result = await randomProposer(ctx);
       expect(validNames).toContain(result.transitionName);
-      expect(result.toState).toBe(ctx.transitions[result.transitionName]);
+      expect(result.toState).toBe(ctx.transitions[result.transitionName].target);
     }
   });
 

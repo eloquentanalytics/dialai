@@ -237,7 +237,8 @@ export function createPostgresStore(databaseUrl: string): Store {
           for (const h of history) {
             const stateDef = session.machine.states[state];
             if (stateDef?.transitions?.[h.transitionName]) {
-              state = stateDef.transitions[h.transitionName];
+              const td = stateDef.transitions[h.transitionName];
+              state = typeof td === "string" ? td : td.target;
             }
           }
           session.currentState = state;
@@ -318,7 +319,8 @@ export function createPostgresStore(databaseUrl: string): Store {
             for (const h of session.history) {
               const stateDef = session.machine.states[state];
               if (stateDef?.transitions?.[h.transitionName]) {
-                state = stateDef.transitions[h.transitionName];
+                const td = stateDef.transitions[h.transitionName];
+                state = typeof td === "string" ? td : td.target;
               }
             }
             session.currentState = state;

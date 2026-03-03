@@ -70,7 +70,9 @@ describe("Session Management", () => {
     expect(session.currentRoundId).toBeDefined();
     expect(session.history).toEqual([]);
     expect(session.createdAt).toBeInstanceOf(Date);
-    expect(session.machine).toEqual(simpleMachine);
+    expect(session.machine.machineName).toBe(simpleMachine.machineName);
+    expect(session.machine.initialState).toBe(simpleMachine.initialState);
+    expect(session.machine.goalState).toBe(simpleMachine.goalState);
   });
 
   it("retrieves a session by ID", async () => {
