@@ -412,6 +412,7 @@ function runStoreTests(
         requestBody: { model: "test-model", messages: [{ role: "user", content: "hello" }] },
         responseStatus: 200,
         responseBody: '{"choices":[{"message":{"content":"hi"}}]}',
+        resolvedModel: null,
         durationMs: 150,
         error: null,
         ...overrides,

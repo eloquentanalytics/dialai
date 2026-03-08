@@ -31,6 +31,7 @@ function makeLlmAuditEntry(overrides?: Partial<LlmAuditEntry>): LlmAuditEntry {
     requestBody: { model: "test-model", messages: [] },
     responseStatus: 200,
     responseBody: '{"choices":[]}',
+    resolvedModel: null,
     durationMs: 100,
     error: null,
     ...overrides,
@@ -90,6 +91,7 @@ describe.skipIf(SKIP)("LLM Audit Log: PostgreSQL", () => {
         "requestBody",
         "responseStatus",
         "responseBody",
+        "resolvedModel",
         "durationMs",
         "error",
       ]);

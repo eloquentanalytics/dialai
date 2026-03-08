@@ -539,6 +539,8 @@ export interface LlmAuditEntry {
   responseStatus: number | null;
   /** The full raw response body as a string */
   responseBody: string | null;
+  /** The resolved/pinned model ID returned by the API (may differ from the alias in requestBody.model) */
+  resolvedModel: string | null;
   /** Duration in milliseconds */
   durationMs: number;
   /** Error message if the call failed */

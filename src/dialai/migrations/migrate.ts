@@ -11,6 +11,7 @@
 import pg from "pg";
 import { sql as migration001 } from "./001-initial-schema.js";
 import { sql as migration002 } from "./002-llm-audit-log.js";
+import { sql as migration003 } from "./003-llm-audit-resolved-model.js";
 
 interface Migration {
   name: string;
@@ -20,6 +21,7 @@ interface Migration {
 const migrations: Migration[] = [
   { name: "001-initial-schema", sql: migration001 },
   { name: "002-llm-audit-log", sql: migration002 },
+  { name: "003-llm-audit-resolved-model", sql: migration003 },
 ];
 
 async function ensureMigrationsTable(client: pg.Client): Promise<void> {

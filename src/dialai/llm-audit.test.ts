@@ -38,6 +38,7 @@ describe("LLM Audit Instrumentation", () => {
 
   it("writes an audit entry on successful LLM call", async () => {
     const responseJson = {
+      model: "test-model-20240101",
       choices: [{ message: { content: "test response" } }],
       usage: { prompt_tokens: 10, completion_tokens: 5 },
     };
@@ -64,6 +65,7 @@ describe("LLM Audit Instrumentation", () => {
     expect(entry.requestUrl).toBe("https://llm.example.com/v1/chat/completions");
     expect(entry.responseStatus).toBe(200);
     expect(entry.responseBody).toBe(JSON.stringify(responseJson));
+    expect(entry.resolvedModel).toBe("test-model-20240101");
     expect(entry.durationMs).toBeGreaterThanOrEqual(0);
     expect(entry.error).toBeNull();
 
@@ -123,6 +125,7 @@ describe("LLM Audit Instrumentation", () => {
     expect(entry.sessionId).toBe("sess-3");
     expect(entry.responseStatus).toBeNull();
     expect(entry.responseBody).toBeNull();
+    expect(entry.resolvedModel).toBeNull();
     expect(entry.error).toBe("fetch failed: ECONNREFUSED");
   });
 

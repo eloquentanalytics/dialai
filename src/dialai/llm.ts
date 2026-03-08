@@ -138,6 +138,7 @@ export async function callLlm(
   const startTime = Date.now();
   let responseStatus: number | null = null;
   let responseBody: string | null = null;
+  let resolvedModel: string | null = null;
   let error: string | null = null;
 
   try {
@@ -156,6 +157,7 @@ export async function callLlm(
     }
 
     let data: {
+      model?: string;
       choices: Array<{ message: { content: string } }>;
       usage?: { prompt_tokens?: number; completion_tokens?: number };
     };
@@ -166,6 +168,8 @@ export async function callLlm(
       error = `Failed to parse LLM response as JSON: ${responseBody}`;
       throw new Error(error);
     }
+
+    resolvedModel = data.model ?? null;
 
     if (!data.choices || data.choices.length === 0) {
       error = "LLM returned no choices";
@@ -202,6 +206,7 @@ export async function callLlm(
         requestBody,
         responseStatus,
         responseBody,
+        resolvedModel,
         durationMs,
         error,
       });
@@ -320,6 +325,7 @@ export async function callLlmWithTools(
   const startTime = Date.now();
   let responseStatus: number | null = null;
   let responseBody: string | null = null;
+  let resolvedModel: string | null = null;
   let error: string | null = null;
 
   try {
@@ -338,6 +344,7 @@ export async function callLlmWithTools(
     }
 
     let data: {
+      model?: string;
       choices: Array<{
         message: {
           content: string | null;
@@ -355,6 +362,8 @@ export async function callLlmWithTools(
       error = `Failed to parse LLM response as JSON: ${responseBody}`;
       throw new Error(error);
     }
+
+    resolvedModel = data.model ?? null;
 
     if (!data.choices || data.choices.length === 0) {
       error = "LLM returned no choices";
@@ -412,6 +421,7 @@ export async function callLlmWithTools(
         requestBody,
         responseStatus,
         responseBody,
+        resolvedModel,
         durationMs,
         error,
       });

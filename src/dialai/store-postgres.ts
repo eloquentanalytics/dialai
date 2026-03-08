@@ -98,6 +98,7 @@ interface LlmAuditLogTable {
   requestBody: unknown;
   responseStatus: number | null;
   responseBody: string | null;
+  resolvedModel: string | null;
   durationMs: number;
   error: string | null;
 }
@@ -598,6 +599,7 @@ export function createPostgresStore(databaseUrl: string): Store {
           requestBody: JSON.stringify(entry.requestBody) as unknown,
           responseStatus: entry.responseStatus,
           responseBody: entry.responseBody,
+          resolvedModel: entry.resolvedModel,
           durationMs: entry.durationMs,
           error: entry.error,
         })
@@ -635,6 +637,7 @@ export function createPostgresStore(databaseUrl: string): Store {
         requestBody: row.requestBody as Record<string, unknown>,
         responseStatus: row.responseStatus,
         responseBody: row.responseBody,
+        resolvedModel: row.resolvedModel,
         durationMs: row.durationMs,
         error: row.error,
       }));
