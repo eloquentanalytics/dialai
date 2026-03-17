@@ -79,7 +79,7 @@ describe("E2E: Semantic Isolation Verification", () => {
     expect(ctxAsAny["consensusScores"]).toBeUndefined();
 
     // Verify only expected keys are present
-    const expectedKeys = ["sessionId", "currentState", "prompt", "transitions", "history", "metaJson"];
+    const expectedKeys = ["sessionId", "currentState", "prompt", "transitions", "history", "metaJson", "exemplars"];
     const actualKeys = Object.keys(capturedCtx!);
     for (const key of actualKeys) {
       expect(expectedKeys).toContain(key);

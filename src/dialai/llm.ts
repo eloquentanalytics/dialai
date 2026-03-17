@@ -7,6 +7,7 @@
  */
 
 import type {
+  Exemplar,
   ProposerContext,
   ProposerStrategyResult,
   TransitionDefinition,
@@ -443,6 +444,42 @@ export function parseModelId(raw: string): { modelId: string; useTools: boolean 
 }
 
 /**
+ * Formats exemplars as few-shot input/output pairs for LLM prompts.
+ * Returns empty string when no exemplars are available.
+ */
+export function formatExemplarsForPrompt(exemplars: Exemplar[]): string {
+  if (exemplars.length === 0) return "";
+
+  const examples = exemplars.map((ex, i) => {
+    const transitions = Object.entries(ex.context.transitions)
+      .map(([name, def]) => `  - "${name}" → "${def.target}"`)
+      .join("\n");
+
+    const humanProposal = ex.proposals.find(
+      (p) => p.transitionName === ex.humanTransitionName && p.isHuman,
+    );
+    const reasoning = humanProposal?.reasoning ?? "";
+
+    const output = JSON.stringify({
+      transitionName: ex.humanTransitionName,
+      toState: ex.humanToState,
+      reasoning,
+    });
+
+    return `Example ${i + 1}:
+Input:
+  State: ${ex.context.currentState}
+  Prompt: ${ex.context.prompt}
+  Transitions:
+${transitions}
+Output:
+${output}`;
+  });
+
+  return `\nHuman ground truth examples:\n${examples.join("\n\n")}\n`;
+}
+
+/**
  * Assembles a proposer prompt for LLM mode.
  */
 function assembleProposerPrompt(ctx: ProposerContext, context: string): string {
@@ -450,12 +487,14 @@ function assembleProposerPrompt(ctx: ProposerContext, context: string): string {
     .map(([name, def]) => `  - "${name}" → "${def.target}"`)
     .join("\n");
 
+  const exemplarSection = formatExemplarsForPrompt(ctx.exemplars ?? []);
+
   return `Current state: ${ctx.currentState}
 Decision prompt: ${ctx.prompt}
 
 Available transitions:
 ${transitions}
-
+${exemplarSection}
 Context:
 ${context}
 
@@ -484,7 +523,9 @@ export async function executeProposerLlm(
   if (tools) {
     const systemMessage = "You are a function-calling AI assistant. "
       + "Use the provided tools to respond to the user's request.";
-    const userMessage = ctx.prompt ? `${ctx.prompt}\n\n${context}` : context;
+    const exemplarSection = formatExemplarsForPrompt(ctx.exemplars ?? []);
+    const baseMessage = ctx.prompt ? `${ctx.prompt}\n\n${context}` : context;
+    const userMessage = exemplarSection ? `${baseMessage}\n${exemplarSection}` : baseMessage;
 
     try {
       const result = await callLlmWithTools(

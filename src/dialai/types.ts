@@ -213,6 +213,8 @@ export interface ProposerContext {
   history: TransitionRecord[];
   /** Session-level metadata */
   metaJson?: Record<string, unknown>;
+  /** Human ground truth decisions for this machine+state, used as few-shot examples. */
+  exemplars?: Exemplar[];
 }
 
 /**

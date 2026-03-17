@@ -7,7 +7,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { clear, getStore } from "./store.js";
-import type { ProposerContext } from "./types.js";
+import type { Exemplar, ProposerContext } from "./types.js";
 
 describe("LLM Module", () => {
   beforeEach(async () => {
@@ -980,5 +980,314 @@ describe("parseModelId", () => {
   it("parses model ID with unknown flags (useTools defaults true)", async () => {
     const { parseModelId } = await import("./llm.js");
     expect(parseModelId("openai/gpt-4[streaming=yes]")).toEqual({ modelId: "openai/gpt-4", useTools: true });
+  });
+});
+
+// ============================================================================
+// Exemplar Formatting Tests
+// ============================================================================
+
+describe("formatExemplarsForPrompt", () => {
+  it("returns empty string for empty array", async () => {
+    const { formatExemplarsForPrompt } = await import("./llm.js");
+    expect(formatExemplarsForPrompt([])).toBe("");
+  });
+
+  it("formats exemplar with input/output pairs", async () => {
+    const { formatExemplarsForPrompt } = await import("./llm.js");
+
+    const exemplar: Exemplar = {
+      exemplarId: "ex1",
+      machineName: "test-machine",
+      state: "review",
+      context: {
+        sessionId: "s1",
+        currentState: "review",
+        prompt: "Should we approve?",
+        transitions: {
+          approve: { target: "approved" },
+          reject: { target: "rejected" },
+        },
+        history: [],
+      },
+      humanTransitionName: "approve",
+      humanToState: "approved",
+      proposals: [
+        {
+          proposalId: "p1",
+          sessionId: "s1",
+          roundId: "r1",
+          specialistId: "human1",
+          isHuman: true,
+          transitionName: "approve",
+          toState: "approved",
+          reasoning: "Looks good to me",
+          createdAt: new Date(),
+        },
+      ],
+      createdAt: new Date(),
+    };
+
+    const result = formatExemplarsForPrompt([exemplar]);
+    expect(result).toContain("Human ground truth examples:");
+    expect(result).toContain("State: review");
+    expect(result).toContain("Prompt: Should we approve?");
+    expect(result).toContain('"approve" → "approved"');
+    expect(result).toContain('"reject" → "rejected"');
+    expect(result).toContain('"transitionName":"approve"');
+    expect(result).toContain('"toState":"approved"');
+    expect(result).toContain('"reasoning":"Looks good to me"');
+  });
+
+  it("uses empty reasoning when no human proposal found", async () => {
+    const { formatExemplarsForPrompt } = await import("./llm.js");
+
+    const exemplar: Exemplar = {
+      exemplarId: "ex1",
+      machineName: "test-machine",
+      state: "review",
+      context: {
+        sessionId: "s1",
+        currentState: "review",
+        prompt: "Decide",
+        transitions: { approve: { target: "approved" } },
+        history: [],
+      },
+      humanTransitionName: "approve",
+      humanToState: "approved",
+      proposals: [],
+      createdAt: new Date(),
+    };
+
+    const result = formatExemplarsForPrompt([exemplar]);
+    expect(result).toContain('"reasoning":""');
+  });
+});
+
+describe("assembleProposerPrompt with exemplars", () => {
+  it("includes exemplar section when exemplars provided", async () => {
+    const { executeProposerLlm } = await import("./llm.js");
+
+    const exemplar: Exemplar = {
+      exemplarId: "ex1",
+      machineName: "test-machine",
+      state: "pending",
+      context: {
+        sessionId: "s0",
+        currentState: "pending",
+        prompt: "Prior decision",
+        transitions: { go: { target: "done" } },
+        history: [],
+      },
+      humanTransitionName: "go",
+      humanToState: "done",
+      proposals: [
+        {
+          proposalId: "p1",
+          sessionId: "s0",
+          roundId: "r0",
+          specialistId: "human",
+          isHuman: true,
+          transitionName: "go",
+          toState: "done",
+          reasoning: "It was time",
+          createdAt: new Date(),
+        },
+      ],
+      createdAt: new Date(),
+    };
+
+    const ctx: ProposerContext = {
+      sessionId: "s1",
+      currentState: "pending",
+      prompt: "Decide now",
+      transitions: { go: { target: "done" }, stay: { target: "pending" } },
+      history: [],
+      exemplars: [exemplar],
+    };
+
+    const originalFetch = globalThis.fetch;
+    let capturedBody: string | undefined;
+    globalThis.fetch = vi.fn().mockImplementation(async (_url: string, opts: { body: string }) => {
+      capturedBody = opts.body;
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({
+          choices: [{ message: { content: '{"transitionName":"go","toState":"done","reasoning":"ok"}' } }],
+        }),
+      };
+    }) as unknown as typeof fetch;
+
+    process.env.OPENROUTER_API_TOKEN = "test-token";
+
+    try {
+      await executeProposerLlm(async () => "context", "test-model", ctx);
+      const body = JSON.parse(capturedBody!) as { messages: Array<{ content: string }> };
+      const userMsg = body.messages[1].content;
+      expect(userMsg).toContain("Human ground truth examples:");
+      expect(userMsg).toContain('"transitionName":"go"');
+      expect(userMsg).toContain("It was time");
+    } finally {
+      globalThis.fetch = originalFetch;
+      delete process.env.OPENROUTER_API_TOKEN;
+    }
+  });
+
+  it("omits exemplar section when exemplars is undefined", async () => {
+    const { executeProposerLlm } = await import("./llm.js");
+
+    const ctx: ProposerContext = {
+      sessionId: "s1",
+      currentState: "pending",
+      prompt: "Decide",
+      transitions: { go: { target: "done" } },
+      history: [],
+    };
+
+    const originalFetch = globalThis.fetch;
+    let capturedBody: string | undefined;
+    globalThis.fetch = vi.fn().mockImplementation(async (_url: string, opts: { body: string }) => {
+      capturedBody = opts.body;
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({
+          choices: [{ message: { content: '{"transitionName":"go","toState":"done","reasoning":"ok"}' } }],
+        }),
+      };
+    }) as unknown as typeof fetch;
+
+    process.env.OPENROUTER_API_TOKEN = "test-token";
+
+    try {
+      await executeProposerLlm(async () => "context", "test-model", ctx);
+      const body = JSON.parse(capturedBody!) as { messages: Array<{ content: string }> };
+      const userMsg = body.messages[1].content;
+      expect(userMsg).not.toContain("Human ground truth examples:");
+    } finally {
+      globalThis.fetch = originalFetch;
+      delete process.env.OPENROUTER_API_TOKEN;
+    }
+  });
+});
+
+describe("executeProposerLlm — TOOL PATH: exemplars in user message", () => {
+  let originalFetch: typeof globalThis.fetch;
+  let originalToken: string | undefined;
+
+  beforeEach(async () => {
+    await clear();
+    originalFetch = globalThis.fetch;
+    originalToken = process.env.OPENROUTER_API_TOKEN;
+    process.env.OPENROUTER_API_TOKEN = "test-token";
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+    if (originalToken !== undefined) {
+      process.env.OPENROUTER_API_TOKEN = originalToken;
+    } else {
+      delete process.env.OPENROUTER_API_TOKEN;
+    }
+  });
+
+  it("includes exemplars in tool-calling user message", async () => {
+    const { executeProposerLlm } = await import("./llm.js");
+
+    const exemplar: Exemplar = {
+      exemplarId: "ex1",
+      machineName: "test-machine",
+      state: "pending",
+      context: {
+        sessionId: "s0",
+        currentState: "pending",
+        prompt: "Past prompt",
+        transitions: { book: { target: "booked", description: "Book a ride" } },
+        history: [],
+      },
+      humanTransitionName: "book",
+      humanToState: "booked",
+      proposals: [
+        {
+          proposalId: "p1",
+          sessionId: "s0",
+          roundId: "r0",
+          specialistId: "human",
+          isHuman: true,
+          transitionName: "book",
+          toState: "booked",
+          reasoning: "Customer needed a ride",
+          createdAt: new Date(),
+        },
+      ],
+      createdAt: new Date(),
+    };
+
+    const enrichedCtx: ProposerContext = {
+      sessionId: "s1",
+      currentState: "pending",
+      prompt: "Decide",
+      transitions: {
+        book_ride: { target: "riding", description: "Book a ride", parameters: { type: "object", properties: {} } },
+      },
+      history: [],
+      exemplars: [exemplar],
+    };
+
+    let capturedBody: string | undefined;
+    const mockFetch = vi.fn().mockImplementation(async (_url: string, opts: { body: string }) => {
+      capturedBody = opts.body;
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({
+          choices: [{ message: { tool_calls: [{ function: { name: "book_ride", arguments: '{}' } }], content: null } }],
+          usage: { prompt_tokens: 100, completion_tokens: 30 },
+        }),
+      };
+    });
+    globalThis.fetch = mockFetch as unknown as typeof fetch;
+
+    await executeProposerLlm(async () => "context", "test-model", enrichedCtx);
+
+    const body = JSON.parse(capturedBody!) as { messages: Array<{ content: string }> };
+    const userMsg = body.messages[1].content;
+    expect(userMsg).toContain("Human ground truth examples:");
+    expect(userMsg).toContain("Customer needed a ride");
+  });
+
+  it("omits exemplar section from tool-calling path when no exemplars", async () => {
+    const { executeProposerLlm } = await import("./llm.js");
+
+    const enrichedCtx: ProposerContext = {
+      sessionId: "s1",
+      currentState: "pending",
+      prompt: "Decide",
+      transitions: {
+        book_ride: { target: "riding", description: "Book a ride", parameters: { type: "object", properties: {} } },
+      },
+      history: [],
+      exemplars: [],
+    };
+
+    let capturedBody: string | undefined;
+    const mockFetch = vi.fn().mockImplementation(async (_url: string, opts: { body: string }) => {
+      capturedBody = opts.body;
+      return {
+        ok: true,
+        status: 200,
+        text: async () => JSON.stringify({
+          choices: [{ message: { tool_calls: [{ function: { name: "book_ride", arguments: '{}' } }], content: null } }],
+        }),
+      };
+    });
+    globalThis.fetch = mockFetch as unknown as typeof fetch;
+
+    await executeProposerLlm(async () => "context", "test-model", enrichedCtx);
+
+    const body = JSON.parse(capturedBody!) as { messages: Array<{ content: string }> };
+    const userMsg = body.messages[1].content;
+    expect(userMsg).not.toContain("Human ground truth examples:");
   });
 });

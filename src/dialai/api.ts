@@ -15,7 +15,7 @@ import {
   updateAlignmentAfterHumanDecision,
   getAllAlignmentRecords,
 } from "./alignment.js";
-import { createExemplar } from "./exemplars.js";
+import { createExemplar, getExemplars } from "./exemplars.js";
 import type {
   MachineDefinition,
   Session,
@@ -494,7 +494,7 @@ export async function getEffectiveThreshold(session: Session): Promise<number | 
 /**
  * Builds the context for a proposer.
  */
-function buildProposerContext(session: Session): ProposerContext {
+async function buildProposerContext(session: Session): Promise<ProposerContext> {
   const currentStatedef = session.machine.states[session.currentState];
   const rawTransitions = currentStatedef?.transitions ?? {};
 
@@ -504,6 +504,8 @@ function buildProposerContext(session: Session): ProposerContext {
     transitions[name] = typeof value === "string" ? { target: value } : value;
   }
 
+  const exemplars = await getExemplars(session.machineName, session.currentState);
+
   return {
     sessionId: session.sessionId,
     currentState: session.currentState,
@@ -511,6 +513,7 @@ function buildProposerContext(session: Session): ProposerContext {
     transitions,
     history: [...session.history],
     metaJson: session.metaJson,
+    exemplars,
   };
 }
 
@@ -676,7 +679,7 @@ export async function submitProposal(
 
   // If transitionName not provided, invoke strategy
   if (!transitionName) {
-    const ctx = buildProposerContext(session);
+    const ctx = await buildProposerContext(session);
     const result = await invokeProposerStrategy(proposer, ctx);
     transitionName = result.transitionName;
     toState = result.toState;
@@ -939,7 +942,7 @@ export async function submitArbitration(
 
     case "humanOverride": {
       // Create exemplar from human decision
-      const proposerCtx = buildProposerContext(session);
+      const proposerCtx = await buildProposerContext(session);
       await createExemplar(
         session.machineName,
         session.currentState,

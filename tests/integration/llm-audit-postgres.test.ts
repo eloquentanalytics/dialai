@@ -91,9 +91,9 @@ describe.skipIf(SKIP)("LLM Audit Log: PostgreSQL", () => {
         "requestBody",
         "responseStatus",
         "responseBody",
-        "resolvedModel",
         "durationMs",
         "error",
+        "resolvedModel",
       ]);
     } finally {
       await client.end();
