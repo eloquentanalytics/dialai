@@ -433,6 +433,16 @@ export async function callLlmWithTools(
 }
 
 /**
+ * Strips markdown code fences from a string before JSON.parse.
+ * Models often wrap JSON in ```json ... ``` blocks.
+ */
+function stripMarkdownFences(text: string): string {
+  const trimmed = text.trim();
+  const match = trimmed.match(/^```(?:\w+)?\s*\n?([\s\S]*?)\n?\s*```$/);
+  return match ? match[1].trim() : trimmed;
+}
+
+/**
  * Parses a model ID, extracting flags like [tools=no].
  */
 export function parseModelId(raw: string): { modelId: string; useTools: boolean } {
@@ -556,7 +566,7 @@ export async function executeProposerLlm(
         // Model returned text instead of tool call.
         // Try parsing it as DIAL JSON before falling through to text path.
         try {
-          const parsed = JSON.parse(e.content) as Record<string, unknown>;
+          const parsed = JSON.parse(stripMarkdownFences(e.content)) as Record<string, unknown>;
           if (parsed.transitionName && parsed.toState) {
             return {
               transitionName: parsed.transitionName as string,
@@ -588,7 +598,7 @@ export async function executeProposerLlm(
   const latencyMsec = Date.now() - start;
 
   try {
-    const parsed = JSON.parse(result.content) as Record<string, unknown>;
+    const parsed = JSON.parse(stripMarkdownFences(result.content)) as Record<string, unknown>;
     if (!parsed.transitionName || !parsed.toState) {
       throw new Error("Missing required fields in LLM response");
     }
